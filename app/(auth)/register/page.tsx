@@ -1,35 +1,47 @@
 "use client";
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import React, { useState } from "react";
 
-export default function LoginPage() {
+export default function RegisterPage() {
+  const [nama, setNama] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [show, setShow] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = createClient();
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const oauthError = params.get("error");
-
-    if (oauthError === "google_not_registered") {
-      setError("Akun Google ini belum terdaftar. Silakan register dulu.");
-    }
-  }, []);
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password !== confirmPassword) {
+      setError("Password dan Konfirmasi Password tidak cocok.");
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      window.location.href = "/";
+      const response = await fetch("/api/auth/send-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          name: nama,
+          password,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Gagal mengirim email verifikasi.");
+      }
+
+      window.location.href = `/verify-otp?email=${encodeURIComponent(email)}`;
     } catch (err: any) {
       setError(err.message || String(err));
     } finally {
@@ -42,12 +54,15 @@ export default function LoginPage() {
     setError(null);
 
     try {
+      const supabaseModule = await import("@/utils/supabase/client");
+      const supabase = supabaseModule.createClient();
+
       await supabase.auth.signOut({ scope: "local" });
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/&intent=login`,
+          redirectTo: `${window.location.origin}/auth/callback?next=/&intent=register`,
           queryParams: {
             prompt: "select_account",
           },
@@ -62,7 +77,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-cover bg-center font-sans" style={{ backgroundImage: "url('/assets/login/background.svg')" }}>
+    <div className="h-screen w-full overflow-hidden bg-cover bg-center font-sans" style={{ backgroundImage: "url('/assets/register/background.svg')" }}>
       <div className="h-full grid lg:grid-cols-12 items-center">
         
         {/* Sisi Kiri - Branding & Ilustrasi */}
@@ -76,40 +91,61 @@ export default function LoginPage() {
             </p>
 
             <div className="mt-8">
-              <Image src="/assets/login/puzzle.svg" alt="puzzle" width={440} height={290} priority />
+              <Image src="/assets/register/puzzle.svg" alt="puzzle" width={440} height={290} priority />
             </div>
           </div>
         </div>
 
         {/* Sisi Kanan - Container Kartu Putih */}
         <div className="lg:col-span-6 flex items-center justify-center w-full h-full lg:-translate-x-6 transition-transform">
-          {/* Lebar kartu dinaikkan ke 400px dan padding diperlonggar ke p-7 */}
+          {/* Padding disesuaikan ke p-5 agar space luar komponen di dalam lebih fit */}
           <div 
-            className="bg-white rounded-lg shadow-xl p-7 pt-8 pb-8 flex flex-col justify-start box-border" 
-            style={{ width: '400px' }}
+            className="bg-white rounded-lg shadow-xl p-5 pt-6 pb-6 flex flex-col justify-start box-border" 
+            style={{ width: '380px' }}
           >
             {/* Header Kartu */}
             <div className="flex flex-col items-center w-full">
               <div className="flex justify-center items-center w-full px-2">
                 <Image 
-                  src="/assets/login/myprodigi-logo.svg" 
+                  src="/assets/register/myprodigi-logo.svg" 
                   alt="logo" 
                   width={310} 
                   height={91.5} 
                   className="object-contain"
                 />
               </div>
-              <div className="w-full max-w-[310px] h-[1px] bg-gray-100 my-3" />
-              <h2 className="text-base font-bold text-gray-900 tracking-tight mt-1">Masuk Sekarang</h2>
+              <div className="w-full max-w-[310px] h-[1px] bg-gray-100 my-2.5" />
+              <h2 className="text-base font-bold text-gray-900 tracking-tight mt-0.5">Daftar Sekarang</h2>
             </div>
 
-            {/* Form Utama */}
-            <form onSubmit={submit} className="flex flex-col w-full items-center mt-6">
-              {error && <div className="text-xs text-red-600 bg-red-50 p-2 rounded-md w-[340px] mb-3">{error}</div>}
+            {/* Form Utama - mt dikurangi ke mt-4 */}
+            <form onSubmit={submit} className="flex flex-col w-full items-center mt-4">
+              {error && <div className="text-xs text-red-600 bg-red-50 p-2 rounded-md w-[320px] mb-2.5">{error}</div>}
+
+              {/* Input Nama */}
+              <div className="w-[320px] mb-3">
+                <label className="block text-[11px] text-[#6E7980] font-semibold mb-1 pl-0.5">Nama</label>
+                <div className="relative w-full">
+                  <span className="absolute inset-y-0 left-3 flex items-center text-[#6E7980] z-10">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                    </svg>
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Jhon Cally"
+                    value={nama}
+                    onChange={(e) => setNama(e.target.value)}
+                    className="block w-full pl-10 pr-4 rounded-md bg-gray-100 text-[#6E7980] placeholder-[#6E7980]/50 text-xs focus:outline-none border-0"
+                    style={{ height: '44px' }}
+                  />
+                </div>
+              </div>
 
               {/* Input Email */}
-              <div className="w-[340px] mb-4">
-                <label className="block text-[11px] text-[#6E7980] font-semibold mb-1.5 pl-0.5">Email Address</label>
+              <div className="w-[320px] mb-3">
+                <label className="block text-[11px] text-[#6E7980] font-semibold mb-1 pl-0.5">Email Address</label>
                 <div className="relative w-full">
                   <span className="absolute inset-y-0 left-3 flex items-center text-[#6E7980] z-10">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -129,11 +165,8 @@ export default function LoginPage() {
               </div>
 
               {/* Input Password */}
-              <div className="w-[340px] mb-5">
-                <div className="flex items-center justify-between mb-1.5 pl-0.5">
-                  <label className="text-[11px] text-[#6E7980] font-semibold">Password</label>
-                  <a className="text-[#FFC917] text-xs font-semibold hover:underline" href="#">Forgot Password?</a>
-                </div>
+              <div className="w-[320px] mb-3">
+                <label className="block text-[11px] text-[#6E7980] font-semibold mb-1 pl-0.5">Password</label>
                 <div className="relative w-full">
                   <span className="absolute inset-y-0 left-3 flex items-center text-[#6E7980] z-10">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -141,9 +174,9 @@ export default function LoginPage() {
                     </svg>
                   </span>
                   <input
-                    type={show ? "text" : "password"}
+                    type={showPassword ? "text" : "password"}
                     required
-                    placeholder="Password"
+                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="block w-full pl-10 pr-10 rounded-md bg-gray-100 text-[#6E7980] placeholder-[#6E7980]/50 text-xs focus:outline-none border-0"
@@ -151,10 +184,10 @@ export default function LoginPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => setShow((s) => !s)}
+                    onClick={() => setShowPassword((s) => !s)}
                     className="absolute inset-y-0 right-3 flex items-center text-[#6E7980] hover:opacity-80 z-10"
                   >
-                    {show ? (
+                    {showPassword ? (
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
@@ -168,20 +201,57 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Tombol Masuk */}
-              <div className="w-[340px] mb-3.5">
+              {/* Input Confirm Password - mb dikurangi dari mb-5 ke mb-4 */}
+              <div className="w-[320px] mb-4">
+                <label className="block text-[11px] text-[#6E7980] font-semibold mb-1 pl-0.5">Confirm Password</label>
+                <div className="relative w-full">
+                  <span className="absolute inset-y-0 left-3 flex items-center text-[#6E7980] z-10">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                    </svg>
+                  </span>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    required
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="block w-full pl-10 pr-10 rounded-md bg-gray-100 text-[#6E7980] placeholder-[#6E7980]/50 text-xs focus:outline-none border-0"
+                    style={{ height: '44px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((s) => !s)}
+                    className="absolute inset-y-0 right-3 flex items-center text-[#6E7980] hover:opacity-80 z-10"
+                  >
+                    {showConfirmPassword ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Tombol Daftar */}
+              <div className="w-[320px] mb-3">
                 <button
                   type="submit"
                   disabled={loading}
                   className="w-full text-black font-bold rounded-md text-xs tracking-wide transition-all hover:brightness-105 active:scale-[0.99] disabled:opacity-50"
                   style={{ height: '46px', backgroundColor: '#FFC917' }}
                 >
-                  {loading ? "Masuk..." : "Masuk"}
+                  {loading ? "Daftar..." : "Daftar"}
                 </button>
               </div>
 
               {/* Tombol Google OAuth */}
-              <div className="w-[340px]">
+              <div className="w-[320px]">
                 <button
                   type="button"
                   className="w-full rounded-md flex items-center justify-center gap-2 text-gray-600 font-medium text-[11px] transition-all hover:bg-gray-50 active:scale-[0.99] disabled:opacity-60"
@@ -195,15 +265,15 @@ export default function LoginPage() {
                     <path d="M117.9 332.7c-10.7-32.1-10.7-66.8 0-98.9V162.7H29.9c-39 77.6-39 169.7 0 247.3l88-77.3z" fill="#FBBC05"/>
                     <path d="M272 109.1c39.9 0 76 13.7 104.2 40.5l78-78C409.1 24.6 347.2 0 272 0 168.6 0 75.4 54.5 29.9 138.7l88 71.1C139.7 157.5 200.4 109.1 272 109.1z" fill="#EA4335"/>
                   </svg>
-                  {googleLoading ? "Connecting..." : "Sign In With Google"}
+                  {googleLoading ? "Connecting..." : "Sign Up With Google"}
                 </button>
               </div>
             </form>
 
-            {/* Footer Kartu */}
-            <div className="w-full text-center mt-5">
+            {/* Footer Kartu - mt dikurangi dari mt-5 ke mt-4 */}
+            <div className="w-full text-center mt-4">
               <p className="text-xs text-gray-500">
-                Belum punya akun? <a href="/register" className="text-[#FFC917] font-semibold hover:underline">Sign Up</a>
+                Sudah punya akun? <a href="/login" className="text-[#FFC917] font-semibold hover:underline">Sign In</a>
               </p>
             </div>
 
