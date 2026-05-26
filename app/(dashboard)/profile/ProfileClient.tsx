@@ -1,0 +1,600 @@
+"use client";
+
+import { useState, useRef } from "react";
+import { User, Lock, LogOut, FileText, CheckCircle2, Briefcase, Link as LinkIcon, Download, ExternalLink, Info, Upload } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
+
+const SKILL_CATEGORIES = [
+  "UI/UX Design", "Frontend Developer", "Backend Developer", 
+  "Mobile Developer", "AI/ML Engineering", "Data Science", 
+  "Cybersecurity", "Business Plan", "Public Speaking", 
+  "Video Editing/Multimedia"
+];
+
+const COMPETITION_INTERESTS = [
+  "Hackathon", "UI/UX Design", "Business Case", "AI Competition", 
+  "Innovation Competition", "Web Development", "Data Competition"
+];
+
+export default function ProfileClient({ profile }: { profile: any }) {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("personal");
+
+  // State for Personal Info Edit
+  const [isEditingPersonal, setIsEditingPersonal] = useState(false);
+  const [personalForm, setPersonalForm] = useState({
+    name: profile.name || "",
+    nim: profile.nim || "",
+    nomorWa: profile.nomorWa || "",
+    angkatan: profile.angkatan || "",
+    jurusan: profile.jurusan || "",
+  });
+  const [isSavingPersonal, setIsSavingPersonal] = useState(false);
+
+  // State for Skills Edit
+  const [isEditingSkills, setIsEditingSkills] = useState(false);
+  const [skillsForm, setSkillsForm] = useState<string[]>(profile.skills || []);
+  const [interestsForm, setInterestsForm] = useState<string[]>(profile.interests || []);
+  const [isSavingSkills, setIsSavingSkills] = useState(false);
+
+  // State for CV Upload
+  const [isUploadingCv, setIsUploadingCv] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // State for Password Reset
+  const [passwordForm, setPasswordForm] = useState({ new: "", confirm: "" });
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState("");
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
+  const handleSavePersonal = async () => {
+    setIsSavingPersonal(true);
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(personalForm)
+      });
+      if (res.ok) {
+        setIsEditingPersonal(false);
+        router.refresh();
+      } else {
+        alert("Gagal menyimpan profil.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setIsSavingPersonal(false);
+  };
+
+  const handleSaveSkills = async () => {
+    setIsSavingSkills(true);
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skills: skillsForm, interests: interestsForm })
+      });
+      if (res.ok) {
+        setIsEditingSkills(false);
+        router.refresh();
+      } else {
+        alert("Gagal menyimpan skill & peminatan.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setIsSavingSkills(false);
+  };
+
+  // Drag and drop handlers for CV
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFileUpload(e.target.files[0]);
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    if (file.type !== "application/pdf") {
+      alert("Mohon unggah file dalam format PDF.");
+      return;
+    }
+    
+    setIsUploadingCv(true);
+    try {
+      // Mock upload URL since we don't have Supabase Storage configured yet
+      const fakeUrl = `uploaded-cv-${Date.now()}.pdf`;
+      
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cvUrl: fakeUrl })
+      });
+      
+      if (res.ok) {
+        alert("CV berhasil diunggah.");
+        router.refresh();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setIsUploadingCv(false);
+  };
+
+  const handleSavePassword = async () => {
+    if (passwordForm.new !== passwordForm.confirm) {
+      setPasswordMessage("Password tidak cocok.");
+      return;
+    }
+    if (passwordForm.new.length < 6) {
+      setPasswordMessage("Password minimal 6 karakter.");
+      return;
+    }
+    
+    setIsSavingPassword(true);
+    setPasswordMessage("");
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({
+        password: passwordForm.new
+      });
+      
+      if (error) {
+        setPasswordMessage(error.message);
+      } else {
+        setPasswordMessage("Password berhasil diubah!");
+        setPasswordForm({ new: "", confirm: "" });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setIsSavingPassword(false);
+  };
+
+  const toggleSkill = (skill: string) => {
+    if (!isEditingSkills) return;
+    setSkillsForm(prev => prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]);
+  };
+
+  const toggleInterest = (interest: string) => {
+    if (!isEditingSkills) return;
+    setInterestsForm(prev => prev.includes(interest) ? prev.filter(i => i !== interest) : [...prev, interest]);
+  };
+
+  const tabs = [
+    { id: "personal", label: "Personal Information", icon: User },
+    { id: "skills", label: "Skill & Peminatan", icon: Briefcase },
+    { id: "role", label: "Role", icon: LinkIcon },
+    { id: "cv", label: "CV", icon: FileText },
+    { id: "password", label: "Reset Password", icon: Lock },
+  ];
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-8">
+      {/* Sidebar */}
+      <div className="w-full lg:w-80 flex-shrink-0 bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex flex-col items-center">
+        <div className="relative mb-4 mt-4">
+          <div className="w-32 h-32 rounded-full border-4 border-[#FFC700] overflow-hidden bg-gray-200">
+            {/* Dummy Avatar */}
+            <img 
+              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" 
+              alt="Avatar" 
+              className="object-cover w-full h-full"
+            />
+          </div>
+          <button className="absolute bottom-1 right-1 bg-[#FFC700] p-2 rounded-full text-black hover:scale-105 transition-transform">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </button>
+        </div>
+        
+        <h2 className="text-xl font-bold text-[#0A1024] mt-2 text-center">{profile.name || "User Prodigi"}</h2>
+        <p className="text-sm text-gray-500 mb-10 text-center">Talent</p>
+
+        <div className="w-full space-y-2 mb-10">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-medium transition-colors ${
+                activeTab === tab.id 
+                  ? "bg-[#FFF9E6] text-[#0A1024]" 
+                  : "text-gray-500 hover:bg-gray-50"
+              }`}
+            >
+              <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? "text-[#FFC700]" : "text-gray-400"}`} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <button 
+          onClick={handleLogout}
+          className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-medium text-red-500 hover:bg-red-50 transition-colors mt-auto"
+        >
+          <LogOut className="w-5 h-5 text-red-500" />
+          Log Out
+        </button>
+
+        <p className="text-xs text-gray-400 mt-8">MyProdigi V1.0</p>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+        
+        {/* TAB: Personal Information */}
+        {activeTab === "personal" && (
+          <div className="animate-in fade-in duration-300">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-bold text-[#0A1024]">Personal Information</h2>
+              {!isEditingPersonal ? (
+                <button 
+                  onClick={() => setIsEditingPersonal(true)}
+                  className="bg-[#FFC700] text-[#0A1024] px-6 py-2 rounded-lg font-semibold hover:bg-[#e6b400] transition-colors text-sm"
+                >
+                  Edit
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => {
+                      setIsEditingPersonal(false);
+                      // Revert changes
+                      setPersonalForm({
+                        name: profile.name || "",
+                        nim: profile.nim || "",
+                        nomorWa: profile.nomorWa || "",
+                        angkatan: profile.angkatan || "",
+                        jurusan: profile.jurusan || "",
+                      });
+                    }}
+                    className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleSavePersonal}
+                    disabled={isSavingPersonal}
+                    className="bg-[#FFC700] text-[#0A1024] px-6 py-2 rounded-lg font-semibold hover:bg-[#e6b400] transition-colors text-sm disabled:opacity-50"
+                  >
+                    {isSavingPersonal ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-600">Nama Lengkap</label>
+                {isEditingPersonal ? (
+                  <input 
+                    type="text" 
+                    value={personalForm.name} 
+                    onChange={e => setPersonalForm({...personalForm, name: e.target.value})}
+                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
+                  />
+                ) : (
+                  <div className="w-full p-4 bg-gray-50 rounded-xl text-gray-900 text-sm border border-transparent">{profile.name || "-"}</div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-600">NIM</label>
+                {isEditingPersonal ? (
+                  <input 
+                    type="text" 
+                    value={personalForm.nim} 
+                    onChange={e => setPersonalForm({...personalForm, nim: e.target.value})}
+                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
+                  />
+                ) : (
+                  <div className="w-full p-4 bg-gray-50 rounded-xl text-gray-900 text-sm border border-transparent">{profile.nim || "Belum diatur"}</div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-600">Email</label>
+                {/* Email is always disabled */}
+                <div className="w-full p-4 bg-gray-100 rounded-xl text-gray-500 text-sm border border-transparent cursor-not-allowed">{profile.email || "-"}</div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-600">Nomor WA</label>
+                {isEditingPersonal ? (
+                  <input 
+                    type="text" 
+                    value={personalForm.nomorWa} 
+                    onChange={e => setPersonalForm({...personalForm, nomorWa: e.target.value})}
+                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
+                  />
+                ) : (
+                  <div className="w-full p-4 bg-gray-50 rounded-xl text-gray-900 text-sm border border-transparent">{profile.nomorWa || "-"}</div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-600">Angkatan</label>
+                {isEditingPersonal ? (
+                  <input 
+                    type="text" 
+                    value={personalForm.angkatan} 
+                    onChange={e => setPersonalForm({...personalForm, angkatan: e.target.value})}
+                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
+                  />
+                ) : (
+                  <div className="w-full p-4 bg-gray-50 rounded-xl text-gray-900 text-sm border border-transparent">{profile.angkatan || "-"}</div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-600">Jurusan</label>
+                {isEditingPersonal ? (
+                  <select 
+                    value={personalForm.jurusan} 
+                    onChange={e => setPersonalForm({...personalForm, jurusan: e.target.value})}
+                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
+                  >
+                    <option value="S1 Informatika">S1 Informatika</option>
+                    <option value="S1 Teknologi Informasi">S1 Teknologi Informasi</option>
+                    <option value="S1 Rekayasa Perangkat Lunak">S1 Rekayasa Perangkat Lunak</option>
+                    <option value="S1 Data Science">S1 Data Science</option>
+                  </select>
+                ) : (
+                  <div className="w-full p-4 bg-gray-50 rounded-xl text-gray-900 text-sm border border-transparent">{profile.jurusan || "-"}</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: Skill & Peminatan */}
+        {activeTab === "skills" && (
+          <div className="animate-in fade-in duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-[#0A1024]">Skill & Peminatan</h2>
+              {!isEditingSkills ? (
+                <button 
+                  onClick={() => setIsEditingSkills(true)}
+                  className="bg-[#FFC700] text-[#0A1024] px-6 py-2 rounded-lg font-semibold hover:bg-[#e6b400] transition-colors text-sm"
+                >
+                  Edit
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => {
+                      setIsEditingSkills(false);
+                      setSkillsForm(profile.skills || []);
+                      setInterestsForm(profile.interests || []);
+                    }}
+                    className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleSaveSkills}
+                    disabled={isSavingSkills}
+                    className="bg-[#FFC700] text-[#0A1024] px-6 py-2 rounded-lg font-semibold hover:bg-[#e6b400] transition-colors text-sm disabled:opacity-50"
+                  >
+                    {isSavingSkills ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Skill */}
+            <h3 className="font-semibold text-gray-700 mb-4">Kategori Skill</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+              {SKILL_CATEGORIES.map(skill => {
+                const hasSkill = isEditingSkills ? skillsForm.includes(skill) : (profile.skills || []).includes(skill);
+                return (
+                  <button 
+                    key={skill} 
+                    onClick={() => toggleSkill(skill)}
+                    disabled={!isEditingSkills}
+                    className={`p-4 border rounded-xl flex justify-between items-center text-sm transition-all ${
+                      hasSkill ? "border-[#FFC700] bg-[#FFF9E6] text-[#0A1024] font-medium" : "border-gray-200 text-gray-600"
+                    } ${isEditingSkills ? "hover:border-[#FFC700] cursor-pointer" : "cursor-default"}`}
+                  >
+                    <span>{skill}</span>
+                    {hasSkill && <CheckCircle2 className="w-5 h-5 text-[#FFC700]" />}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Peminatan Lomba */}
+            <h3 className="font-semibold text-gray-700 mb-4 mt-10">Peminatan Lomba</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {COMPETITION_INTERESTS.map(interest => {
+                const hasInterest = isEditingSkills ? interestsForm.includes(interest) : (profile.interests || []).includes(interest);
+                return (
+                  <button 
+                    key={interest} 
+                    onClick={() => toggleInterest(interest)}
+                    disabled={!isEditingSkills}
+                    className={`p-4 border rounded-xl flex justify-between items-center text-sm transition-all ${
+                      hasInterest ? "border-[#FFC700] bg-[#FFF9E6] text-[#0A1024] font-medium" : "border-gray-200 text-gray-600"
+                    } ${isEditingSkills ? "hover:border-[#FFC700] cursor-pointer" : "cursor-default"}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${hasInterest ? "bg-[#FFC700] text-white" : "bg-gray-100 text-gray-400"}`}>
+                        <Briefcase className="w-4 h-4" />
+                      </div>
+                      <span>{interest}</span>
+                    </div>
+                    {hasInterest && <CheckCircle2 className="w-5 h-5 text-[#FFC700]" />}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TAB: Role */}
+        {activeTab === "role" && (
+          <div className="animate-in fade-in duration-300">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-bold text-[#0A1024]">Role</h2>
+              <button className="bg-[#FFC700] text-[#0A1024] px-6 py-2 rounded-lg font-semibold hover:bg-[#e6b400] transition-colors text-sm">
+                Request Ganti Role
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              {/* Active Role */}
+              <div className="p-6 border border-[#FFC700] bg-[#FFF9E6] rounded-2xl relative">
+                <CheckCircle2 className="w-6 h-6 text-[#FFC700] absolute top-6 right-6" />
+                <h3 className="text-lg font-bold text-[#0A1024] mb-2">Talent</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Role umum yang dapat mengakses fitur-fitur yang disediakan oleh MyProdigi
+                </p>
+              </div>
+              
+              {/* Inactive Roles */}
+              <div className="p-6 border border-gray-200 bg-gray-50 rounded-2xl opacity-60">
+                <h3 className="text-lg font-bold text-[#0A1024] mb-2">Asisten Laboratorium</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Role Khusus Aslab DTC yang dapat mengakses fitur-fitur aslab
+                </p>
+              </div>
+              
+              <div className="p-6 border border-gray-200 bg-gray-50 rounded-2xl opacity-60">
+                <h3 className="text-lg font-bold text-[#0A1024] mb-2">Admin</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Role Super yang dapat melakukan management platform
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Info className="w-4 h-4" />
+              <span>saat ini kamu hanya memiliki 1 role</span>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: CV */}
+        {activeTab === "cv" && (
+          <div className="animate-in fade-in duration-300">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-bold text-[#0A1024]">CV</h2>
+            </div>
+            
+            {profile.cvUrl && (
+              <div className="border border-gray-200 rounded-2xl p-6 max-w-sm mb-8">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-12 h-12 bg-[#FFF9E6] rounded-xl flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-[#FFC700]" />
+                  </div>
+                  <div className="overflow-hidden">
+                    <h3 className="font-semibold text-[#0A1024] truncate">CV {profile.name || "User"}</h3>
+                    <p className="text-xs text-gray-500 truncate">{profile.cvUrl}</p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-4">
+                  <button className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors">
+                    Buka
+                  </button>
+                  <button className="flex-1 bg-[#FFC700] text-[#0A1024] py-2.5 rounded-xl font-medium text-sm hover:bg-[#e6b400] transition-colors">
+                    Unduh
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Upload / Ganti CV Baru</label>
+              <div 
+                className={`border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-colors max-w-sm ${isDragging ? "border-[#FFC700] bg-[#FFF9E6]" : "border-gray-300 hover:bg-gray-50"}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className="w-16 h-16 bg-[#FFF9E6] rounded-full flex items-center justify-center mb-4">
+                  <Upload className="w-8 h-8 text-[#FFC700]" />
+                </div>
+                <p className="font-semibold text-gray-900">
+                  {isUploadingCv ? "Uploading..." : "Drag & drop file here or click to browse"}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">Supported only PDF (Max 5MB)</p>
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept=".pdf" 
+                  ref={fileInputRef}
+                  onChange={handleFileChange} 
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: Reset Password */}
+        {activeTab === "password" && (
+          <div className="animate-in fade-in duration-300">
+            <h2 className="text-2xl font-bold text-[#0A1024] mb-8">Reset Password</h2>
+            <div className="max-w-md space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-600">Password Baru</label>
+                <input 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={passwordForm.new}
+                  onChange={e => setPasswordForm({...passwordForm, new: e.target.value})}
+                  className="w-full p-4 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900" 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-600">Konfirmasi Password Baru</label>
+                <input 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={passwordForm.confirm}
+                  onChange={e => setPasswordForm({...passwordForm, confirm: e.target.value})}
+                  className="w-full p-4 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900" 
+                />
+              </div>
+              
+              {passwordMessage && (
+                <p className={`text-sm ${passwordMessage.includes("berhasil") ? "text-green-600" : "text-red-500"}`}>
+                  {passwordMessage}
+                </p>
+              )}
+              
+              <button 
+                onClick={handleSavePassword}
+                disabled={isSavingPassword || !passwordForm.new}
+                className="bg-[#FFC700] text-[#0A1024] px-8 py-3 rounded-xl font-semibold hover:bg-[#e6b400] transition-colors w-full mt-4 disabled:opacity-50"
+              >
+                {isSavingPassword ? "Menyimpan..." : "Simpan Password Baru"}
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}

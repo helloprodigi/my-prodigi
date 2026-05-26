@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
 }
 
 model Activity {
@@ -65,4 +65,40 @@ model AdmissionResult {
   isPassed  Boolean  @map("lolos")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model User {
+  id          String   @id // Mapping to Supabase auth.users id
+  email       String   @unique
+  name        String?
+  nim         String?
+  jurusan     String?
+  angkatan    String?
+  nomorWa     String?
+  cvUrl       String?
+  skills      String[]
+  interests   String[]
+  role        String   @default("talent") // Can be "talent", "asisten_lab", "admin"
+  isOnboarded Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  competitionsCreated Competition[] @relation("CreatedCompetitions")
+}
+
+model Competition {
+  id          String   @id @default(uuid())
+  title       String
+  organizer   String
+  deadline    DateTime
+  category    String   // e.g., "Belmawa", "Non-Belmawa", "Internal"
+  skills      String[] // Tags e.g., ["Data Science", "UI/UX Design"]
+  imageUrl    String?
+  description String?
+  link        String?
+  status      String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
+  createdById String?
+  createdBy   User?    @relation("CreatedCompetitions", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

@@ -55,3 +55,7 @@ next-env.d.ts
 !.vscode/extensions.json
 *.code-workspace
 .history/
+
+# Prisma Generated Files
+/generated
+/generated/prisma/*
