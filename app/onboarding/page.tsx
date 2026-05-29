@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Code, PenTool, Briefcase, Cpu, Lightbulb, Globe, Database, Upload, FileText } from "lucide-react";
+import toast from "react-hot-toast";
 
 const SKILL_CATEGORIES = [
   "UI/UX Design", "Frontend Developer", "Backend Developer",
@@ -58,7 +59,7 @@ export default function OnboardingPage() {
       if (file.type === "application/pdf") {
         setFormData({ ...formData, cvUrl: file.name });
       } else {
-        alert("Mohon unggah file dalam format PDF.");
+        toast.error("Mohon unggah file dalam format PDF.");
       }
     }
   };
@@ -69,7 +70,7 @@ export default function OnboardingPage() {
       if (file.type === "application/pdf") {
         setFormData({ ...formData, cvUrl: file.name });
       } else {
-        alert("Mohon unggah file dalam format PDF.");
+        toast.error("Mohon unggah file dalam format PDF.");
       }
     }
   };
@@ -105,7 +106,7 @@ export default function OnboardingPage() {
       } else {
         const errorData = await res.json();
         console.error("Failed to save onboarding data:", errorData.error);
-        alert("Error saving data: " + errorData.error);
+        toast.error("Error saving data: " + errorData.error);
       }
     } catch (err) {
       console.error(err);

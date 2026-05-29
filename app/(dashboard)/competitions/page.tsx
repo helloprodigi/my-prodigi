@@ -17,10 +17,14 @@ const getTagColors = (skill: string) => {
 export default async function CompetitionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; page?: string }>;
 }) {
-  const { tab } = await searchParams;
-  const currentTab = tab || "Belmawa";
+  const params = await searchParams;
+  const currentTab = params.tab || "Belmawa";
+  const currentPage = parseInt(params.page || "1", 10);
+  const limit = 8;
+  const from = (currentPage - 1) * limit;
+  const to = from + limit - 1;
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
@@ -39,7 +43,7 @@ export default async function CompetitionsPage({
     }
   }
 
-  let query = supabase.from("Competition").select("*");
+  let query = supabase.from("Competition").select("*", { count: "exact" });
   
   if (currentTab === "Preview Lomba") {
     // Only show pending ones for Preview Lomba tab
@@ -49,7 +53,11 @@ export default async function CompetitionsPage({
     query = query.eq("category", currentTab).eq("status", "APPROVED");
   }
 
-  const { data: competitions, error } = await query;
+  query = query.order("createdAt", { ascending: false }).range(from, to);
+
+  const { data: competitions, error, count } = await query;
+  
+  const totalPages = count ? Math.ceil(count / limit) : 0;
 
   const tabs = ["Belmawa", "Non-Belmawa", "Internal"];
   if (role === "admin") {
@@ -136,6 +144,41 @@ export default async function CompetitionsPage({
           <p className="text-gray-500 max-w-md">
             Saat ini belum ada kompetisi yang tersedia. Pantau terus untuk mendapatkan informasi kompetisi terbaru!
           </p>
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 mt-12 mb-8">
+          {currentPage > 1 ? (
+            <Link 
+              href={`/competitions?tab=${currentTab}&page=${currentPage - 1}`}
+              className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              Previous
+            </Link>
+          ) : (
+            <button disabled className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed">
+              Previous
+            </button>
+          )}
+          
+          <span className="text-sm font-medium text-gray-600">
+            Page {currentPage} of {totalPages}
+          </span>
+          
+          {currentPage < totalPages ? (
+            <Link 
+              href={`/competitions?tab=${currentTab}&page=${currentPage + 1}`}
+              className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              Next
+            </Link>
+          ) : (
+            <button disabled className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed">
+              Next
+            </button>
+          )}
         </div>
       )}
     </div>

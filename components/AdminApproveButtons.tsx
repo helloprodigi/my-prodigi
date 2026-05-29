@@ -4,13 +4,25 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Trash2, Pencil } from "lucide-react";
+import toast from "react-hot-toast";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 
 export default function AdminApproveButtons({ competitionId }: { competitionId: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    action: "approve" | "reject" | null;
+  }>({ isOpen: false, action: null });
 
-  const handleAction = async (action: "approve" | "reject") => {
-    if (!confirm(`Are you sure you want to ${action} this competition?`)) return;
+  const triggerAction = (action: "approve" | "reject") => {
+    setConfirmModal({ isOpen: true, action });
+  };
+
+  const handleAction = async () => {
+    const action = confirmModal.action;
+    if (!action) return;
+    setConfirmModal({ isOpen: false, action: null });
     
     setLoading(true);
     try {
@@ -21,15 +33,15 @@ export default function AdminApproveButtons({ competitionId }: { competitionId: 
       });
 
       if (res.ok) {
-        alert(`Competition ${action}d successfully`);
+        toast.success(`Competition ${action}d successfully`);
         router.refresh();
       } else {
         const err = await res.json();
-        alert(`Error: ${err.error}`);
+        toast.error(`Error: ${err.error}`);
       }
     } catch (error) {
       console.error(error);
-      alert("System error occurred.");
+      toast.error("System error occurred.");
     } finally {
       setLoading(false);
     }
@@ -39,7 +51,7 @@ export default function AdminApproveButtons({ competitionId }: { competitionId: 
     <>
       <div className="absolute top-6 right-6 flex gap-3">
         <button 
-          onClick={() => handleAction("reject")}
+          onClick={() => triggerAction("reject")}
           disabled={loading}
           className="p-1.5 bg-red-50 text-red-500 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
           title="Tolak Lomba"
@@ -62,13 +74,24 @@ export default function AdminApproveButtons({ competitionId }: { competitionId: 
           Lihat Detail
         </Link>
         <button 
-          onClick={() => handleAction("approve")}
+          onClick={() => triggerAction("approve")}
           disabled={loading}
           className="flex-1 bg-[#FFC700] text-[#0A1024] font-semibold py-2 rounded-lg text-sm hover:bg-[#e6b400] transition-colors disabled:opacity-50"
         >
           {loading ? "..." : "Accept"}
         </button>
       </div>
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.action === "approve" ? "Setujui Lomba" : "Tolak Lomba"}
+        message={`Apakah Anda yakin ingin ${confirmModal.action === "approve" ? "menyetujui" : "menolak"} lomba ini?`}
+        confirmText={confirmModal.action === "approve" ? "Setujui" : "Tolak"}
+        cancelText="Batal"
+        isDestructive={confirmModal.action === "reject"}
+        onConfirm={handleAction}
+        onCancel={() => setConfirmModal({ isOpen: false, action: null })}
+      />
     </>
   );
 }

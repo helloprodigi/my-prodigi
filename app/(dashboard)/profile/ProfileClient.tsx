@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { User, Lock, LogOut, FileText, CheckCircle2, Briefcase, Link as LinkIcon, Download, ExternalLink, Info, Upload } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { User, Lock, LogOut, FileText, CheckCircle2, Briefcase, Link as LinkIcon, Download, ExternalLink, Info, Upload, Users } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 const SKILL_CATEGORIES = [
-  "UI/UX Design", "Frontend Developer", "Backend Developer", 
-  "Mobile Developer", "AI/ML Engineering", "Data Science", 
-  "Cybersecurity", "Business Plan", "Public Speaking", 
+  "UI/UX Design", "Frontend Developer", "Backend Developer",
+  "Mobile Developer", "AI/ML Engineering", "Data Science",
+  "Cybersecurity", "Business Plan", "Public Speaking",
   "Video Editing/Multimedia"
 ];
 
 const COMPETITION_INTERESTS = [
-  "Hackathon", "UI/UX Design", "Business Case", "AI Competition", 
+  "Hackathon", "UI/UX Design", "Business Case", "AI Competition",
   "Innovation Competition", "Web Development", "Data Competition"
 ];
 
@@ -48,6 +49,55 @@ export default function ProfileClient({ profile }: { profile: any }) {
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState("");
 
+  // State for User Management (Admin only)
+  const [users, setUsers] = useState<any[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const fetchUsers = async (page: number = 1) => {
+    setIsLoadingUsers(true);
+    try {
+      const res = await fetch(`/api/admin/users?page=${page}&limit=10`);
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data.users || []);
+        setCurrentPage(data.currentPage || 1);
+        setTotalPages(data.totalPages || 1);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setIsLoadingUsers(false);
+  };
+
+  useEffect(() => {
+    if (activeTab === "management" && profile.role === "admin") {
+      fetchUsers(currentPage);
+    }
+  }, [activeTab, profile.role, currentPage]);
+
+  const handleUpdateRole = async (userId: string, newRole: string) => {
+    setUpdatingRole(userId);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, role: newRole })
+      });
+      if (res.ok) {
+        toast.success("Role berhasil diupdate!");
+        fetchUsers(currentPage);
+      } else {
+        toast.error("Gagal update role.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setUpdatingRole(null);
+  };
+
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -66,7 +116,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
         setIsEditingPersonal(false);
         router.refresh();
       } else {
-        alert("Gagal menyimpan profil.");
+        toast.error("Gagal menyimpan profil.");
       }
     } catch (err) {
       console.error(err);
@@ -86,7 +136,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
         setIsEditingSkills(false);
         router.refresh();
       } else {
-        alert("Gagal menyimpan skill & peminatan.");
+        toast.error("Gagal menyimpan skill & peminatan.");
       }
     } catch (err) {
       console.error(err);
@@ -121,23 +171,23 @@ export default function ProfileClient({ profile }: { profile: any }) {
 
   const handleFileUpload = async (file: File) => {
     if (file.type !== "application/pdf") {
-      alert("Mohon unggah file dalam format PDF.");
+      toast.error("Mohon unggah file dalam format PDF.");
       return;
     }
-    
+
     setIsUploadingCv(true);
     try {
       // Mock upload URL since we don't have Supabase Storage configured yet
       const fakeUrl = `uploaded-cv-${Date.now()}.pdf`;
-      
+
       const res = await fetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cvUrl: fakeUrl })
       });
-      
+
       if (res.ok) {
-        alert("CV berhasil diunggah.");
+        toast.success("CV berhasil diunggah.");
         router.refresh();
       }
     } catch (err) {
@@ -155,7 +205,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
       setPasswordMessage("Password minimal 6 karakter.");
       return;
     }
-    
+
     setIsSavingPassword(true);
     setPasswordMessage("");
     try {
@@ -163,7 +213,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
       const { error } = await supabase.auth.updateUser({
         password: passwordForm.new
       });
-      
+
       if (error) {
         setPasswordMessage(error.message);
       } else {
@@ -194,6 +244,10 @@ export default function ProfileClient({ profile }: { profile: any }) {
     { id: "password", label: "Reset Password", icon: Lock },
   ];
 
+  if (profile.role === "admin") {
+    tabs.push({ id: "management", label: "Management Akun", icon: Users });
+  }
+
   return (
     <div className="flex flex-col lg:flex-row gap-8">
       {/* Sidebar */}
@@ -201,17 +255,17 @@ export default function ProfileClient({ profile }: { profile: any }) {
         <div className="relative mb-4 mt-4">
           <div className="w-32 h-32 rounded-full border-4 border-[#FFC700] overflow-hidden bg-gray-200">
             {/* Dummy Avatar */}
-            <img 
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" 
-              alt="Avatar" 
+            <img
+              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+              alt="Avatar"
               className="object-cover w-full h-full"
             />
           </div>
           <button className="absolute bottom-1 right-1 bg-[#FFC700] p-2 rounded-full text-black hover:scale-105 transition-transform">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
           </button>
         </div>
-        
+
         <h2 className="text-xl font-bold text-[#0A1024] mt-2 text-center">{profile.name || "User Prodigi"}</h2>
         <p className="text-sm text-gray-500 mb-10 text-center">Talent</p>
 
@@ -220,11 +274,10 @@ export default function ProfileClient({ profile }: { profile: any }) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-medium transition-colors ${
-                activeTab === tab.id 
-                  ? "bg-[#FFF9E6] text-[#0A1024]" 
-                  : "text-gray-500 hover:bg-gray-50"
-              }`}
+              className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-medium transition-colors ${activeTab === tab.id
+                ? "bg-[#FFF9E6] text-[#0A1024]"
+                : "text-gray-500 hover:bg-gray-50"
+                }`}
             >
               <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? "text-[#FFC700]" : "text-gray-400"}`} />
               {tab.label}
@@ -232,7 +285,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
           ))}
         </div>
 
-        <button 
+        <button
           onClick={handleLogout}
           className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-medium text-red-500 hover:bg-red-50 transition-colors mt-auto"
         >
@@ -245,14 +298,14 @@ export default function ProfileClient({ profile }: { profile: any }) {
 
       {/* Main Content Area */}
       <div className="flex-1 bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-        
+
         {/* TAB: Personal Information */}
         {activeTab === "personal" && (
           <div className="animate-in fade-in duration-300">
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-bold text-[#0A1024]">Personal Information</h2>
               {!isEditingPersonal ? (
-                <button 
+                <button
                   onClick={() => setIsEditingPersonal(true)}
                   className="bg-[#FFC700] text-[#0A1024] px-6 py-2 rounded-lg font-semibold hover:bg-[#e6b400] transition-colors text-sm"
                 >
@@ -260,7 +313,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                 </button>
               ) : (
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={() => {
                       setIsEditingPersonal(false);
                       // Revert changes
@@ -276,7 +329,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     onClick={handleSavePersonal}
                     disabled={isSavingPersonal}
                     className="bg-[#FFC700] text-[#0A1024] px-6 py-2 rounded-lg font-semibold hover:bg-[#e6b400] transition-colors text-sm disabled:opacity-50"
@@ -286,15 +339,15 @@ export default function ProfileClient({ profile }: { profile: any }) {
                 </div>
               )}
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-600">Nama Lengkap</label>
                 {isEditingPersonal ? (
-                  <input 
-                    type="text" 
-                    value={personalForm.name} 
-                    onChange={e => setPersonalForm({...personalForm, name: e.target.value})}
+                  <input
+                    type="text"
+                    value={personalForm.name}
+                    onChange={e => setPersonalForm({ ...personalForm, name: e.target.value })}
                     className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
                   />
                 ) : (
@@ -304,10 +357,10 @@ export default function ProfileClient({ profile }: { profile: any }) {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-600">NIM</label>
                 {isEditingPersonal ? (
-                  <input 
-                    type="text" 
-                    value={personalForm.nim} 
-                    onChange={e => setPersonalForm({...personalForm, nim: e.target.value})}
+                  <input
+                    type="text"
+                    value={personalForm.nim}
+                    onChange={e => setPersonalForm({ ...personalForm, nim: e.target.value })}
                     className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
                   />
                 ) : (
@@ -322,10 +375,10 @@ export default function ProfileClient({ profile }: { profile: any }) {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-600">Nomor WA</label>
                 {isEditingPersonal ? (
-                  <input 
-                    type="text" 
-                    value={personalForm.nomorWa} 
-                    onChange={e => setPersonalForm({...personalForm, nomorWa: e.target.value})}
+                  <input
+                    type="text"
+                    value={personalForm.nomorWa}
+                    onChange={e => setPersonalForm({ ...personalForm, nomorWa: e.target.value })}
                     className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
                   />
                 ) : (
@@ -335,10 +388,10 @@ export default function ProfileClient({ profile }: { profile: any }) {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-600">Angkatan</label>
                 {isEditingPersonal ? (
-                  <input 
-                    type="text" 
-                    value={personalForm.angkatan} 
-                    onChange={e => setPersonalForm({...personalForm, angkatan: e.target.value})}
+                  <input
+                    type="text"
+                    value={personalForm.angkatan}
+                    onChange={e => setPersonalForm({ ...personalForm, angkatan: e.target.value })}
                     className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
                   />
                 ) : (
@@ -348,9 +401,9 @@ export default function ProfileClient({ profile }: { profile: any }) {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-600">Jurusan</label>
                 {isEditingPersonal ? (
-                  <select 
-                    value={personalForm.jurusan} 
-                    onChange={e => setPersonalForm({...personalForm, jurusan: e.target.value})}
+                  <select
+                    value={personalForm.jurusan}
+                    onChange={e => setPersonalForm({ ...personalForm, jurusan: e.target.value })}
                     className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
                   >
                     <option value="S1 Informatika">S1 Informatika</option>
@@ -372,7 +425,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-[#0A1024]">Skill & Peminatan</h2>
               {!isEditingSkills ? (
-                <button 
+                <button
                   onClick={() => setIsEditingSkills(true)}
                   className="bg-[#FFC700] text-[#0A1024] px-6 py-2 rounded-lg font-semibold hover:bg-[#e6b400] transition-colors text-sm"
                 >
@@ -380,7 +433,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                 </button>
               ) : (
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={() => {
                       setIsEditingSkills(false);
                       setSkillsForm(profile.skills || []);
@@ -390,7 +443,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     onClick={handleSaveSkills}
                     disabled={isSavingSkills}
                     className="bg-[#FFC700] text-[#0A1024] px-6 py-2 rounded-lg font-semibold hover:bg-[#e6b400] transition-colors text-sm disabled:opacity-50"
@@ -407,13 +460,12 @@ export default function ProfileClient({ profile }: { profile: any }) {
               {SKILL_CATEGORIES.map(skill => {
                 const hasSkill = isEditingSkills ? skillsForm.includes(skill) : (profile.skills || []).includes(skill);
                 return (
-                  <button 
-                    key={skill} 
+                  <button
+                    key={skill}
                     onClick={() => toggleSkill(skill)}
                     disabled={!isEditingSkills}
-                    className={`p-4 border rounded-xl flex justify-between items-center text-sm transition-all ${
-                      hasSkill ? "border-[#FFC700] bg-[#FFF9E6] text-[#0A1024] font-medium" : "border-gray-200 text-gray-600"
-                    } ${isEditingSkills ? "hover:border-[#FFC700] cursor-pointer" : "cursor-default"}`}
+                    className={`p-4 border rounded-xl flex justify-between items-center text-sm transition-all ${hasSkill ? "border-[#FFC700] bg-[#FFF9E6] text-[#0A1024] font-medium" : "border-gray-200 text-gray-600"
+                      } ${isEditingSkills ? "hover:border-[#FFC700] cursor-pointer" : "cursor-default"}`}
                   >
                     <span>{skill}</span>
                     {hasSkill && <CheckCircle2 className="w-5 h-5 text-[#FFC700]" />}
@@ -428,13 +480,12 @@ export default function ProfileClient({ profile }: { profile: any }) {
               {COMPETITION_INTERESTS.map(interest => {
                 const hasInterest = isEditingSkills ? interestsForm.includes(interest) : (profile.interests || []).includes(interest);
                 return (
-                  <button 
-                    key={interest} 
+                  <button
+                    key={interest}
                     onClick={() => toggleInterest(interest)}
                     disabled={!isEditingSkills}
-                    className={`p-4 border rounded-xl flex justify-between items-center text-sm transition-all ${
-                      hasInterest ? "border-[#FFC700] bg-[#FFF9E6] text-[#0A1024] font-medium" : "border-gray-200 text-gray-600"
-                    } ${isEditingSkills ? "hover:border-[#FFC700] cursor-pointer" : "cursor-default"}`}
+                    className={`p-4 border rounded-xl flex justify-between items-center text-sm transition-all ${hasInterest ? "border-[#FFC700] bg-[#FFF9E6] text-[#0A1024] font-medium" : "border-gray-200 text-gray-600"
+                      } ${isEditingSkills ? "hover:border-[#FFC700] cursor-pointer" : "cursor-default"}`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${hasInterest ? "bg-[#FFC700] text-white" : "bg-gray-100 text-gray-400"}`}>
@@ -459,7 +510,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                 Request Ganti Role
               </button>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               {/* Active Role */}
               <div className="p-6 border border-[#FFC700] bg-[#FFF9E6] rounded-2xl relative">
@@ -469,7 +520,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                   Role umum yang dapat mengakses fitur-fitur yang disediakan oleh MyProdigi
                 </p>
               </div>
-              
+
               {/* Inactive Roles */}
               <div className="p-6 border border-gray-200 bg-gray-50 rounded-2xl opacity-60">
                 <h3 className="text-lg font-bold text-[#0A1024] mb-2">Asisten Laboratorium</h3>
@@ -477,7 +528,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                   Role Khusus Aslab DTC yang dapat mengakses fitur-fitur aslab
                 </p>
               </div>
-              
+
               <div className="p-6 border border-gray-200 bg-gray-50 rounded-2xl opacity-60">
                 <h3 className="text-lg font-bold text-[#0A1024] mb-2">Admin</h3>
                 <p className="text-sm text-gray-600 leading-relaxed">
@@ -499,7 +550,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-bold text-[#0A1024]">CV</h2>
             </div>
-            
+
             {profile.cvUrl && (
               <div className="border border-gray-200 rounded-2xl p-6 max-w-sm mb-8">
                 <div className="flex items-center gap-4 mb-8">
@@ -511,7 +562,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                     <p className="text-xs text-gray-500 truncate">{profile.cvUrl}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex gap-4">
                   <button className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors">
                     Buka
@@ -525,7 +576,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-900">Upload / Ganti CV Baru</label>
-              <div 
+              <div
                 className={`border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-colors max-w-sm ${isDragging ? "border-[#FFC700] bg-[#FFF9E6]" : "border-gray-300 hover:bg-gray-50"}`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -539,12 +590,12 @@ export default function ProfileClient({ profile }: { profile: any }) {
                   {isUploadingCv ? "Uploading..." : "Drag & drop file here or click to browse"}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">Supported only PDF (Max 5MB)</p>
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  accept=".pdf" 
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf"
                   ref={fileInputRef}
-                  onChange={handleFileChange} 
+                  onChange={handleFileChange}
                 />
               </div>
             </div>
@@ -558,32 +609,32 @@ export default function ProfileClient({ profile }: { profile: any }) {
             <div className="max-w-md space-y-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-600">Password Baru</label>
-                <input 
-                  type="password" 
-                  placeholder="••••••••" 
+                <input
+                  type="password"
+                  placeholder="••••••••"
                   value={passwordForm.new}
-                  onChange={e => setPasswordForm({...passwordForm, new: e.target.value})}
-                  className="w-full p-4 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900" 
+                  onChange={e => setPasswordForm({ ...passwordForm, new: e.target.value })}
+                  className="w-full p-4 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-600">Konfirmasi Password Baru</label>
-                <input 
-                  type="password" 
-                  placeholder="••••••••" 
+                <input
+                  type="password"
+                  placeholder="••••••••"
                   value={passwordForm.confirm}
-                  onChange={e => setPasswordForm({...passwordForm, confirm: e.target.value})}
-                  className="w-full p-4 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900" 
+                  onChange={e => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
+                  className="w-full p-4 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
                 />
               </div>
-              
+
               {passwordMessage && (
                 <p className={`text-sm ${passwordMessage.includes("berhasil") ? "text-green-600" : "text-red-500"}`}>
                   {passwordMessage}
                 </p>
               )}
-              
-              <button 
+
+              <button
                 onClick={handleSavePassword}
                 disabled={isSavingPassword || !passwordForm.new}
                 className="bg-[#FFC700] text-[#0A1024] px-8 py-3 rounded-xl font-semibold hover:bg-[#e6b400] transition-colors w-full mt-4 disabled:opacity-50"
@@ -591,6 +642,121 @@ export default function ProfileClient({ profile }: { profile: any }) {
                 {isSavingPassword ? "Menyimpan..." : "Simpan Password Baru"}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* TAB: Management Akun (Admin Only) */}
+        {activeTab === "management" && profile.role === "admin" && (
+          <div className="animate-in fade-in duration-300">
+            <h2 className="text-2xl font-bold text-[#0A1024] mb-8">Management Akun</h2>
+
+            {isLoadingUsers ? (
+              <div className="flex justify-center p-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FFC700]"></div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="py-4 px-4 font-semibold text-gray-600">Nama</th>
+                      <th className="py-4 px-4 font-semibold text-gray-600">Email</th>
+                      <th className="py-4 px-4 font-semibold text-gray-600">Role Saat Ini</th>
+                      <th className="py-4 px-4 font-semibold text-gray-600">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u: any) => (
+                      <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <td className="py-4 px-4 text-gray-900">{u.name || "-"}</td>
+                        <td className="py-4 px-4 text-gray-600 text-sm">{u.email}</td>
+                        <td className="py-4 px-4">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${u.role === "admin" ? "bg-red-100 text-red-700" :
+                            u.role === "asisten_lab" ? "bg-blue-100 text-blue-700" :
+                              "bg-gray-100 text-gray-700"
+                            }`}>
+                            {u.role === "asisten_lab" ? "Asisten Lab" : u.role.charAt(0).toUpperCase() + u.role.slice(1)}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <select
+                              className="
+        min-w-[220px]
+        px-4 py-2.5
+        bg-white
+        border border-gray-300
+        rounded-xl
+        text-sm font-medium text-gray-700
+        shadow-sm
+        transition-all duration-200
+
+        hover:border-gray-400
+        focus:outline-none
+        focus:ring-2
+        focus:ring-[#FFC700]/30
+        focus:border-[#FFC700]
+
+        disabled:bg-gray-50
+        disabled:text-gray-500
+        disabled:border-gray-200
+        disabled:cursor-not-allowed
+      "
+                              value={u.role}
+                              onChange={(event) =>
+                                handleUpdateRole(u.id, event.target.value)
+                              }
+                              disabled={updatingRole === u.id || u.id === profile.id}
+                            >
+                              <option value="talent">Talent</option>
+                              <option value="asisten_lab">Asisten Laboratorium</option>
+                              <option value="admin">Admin</option>
+                            </select>
+
+                            {updatingRole === u.id && (
+                              <div
+                                className="
+          animate-spin
+          h-5 w-5
+          rounded-full
+          border-2 border-gray-200
+          border-t-[#FFC700]
+        "
+                                role="status"
+                                aria-label="Memperbarui role pengguna"
+                              />
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Pagination Controls for Management Akun */}
+            {!isLoadingUsers && totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4 mt-8">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage <= 1}
+                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="text-sm font-medium text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage >= totalPages}
+                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
 

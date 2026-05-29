@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, CheckCircle2 } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface AddCompetitionModalProps {
   isOpen: boolean;
@@ -44,11 +45,11 @@ export default function AddCompetitionModal({ isOpen, onClose }: AddCompetitionM
         router.refresh(); // Refresh page to show new data
       } else {
         const errorData = await res.json();
-        alert("Gagal menambahkan Info Lomba: " + errorData.error);
+        toast.error("Gagal menambahkan Info Lomba: " + errorData.error);
       }
     } catch (err) {
       console.error("Error submitting competition:", err);
-      alert("Terjadi kesalahan sistem.");
+      toast.error("Terjadi kesalahan sistem.");
     } finally {
       setLoading(false);
     }
