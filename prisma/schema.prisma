@@ -82,9 +82,9 @@ model User {
   isOnboarded Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
+  
   competitionsCreated Competition[] @relation("CreatedCompetitions")
-  teams               Team[]
+  teamsAsLeader       Team[]        @relation("UserLedTeams")
 }
 
 model Competition {
@@ -92,7 +92,7 @@ model Competition {
   title       String
   organizer   String
   deadline    DateTime
-  category    String // e.g., "Belmawa", "Non-Belmawa", "Internal"
+  category    String   // e.g., "Belmawa", "Non-Belmawa", "Internal"
   skills      String[] // Tags e.g., ["Data Science", "UI/UX Design"]
   imageUrl    String?
   description String?
@@ -102,20 +102,21 @@ model Competition {
   createdBy   User?    @relation("CreatedCompetitions", fields: [createdById], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  teams       Team[]
+
+  teams       Team[]    @relation("CompetitionTeams")
 }
 
 model Team {
-  id             String      @id @default(uuid())
-  name           String
-  memberCount    Int
-  competitionId  String
-  competition    Competition @relation(fields: [competitionId], references: [id])
-  leaderId       String?
-  leader         User?       @relation(fields: [leaderId], references: [id])
-  requiredSkills String[]
-  link           String
-  category       String
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  id                 String   @id @default(uuid())
+  name               String
+  memberCount        Int
+  competitionId      String
+  competition        Competition @relation("CompetitionTeams", fields: [competitionId], references: [id])
+  leaderId           String?  
+  leader             User?    @relation("UserLedTeams", fields: [leaderId], references: [id])
+  requiredSkills     String[] 
+  link               String
+  category           String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
