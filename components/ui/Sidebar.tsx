@@ -10,7 +10,7 @@ import { useState } from "react";
 const navItems = [
   { icon: LayoutGrid, href: "/home", label: "Dashboard" },
   { icon: Trophy, href: "/competitions", label: "Competition" },
-  { icon: Sparkles, href: "/achievements", label: "Matchmaking" },
+  { icon: Sparkles, href: "/matchmaking", label: "Matchmaking" },
   { icon: BookOpen, href: "/library", label: "Tutorial & FAQ" },
   { icon: Bell, href: "/notifications", label: "Notifikasi" },
 ];

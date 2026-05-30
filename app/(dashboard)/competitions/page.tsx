@@ -124,9 +124,12 @@ export default async function CompetitionsPage({
                 <AdminApproveButtons competitionId={comp.id} />
               ) : (
                 <div className="flex gap-3 mt-auto flex-col sm:flex-row pt-6">
-                  <button className="flex-1 bg-[#FFF9E6] text-[#0A1024] font-semibold py-2 rounded-lg text-sm hover:bg-[#ffe380] transition-colors">
+                  <Link
+                    href={`/matchmaking?competitionId=${comp.id}`}
+                    className="flex-1 bg-[#FFF9E6] text-[#0A1024] font-semibold py-2 rounded-lg text-sm hover:bg-[#ffe380] transition-colors text-center block"
+                  >
                     Buat Tim
-                  </button>
+                  </Link>
                   <Link href={`/competitions/${comp.id}`} className="flex-1 bg-[#FFC700] text-[#0A1024] font-semibold py-2 rounded-lg text-sm hover:bg-[#e6b400] transition-colors text-center block">
                     Lihat Detail
                   </Link>

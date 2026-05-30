@@ -108,10 +108,10 @@ export default async function CompetitionDetailPage({
           )}
 
           <div className="pt-6 border-t border-gray-100 flex gap-4">
-            <button className="flex-1 bg-[#FFC700] hover:bg-[#e6b400] text-[#0A1024] font-bold py-4 rounded-xl transition-colors text-lg flex items-center justify-center gap-2 shadow-sm">
+            <Link href={`/matchmaking?competitionId=${comp.id}`} className="flex-1 bg-[#FFC700] hover:bg-[#e6b400] text-[#0A1024] font-bold py-4 rounded-xl transition-colors text-lg flex items-center justify-center gap-2 shadow-sm">
               <Users className="w-5 h-5" />
               Buat Tim untuk Lomba Ini
-            </button>
+            </Link>
           </div>
         </div>
       </div>
