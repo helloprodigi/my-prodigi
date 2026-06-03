@@ -1,12 +1,11 @@
 import "dotenv/config";
-import { defineConfig } from "prisma/config";
-
-const DATABASE_URL = (globalThis as any).process?.env?.DATABASE_URL || "";
+import { defineConfig, env } from "prisma/config";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: { path: "prisma/migrations" },
   datasource: {
-    url: DATABASE_URL,
+    url: env("DIRECT_URL"),
+    directUrl: env("DIRECT_URL"),
   },
 });

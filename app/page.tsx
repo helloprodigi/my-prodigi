@@ -2,6 +2,7 @@ import Image from "next/image";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import Link from "next/link";
 
 export default async function Page() {
   const cookieStore = await cookies();
@@ -13,17 +14,26 @@ export default async function Page() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-6">
-      <div className="flex flex-col items-center gap-4">
+    <main className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
+      <div className="bg-white p-12 rounded-3xl shadow-lg flex flex-col items-center gap-8 max-w-md w-full text-center border border-gray-100">
         <Image
           src="/assets/myprodigi.svg"
           alt="MyProdigi"
           width={420}
           height={140}
           priority
-          className="h-auto w-[280px] sm:w-[360px] md:w-[420px]"
+          className="h-auto w-[240px]"
         />
-        <p className="text-base text-[#6E7980]">this is homePage</p>
+        <div>
+          <h1 className="text-3xl font-bold text-[#0A1024] mb-3">Welcome Back!</h1>
+          <p className="text-[#6E7980] leading-relaxed">Anda telah berhasil login. Silahkan lanjutkan ke halaman Dashboard untuk melihat aktivitas Anda.</p>
+        </div>
+        <Link 
+          href="/home" 
+          className="w-full bg-[#FFC700] text-[#0A1024] font-bold py-4 px-6 rounded-xl hover:bg-[#e6b400] transition-colors shadow-sm"
+        >
+          Go to Dashboard
+        </Link>
       </div>
     </main>
   )
