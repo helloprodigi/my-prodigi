@@ -15,7 +15,7 @@ export async function PUT(req: Request) {
     }
     
     const body = await req.json();
-    const { name, nim, nomorWa, angkatan, jurusan, skills, interests, cvUrl } = body;
+    const { name, nim, nomorWa, angkatan, jurusan, skills, interests, cvUrl, photoUrl } = body;
     
     // Construct User data to update
     const updateData: any = { updatedAt: new Date().toISOString() };
@@ -28,6 +28,16 @@ export async function PUT(req: Request) {
     if (skills !== undefined) updateData.skills = skills;
     if (interests !== undefined) updateData.interests = interests;
     if (cvUrl !== undefined) updateData.cvUrl = cvUrl;
+    
+    // Save photoUrl to Auth user metadata
+    if (photoUrl !== undefined) {
+      const { error: authError } = await supabase.auth.updateUser({
+        data: { photoUrl }
+      });
+      if (authError) {
+        console.error("Supabase Error updating auth metadata:", authError);
+      }
+    }
 
     const { error } = await supabase
       .from("User")

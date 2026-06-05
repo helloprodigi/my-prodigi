@@ -3,7 +3,7 @@
 import { useState } from "react";
 import AddCompetitionModal from "./AddCompetitionModal";
 
-export default function CompetitionsHeader() {
+export default function CompetitionsHeader({ role }: { role: string }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
@@ -20,6 +20,7 @@ export default function CompetitionsHeader() {
       <AddCompetitionModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
+        userRole={role}
       />
     </>
   );

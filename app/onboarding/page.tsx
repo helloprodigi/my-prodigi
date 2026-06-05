@@ -229,7 +229,8 @@ export default function OnboardingPage() {
               <div className="flex justify-end mt-10">
                 <button
                   onClick={handleNext}
-                  className="bg-[#FFC700] text-[#0A1024] font-semibold py-3 px-10 rounded-xl hover:bg-[#e6b400] transition-colors"
+                  disabled={!formData.jurusan || !formData.angkatan || !formData.nomorWa || !formData.cvUrl}
+                  className="bg-[#FFC700] text-[#0A1024] font-semibold py-3 px-10 rounded-xl hover:bg-[#e6b400] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                 </button>
@@ -264,7 +265,8 @@ export default function OnboardingPage() {
                 </button>
                 <button
                   onClick={handleNext}
-                  className="bg-[#FFC700] text-[#0A1024] font-semibold py-3 px-10 rounded-xl hover:bg-[#e6b400] transition-colors"
+                  disabled={formData.skills.length === 0}
+                  className="bg-[#FFC700] text-[#0A1024] font-semibold py-3 px-10 rounded-xl hover:bg-[#e6b400] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                 </button>
@@ -302,8 +304,8 @@ export default function OnboardingPage() {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={loading}
-                  className="bg-[#FFC700] text-[#0A1024] font-semibold py-3 px-10 rounded-xl hover:bg-[#e6b400] transition-colors disabled:opacity-50"
+                  disabled={loading || formData.interests.length === 0}
+                  className="bg-[#FFC700] text-[#0A1024] font-semibold py-3 px-10 rounded-xl hover:bg-[#e6b400] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? "Saving..." : "Continue"}
                 </button>

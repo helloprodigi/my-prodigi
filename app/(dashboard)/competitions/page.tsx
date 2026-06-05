@@ -91,7 +91,7 @@ export default async function CompetitionsPage({
           })}
         </div>
         <div className="pb-2">
-          <CompetitionsHeader />
+          <CompetitionsHeader role={role} />
         </div>
       </div>
 
@@ -121,7 +121,7 @@ export default async function CompetitionsPage({
               </div>
 
               {currentTab === "Preview Lomba" && role === "admin" ? (
-                <AdminApproveButtons competitionId={comp.id} />
+                <AdminApproveButtons competition={comp} />
               ) : (
                 <div className="flex gap-3 mt-auto flex-col sm:flex-row pt-6">
                   <Link
@@ -130,7 +130,12 @@ export default async function CompetitionsPage({
                   >
                     Buat Tim
                   </Link>
-                  <Link href={`/competitions/${comp.id}`} className="flex-1 bg-[#FFC700] text-[#0A1024] font-semibold py-2 rounded-lg text-sm hover:bg-[#e6b400] transition-colors text-center block">
+                  <Link 
+                    href={comp.link || "#"} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="flex-1 bg-[#FFC700] text-[#0A1024] font-semibold py-2 rounded-lg text-sm hover:bg-[#e6b400] transition-colors text-center block"
+                  >
                     Lihat Detail
                   </Link>
                 </div>

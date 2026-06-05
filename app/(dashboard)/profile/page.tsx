@@ -22,6 +22,11 @@ export default async function ProfilePage() {
     redirect("/onboarding");
   }
 
+  // Inject photoUrl from auth metadata
+  if (profile && user?.user_metadata?.photoUrl) {
+    profile.photoUrl = user.user_metadata.photoUrl;
+  }
+
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-8 md:p-12 w-full">
       <h1 className="text-4xl font-bold text-[#0A1024] mb-8">Profile</h1>
