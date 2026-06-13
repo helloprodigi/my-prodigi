@@ -18,9 +18,34 @@ const COMPETITION_INTERESTS = [
   "Innovation Competition", "Web Development", "Data Competition"
 ];
 
+const ROLES_INFO = [
+  { id: "talent", title: "Talent", desc: "Role umum yang dapat mengakses fitur-fitur yang disediakan oleh MyProdigi" },
+  { id: "asisten_lab", title: "Asisten Laboratorium", desc: "Role Khusus Aslab DTC yang dapat mengakses fitur-fitur aslab" },
+  { id: "admin", title: "Admin", desc: "Role Super yang dapat melakukan management platform" }
+];
+
 export default function ProfileClient({ profile }: { profile: any }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("personal");
+
+  const availableRoles = profile.role === 'admin' 
+    ? ['talent', 'asisten_lab', 'admin'] 
+    : profile.role === 'asisten_lab' 
+      ? ['talent', 'asisten_lab'] 
+      : ['talent'];
+
+  const [isChangingRole, setIsChangingRole] = useState(false);
+  const [activeRole, setActiveRole] = useState(profile.role);
+  const [selectedRole, setSelectedRole] = useState(profile.role);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('activeRole');
+    if (saved && availableRoles.includes(saved)) {
+      setActiveRole(saved);
+      setSelectedRole(saved);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // State for Personal Info Edit
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
@@ -43,6 +68,10 @@ export default function ProfileClient({ profile }: { profile: any }) {
   const [isUploadingCv, setIsUploadingCv] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // State for Photo Upload
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // State for Password Reset
   const [passwordForm, setPasswordForm] = useState({ new: "", confirm: "" });
@@ -73,10 +102,10 @@ export default function ProfileClient({ profile }: { profile: any }) {
   };
 
   useEffect(() => {
-    if (activeTab === "management" && profile.role === "admin") {
+    if (activeTab === "management" && activeRole === "admin") {
       fetchUsers(currentPage);
     }
-  }, [activeTab, profile.role, currentPage]);
+  }, [activeTab, activeRole, currentPage]);
 
   const handleUpdateRole = async (userId: string, newRole: string) => {
     setUpdatingRole(userId);
@@ -196,6 +225,51 @@ export default function ProfileClient({ profile }: { profile: any }) {
     setIsUploadingCv(false);
   };
 
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      if (!file.type.startsWith("image/")) {
+        toast.error("Mohon unggah file gambar (JPG, PNG).");
+        return;
+      }
+      setIsUploadingPhoto(true);
+      try {
+        // Upload the file first
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error("Failed to upload image");
+        }
+
+        const { url } = await uploadRes.json();
+
+        // Update the profile with the real URL
+        const res = await fetch("/api/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ photoUrl: url })
+        });
+        
+        if (res.ok) {
+          toast.success("Foto profil berhasil diubah.");
+          router.refresh();
+        } else {
+          toast.error("Gagal mengubah foto profil.");
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error("Gagal mengunggah foto profil.");
+      }
+      setIsUploadingPhoto(false);
+    }
+  };
+
   const handleSavePassword = async () => {
     if (passwordForm.new !== passwordForm.confirm) {
       setPasswordMessage("Password tidak cocok.");
@@ -244,7 +318,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
     { id: "password", label: "Reset Password", icon: Lock },
   ];
 
-  if (profile.role === "admin") {
+  if (activeRole === "admin") {
     tabs.push({ id: "management", label: "Management Akun", icon: Users });
   }
 
@@ -254,20 +328,40 @@ export default function ProfileClient({ profile }: { profile: any }) {
       <div className="w-full lg:w-80 flex-shrink-0 bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex flex-col items-center">
         <div className="relative mb-4 mt-4">
           <div className="w-32 h-32 rounded-full border-4 border-[#FFC700] overflow-hidden bg-gray-200">
-            {/* Dummy Avatar */}
-            <img
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
-              alt="Avatar"
-              className="object-cover w-full h-full"
-            />
+            {profile.photoUrl ? (
+              <img
+                src={profile.photoUrl}
+                alt="Avatar"
+                className="object-cover w-full h-full"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
+                <User className="w-16 h-16" />
+              </div>
+            )}
           </div>
-          <button className="absolute bottom-1 right-1 bg-[#FFC700] p-2 rounded-full text-black hover:scale-105 transition-transform">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+          <button 
+            onClick={() => photoInputRef.current?.click()}
+            disabled={isUploadingPhoto}
+            className="absolute bottom-1 right-1 bg-[#FFC700] p-2 rounded-full text-black hover:scale-105 transition-transform disabled:opacity-50"
+          >
+            {isUploadingPhoto ? (
+              <div className="w-4 h-4 rounded-full border-2 border-black border-t-transparent animate-spin" />
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+            )}
           </button>
+          <input 
+            type="file" 
+            className="hidden" 
+            accept="image/*" 
+            ref={photoInputRef}
+            onChange={handlePhotoChange} 
+          />
         </div>
 
         <h2 className="text-xl font-bold text-[#0A1024] mt-2 text-center">{profile.name || "User Prodigi"}</h2>
-        <p className="text-sm text-gray-500 mb-10 text-center">Talent</p>
+        <p className="text-sm text-gray-500 mb-10 text-center capitalize">{activeRole.replace('_', ' ')}</p>
 
         <div className="w-full space-y-2 mb-10">
           {tabs.map(tab => (
@@ -506,40 +600,75 @@ export default function ProfileClient({ profile }: { profile: any }) {
           <div className="animate-in fade-in duration-300">
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-bold text-[#0A1024]">Role</h2>
-              <button className="bg-[#FFC700] text-[#0A1024] px-6 py-2 rounded-lg font-semibold hover:bg-[#e6b400] transition-colors text-sm">
-                Request Ganti Role
-              </button>
+              {availableRoles.length === 1 ? (
+                <button disabled className="bg-gray-200 text-gray-500 px-6 py-2 rounded-lg font-semibold cursor-not-allowed text-sm">
+                  Ganti Role
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  {isChangingRole && (
+                    <button 
+                      onClick={() => {
+                        setIsChangingRole(false);
+                        setSelectedRole(activeRole);
+                      }} 
+                      className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-sm"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => {
+                      if (!isChangingRole) {
+                        setIsChangingRole(true);
+                      } else {
+                        localStorage.setItem('activeRole', selectedRole);
+                        setActiveRole(selectedRole);
+                        setIsChangingRole(false);
+                        router.push('/');
+                        router.refresh();
+                      }
+                    }}
+                    className="bg-[#FFC700] text-[#0A1024] px-6 py-2 rounded-lg font-semibold hover:bg-[#e6b400] transition-colors text-sm"
+                  >
+                    {isChangingRole ? "Masuk" : "Ganti Role"}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              {/* Active Role */}
-              <div className="p-6 border border-[#FFC700] bg-[#FFF9E6] rounded-2xl relative">
-                <CheckCircle2 className="w-6 h-6 text-[#FFC700] absolute top-6 right-6" />
-                <h3 className="text-lg font-bold text-[#0A1024] mb-2">Talent</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Role umum yang dapat mengakses fitur-fitur yang disediakan oleh MyProdigi
-                </p>
-              </div>
-
-              {/* Inactive Roles */}
-              <div className="p-6 border border-gray-200 bg-gray-50 rounded-2xl opacity-60">
-                <h3 className="text-lg font-bold text-[#0A1024] mb-2">Asisten Laboratorium</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Role Khusus Aslab DTC yang dapat mengakses fitur-fitur aslab
-                </p>
-              </div>
-
-              <div className="p-6 border border-gray-200 bg-gray-50 rounded-2xl opacity-60">
-                <h3 className="text-lg font-bold text-[#0A1024] mb-2">Admin</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Role Super yang dapat melakukan management platform
-                </p>
-              </div>
+              {ROLES_INFO.filter(r => availableRoles.includes(r.id)).map(roleInfo => {
+                const isActive = isChangingRole ? selectedRole === roleInfo.id : activeRole === roleInfo.id;
+                return (
+                  <div 
+                    key={roleInfo.id}
+                    onClick={() => {
+                      if (isChangingRole) setSelectedRole(roleInfo.id);
+                    }}
+                    className={`p-6 border rounded-2xl relative transition-all ${
+                      isActive 
+                        ? "border-[#FFC700] bg-[#FFF9E6]" 
+                        : "border-gray-200 bg-gray-50 opacity-60"
+                    } ${isChangingRole ? "cursor-pointer hover:border-[#FFC700]" : ""}`}
+                  >
+                    {isActive && <CheckCircle2 className="w-6 h-6 text-[#FFC700] absolute top-6 right-6" />}
+                    <h3 className="text-lg font-bold text-[#0A1024] mb-2">{roleInfo.title}</h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {roleInfo.desc}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Info className="w-4 h-4" />
-              <span>saat ini kamu hanya memiliki 1 role</span>
+              <span>
+                {availableRoles.length === 1 
+                  ? "saat ini kamu hanya memiliki 1 role" 
+                  : `saat ini kamu memiliki ${availableRoles.length} role`}
+              </span>
             </div>
           </div>
         )}
@@ -646,7 +775,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
         )}
 
         {/* TAB: Management Akun (Admin Only) */}
-        {activeTab === "management" && profile.role === "admin" && (
+        {activeTab === "management" && activeRole === "admin" && (
           <div className="animate-in fade-in duration-300">
             <h2 className="text-2xl font-bold text-[#0A1024] mb-8">Management Akun</h2>
 

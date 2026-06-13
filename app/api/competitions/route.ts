@@ -38,18 +38,29 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { title, organizer, category, skills, link, deadline } = body;
 
-    if (!title || !organizer || !category || !deadline) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (role === "admin") {
+      if (!title || !organizer || !category || !deadline) {
+        return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      }
+    } else {
+      if (!link) {
+        return NextResponse.json({ error: "Link Lomba wajib diisi" }, { status: 400 });
+      }
     }
+
+    const compTitle = title || "Menunggu Review Admin";
+    const compOrganizer = organizer || "TBD";
+    const compCategory = category || "Belmawa";
+    const compDeadline = deadline ? new Date(deadline).toISOString() : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
     const competitionData = {
       id: crypto.randomUUID(),
-      title,
-      organizer,
-      category,
+      title: compTitle,
+      organizer: compOrganizer,
+      category: compCategory,
       skills: skills || [],
       link: link || null,
-      deadline: new Date(deadline).toISOString(),
+      deadline: compDeadline,
       status,
       createdById: user.id,
       updatedAt: new Date().toISOString()

@@ -5,18 +5,24 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Trash2, Pencil } from "lucide-react";
 import toast from "react-hot-toast";
+import AddCompetitionModal from "./AddCompetitionModal";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 
-export default function AdminApproveButtons({ competitionId }: { competitionId: string }) {
+export default function AdminApproveButtons({ competition }: { competition: any }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     action: "approve" | "reject" | null;
   }>({ isOpen: false, action: null });
 
   const triggerAction = (action: "approve" | "reject") => {
-    setConfirmModal({ isOpen: true, action });
+    if (action === "approve") {
+      setIsAddModalOpen(true);
+    } else {
+      setConfirmModal({ isOpen: true, action });
+    }
   };
 
   const handleAction = async () => {
@@ -26,7 +32,7 @@ export default function AdminApproveButtons({ competitionId }: { competitionId: 
     
     setLoading(true);
     try {
-      const res = await fetch(`/api/competitions/${competitionId}/approve`, {
+      const res = await fetch(`/api/competitions/${competition.id}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action })
@@ -68,7 +74,9 @@ export default function AdminApproveButtons({ competitionId }: { competitionId: 
 
       <div className="flex gap-3 w-full mt-auto pt-6">
         <Link 
-          href={`/competitions/${competitionId}`} 
+          href={competition.link || "#"} 
+          target="_blank"
+          rel="noopener noreferrer"
           className="flex-1 bg-[#FFF9E6] text-[#0A1024] font-semibold py-2 rounded-lg text-sm hover:bg-[#ffe380] transition-colors text-center block"
         >
           Lihat Detail
@@ -91,6 +99,13 @@ export default function AdminApproveButtons({ competitionId }: { competitionId: 
         isDestructive={confirmModal.action === "reject"}
         onConfirm={handleAction}
         onCancel={() => setConfirmModal({ isOpen: false, action: null })}
+      />
+      
+      <AddCompetitionModal 
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)} 
+        userRole="admin"
+        competitionToApprove={competition}
       />
     </>
   );

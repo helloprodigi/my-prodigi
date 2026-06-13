@@ -59,3 +59,7 @@ next-env.d.ts
 # Prisma Generated Files
 /generated
 /generated/prisma/*
+
+# Uploaded Profile Photos & Assets
+/public/uploaded-photo-*
+/public/uploads/
