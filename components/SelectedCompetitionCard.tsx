@@ -8,7 +8,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Web Development": "bg-[#FEF9C3] text-[#0A1024]",
 };
 
-function getCategoryClass(category: string) {
+export function getCategoryClass(category: string) {
   return CATEGORY_COLORS[category] || "bg-gray-200 text-[#0A1024]";
 }
 

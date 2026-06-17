@@ -2,6 +2,7 @@
 import React, { useState, useTransition, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SelectedCompetitionCard from "@/components/SelectedCompetitionCard";
+import { ChevronDown } from "lucide-react";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import Link from "next/link";
@@ -36,7 +37,12 @@ export default function MatchmakingPage() {
             if (data && data.competition) {
               setSelectedCompetition(data.competition);
               setCompetitionLink(data.competition.link || "");
-              setCompetitionCategory(data.competition.category || "");
+              const hasOptions = (data.competition.skills?.length > 0) || (data.competition.categories?.length > 0);
+              if (!hasOptions) {
+                setCompetitionCategory(data.competition.category || "");
+              } else {
+                setCompetitionCategory("");
+              }
             }
           });
       }
@@ -168,15 +174,36 @@ export default function MatchmakingPage() {
 
               <div className="mb-4">
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Kategori Lomba</label>
-                <input
-                  type="text"
-                  className="w-full h-10 rounded-[6px] bg-[#F4F5F6] px-3 text-black focus:outline-none text-xs border-none ring-0"
-                  placeholder="exp: UIUX DESIGN"
-                  value={competitionCategory}
-                  onChange={e => setCompetitionCategory(e.target.value)}
+                {selectedCompetition && (selectedCompetition.skills?.length > 0 || selectedCompetition.categories?.length > 0) ? (
+                  <div className="relative">
+                    <select
+                      className="w-full h-10 rounded-[6px] bg-[#F4F5F6] px-3 pr-10 text-black focus:outline-none text-xs border-none ring-0 appearance-none cursor-pointer"
+                      value={competitionCategory}
+                      onChange={(e) => setCompetitionCategory(e.target.value)}
+                      required
+                    >
+                      <option value="" disabled hidden>Pilih kategori/bidang lomba</option>
+                      {(selectedCompetition.skills || selectedCompetition.categories).map((cat: string) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                      <ChevronDown size={16} className="text-gray-500" />
+                    </div>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    className="w-full h-10 rounded-[6px] bg-[#F4F5F6] px-3 text-black focus:outline-none text-xs border-none ring-0"
+                    placeholder="exp: UIUX DESIGN"
+                    value={competitionCategory}
+                    onChange={e => setCompetitionCategory(e.target.value)}
                     readOnly={Boolean(selectedCompetition?.category)}
-                  required
-                />
+                    required
+                  />
+                )}
               </div>
             </div>
             <div className="text-[12px] leading-relaxed pt-2 mt-4 italic" style={{ color: "#3E484F" }}>
