@@ -278,15 +278,16 @@ export async function getTeamDetailAction(teamId: string): Promise<{
 
     const { data: membership } = await adminDb
       .from("TeamMember")
-      .select("id, status")
+      .select("id, status, inviteToken")
       .eq("teamId", teamId)
       .eq("userId", user.id)
       .maybeSingle();
 
     const isMember = membership?.status === "APPROVED";
-    const hasJoinRequest = membership?.status === "WAITING";
+    const hasJoinRequest = membership?.status === "WAITING" && membership?.inviteToken === "REQUEST_JOIN";
+    const isInvited = membership?.status === "WAITING" && membership?.inviteToken !== "REQUEST_JOIN";
 
-    if (!isLeader && !isMember && !hasJoinRequest) {
+    if (!isLeader && !isMember && !hasJoinRequest && !isInvited) {
       const { data: viewerProfile } = await adminDb
         .from("User")
         .select("skills")
@@ -387,8 +388,11 @@ export async function getTeamDetailAction(teamId: string): Promise<{
         approvedCount,
         isLeader,
         isMember,
-        canJoin: !isLeader && !isMember && !hasJoinRequest && teamNeedsMembers,
+        canJoin: !isLeader && !isMember && !hasJoinRequest && !isInvited && teamNeedsMembers,
         hasJoinRequest,
+        isInvited,
+        inviteToken: membership?.inviteToken ?? null,
+        membershipId: membership?.id ?? null,
         members: visibleMembers.map((row) => {
           const memberUser = unwrapRelation(
             row.user as
