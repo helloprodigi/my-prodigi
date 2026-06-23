@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:migrate-team": "node scripts/apply-team-migration.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -28,6 +29,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "pg": "^8.21.0",
     "tailwindcss": "^4",
     "typescript": "5.9.3"
   }

@@ -60,7 +60,7 @@ export default function MatchmakingPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const count = Number(memberCount);
-    if (!teamName.trim() || !competitionId.trim() || !competitionLink.trim() || !competitionCategory.trim() || requiredSkills.length < 1) {
+    if (!teamName.trim() || !competitionLink.trim() || !competitionCategory.trim() || requiredSkills.length < 1) {
       toast.error("Semua field wajib diisi dan minimal 1 skill dipilih.");
       return;
     }
@@ -83,7 +83,7 @@ export default function MatchmakingPage() {
         setTeamName("");
         setMemberCount("");
         setRequiredSkills([]);
-        router.refresh();
+        router.push("/dashboard");
       } else {
         toast.error(result.error || "Gagal membuat tim.");
       }
@@ -126,14 +126,19 @@ export default function MatchmakingPage() {
               <div className="flex gap-3 mb-3 items-end">
                 <div className="w-2/3 flex flex-col">
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Nama Tim</label>
-                  <input
-                    type="text"
-                    className="w-full h-10 rounded-[6px] bg-[#F4F5F6] px-3 text-black focus:outline-none text-xs border-none ring-0"
-                    placeholder="masukkan nama tim"
-                    value={teamName}
-                    onChange={e => setTeamName(e.target.value)}
-                    required
-                  />
+                  <div className="flex h-10 rounded-[6px] bg-[#F4F5F6] overflow-hidden">
+                    <span className="flex items-center pl-3 text-xs font-semibold text-[#0A1024] whitespace-nowrap">
+                      Tim :
+                    </span>
+                    <input
+                      type="text"
+                      className="flex-1 h-full bg-transparent px-2 text-black focus:outline-none text-xs border-none ring-0"
+                      placeholder="masukkan nama tim"
+                      value={teamName}
+                      onChange={e => setTeamName(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
                 <div className="w-1/3 flex flex-col">
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Jumlah Anggota</label>

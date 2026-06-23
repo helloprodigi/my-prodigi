@@ -132,7 +132,7 @@ export default function LoginPage() {
               <div className="w-[340px] mb-5">
                 <div className="flex items-center justify-between mb-1.5 pl-0.5">
                   <label className="text-[11px] text-[#6E7980] font-semibold">Password</label>
-                  <a className="text-[#FFC917] text-xs font-semibold hover:underline" href="#">Forgot Password?</a>
+                  <a className="text-[#FFC917] text-xs font-semibold hover:underline" href="/request-reset">Forgot Password?</a>
                 </div>
                 <div className="relative w-full">
                   <span className="absolute inset-y-0 left-3 flex items-center text-[#6E7980] z-10">

@@ -27,7 +27,8 @@ export function createVerificationRecord(email: string, name: string, password: 
     verificationStore.delete(previousToken);
   }
 
-  const token = randomUUID();
+  // Generate 6-digit OTP
+  const token = Math.floor(100000 + Math.random() * 900000).toString();
   const record: VerificationRecord = {
     email,
     name,
