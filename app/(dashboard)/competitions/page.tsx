@@ -1,10 +1,12 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/lib/supabase-admin";
 import { Search } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import CompetitionsHeader from "@/components/CompetitionsHeader";
 import AdminApproveButtons from "@/components/AdminApproveButtons";
+import PreviewLombaCard from "@/components/PreviewLombaCard";
 
 const getTagColors = (skill: string) => {
   if (skill.includes("Data Science")) return "bg-blue-50 text-blue-600";
@@ -29,6 +31,11 @@ export default async function CompetitionsPage({
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
+  // Lazy cleanup: hapus otomatis kompetisi yang melewati batas waktu
+  const adminDb = createAdminClient();
+  const today = new Date().toISOString();
+  await adminDb.from("Competition").delete().lt("deadline", today);
+
   const { data: { user } } = await supabase.auth.getUser();
   let role = "talent";
 
@@ -43,7 +50,7 @@ export default async function CompetitionsPage({
     }
   }
 
-  let query = supabase.from("Competition").select("*", { count: "exact" });
+  let query = supabase.from("Competition").select("*, createdBy:User(name)", { count: "exact" });
   
   if (currentTab === "Preview Lomba") {
     // Only show pending ones for Preview Lomba tab
@@ -100,36 +107,44 @@ export default async function CompetitionsPage({
         <div className="text-red-500">Error loading competitions: {error.message}</div>
       ) : competitions && competitions.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {competitions.map((comp: any) => (
-            <div key={comp.id} className="relative bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow">
-              <p className="text-[#FFC700] text-sm font-semibold mb-3">
-                Deadline • {new Date(comp.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-              </p>
-              <h3 className="text-xl font-bold text-[#0A1024] leading-tight mb-2">
-                {comp.title}
-              </h3>
-              <p className="text-gray-500 text-sm mb-6 flex-1">
-                Diselenggarakan oleh : {comp.organizer}
-              </p>
-              
-              <div className="flex flex-wrap gap-2 mb-6">
-                {comp.skills && comp.skills.map((skill: string) => (
-                  <span key={skill} className={`px-3 py-1 text-xs font-medium rounded-full ${getTagColors(skill)}`}>
-                    {skill}
-                  </span>
-                ))}
-              </div>
+          {competitions.map((comp: any) => {
+            if (currentTab === "Preview Lomba" && role === "admin") {
+              return (
+                <div key={comp.id}>
+                  <PreviewLombaCard competition={comp} />
+                </div>
+              );
+            }
 
-              {currentTab === "Preview Lomba" && role === "admin" ? (
-                <AdminApproveButtons competition={comp} />
-              ) : (
+            return (
+              <div key={comp.id} className="relative bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow">
+                <p className="text-[#FFC700] text-sm font-semibold mb-3">
+                  Deadline • {new Date(comp.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                </p>
+                <h3 className="text-xl font-bold text-[#0A1024] leading-tight mb-2">
+                  {comp.title}
+                </h3>
+                <p className="text-gray-500 text-sm mb-6 flex-1">
+                  Diselenggarakan oleh : {comp.organizer}
+                </p>
+                
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {comp.skills && comp.skills.map((skill: string) => (
+                    <span key={skill} className={`px-3 py-1 text-xs font-medium rounded-full ${getTagColors(skill)}`}>
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+
                 <div className="flex gap-3 mt-auto flex-col sm:flex-row pt-6">
-                  <Link
-                    href={`/matchmaking?competitionId=${comp.id}`}
-                    className="flex-1 bg-[#FFF9E6] text-[#0A1024] font-semibold py-2 rounded-lg text-sm hover:bg-[#ffe380] transition-colors text-center block"
-                  >
-                    Buat Tim
-                  </Link>
+                  {role !== "admin" && (
+                    <Link
+                      href={`/matchmaking?competitionId=${comp.id}`}
+                      className="flex-1 bg-[#FFF9E6] text-[#0A1024] font-semibold py-2 rounded-lg text-sm hover:bg-[#ffe380] transition-colors text-center block"
+                    >
+                      Buat Tim
+                    </Link>
+                  )}
                   <Link 
                     href={comp.link || "#"} 
                     target="_blank" 
@@ -139,9 +154,9 @@ export default async function CompetitionsPage({
                     Lihat Detail
                   </Link>
                 </div>
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-20 text-center">

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { X, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
+import CreatableSelect from 'react-select/creatable';
 
 interface AddCompetitionModalProps {
   isOpen: boolean;
@@ -177,6 +178,7 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
                   <input 
                     type="date" 
                     required
+                    min={new Date().toISOString().split("T")[0]}
                     className="w-full bg-[#F4F4F5] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC700] transition-all text-[#0A1024]"
                     value={formData.deadline}
                     onChange={e => setFormData({...formData, deadline: e.target.value})}
@@ -201,39 +203,53 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
               <>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Kategori yang tersedia</label>
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {SKILL_CATEGORIES.map(skill => {
-                      const selectedSkills = formData.skillsString.split(",").map(s => s.trim()).filter(Boolean);
-                      const isSelected = selectedSkills.includes(skill.name);
-                      
-                      return (
-                        <button
-                          type="button"
-                          key={skill.name}
-                          onClick={() => {
-                            if (isSelected) {
-                              setFormData({
-                                ...formData, 
-                                skillsString: selectedSkills.filter(s => s !== skill.name).join(", ")
-                              });
-                            } else {
-                              setFormData({
-                                ...formData, 
-                                skillsString: [...selectedSkills, skill.name].join(", ")
-                              });
-                            }
-                          }}
-                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                            isSelected 
-                              ? skill.activeClass
-                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                          }`}
-                        >
-                          {skill.name}
-                        </button>
-                      );
+                  <CreatableSelect
+                    isMulti
+                    options={SKILL_CATEGORIES.map(skill => ({ value: skill.name, label: skill.name }))}
+                    value={formData.skillsString.split(",").map(s => s.trim()).filter(Boolean).map(s => ({ value: s, label: s }))}
+                    onChange={(newValue) => {
+                      setFormData({
+                        ...formData,
+                        skillsString: newValue.map(v => v.value).join(", ")
+                      });
+                    }}
+                    placeholder="Pilih atau ketik kategori baru..."
+                    className="text-sm react-select-container"
+                    classNamePrefix="react-select"
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        backgroundColor: '#F4F4F5',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '2px',
+                        boxShadow: 'none',
+                      }),
+                      option: (base, state) => ({
+                        ...base,
+                        color: '#0A1024',
+                        backgroundColor: state.isFocused ? '#E5E7EB' : 'white',
+                      }),
+                      multiValue: (base) => ({
+                        ...base,
+                        backgroundColor: '#FFC700',
+                        borderRadius: '8px',
+                      }),
+                      multiValueLabel: (base) => ({
+                        ...base,
+                        color: '#0A1024',
+                        fontWeight: '600',
+                      })
+                    }}
+                    theme={(theme) => ({
+                      ...theme,
+                      borderRadius: 12,
+                      colors: {
+                        ...theme.colors,
+                        primary: '#FFC700',
+                      },
                     })}
-                  </div>
+                  />
                 </div>
 
                 <div className="space-y-2">
