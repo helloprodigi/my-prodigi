@@ -53,17 +53,26 @@ export async function middleware(request: NextRequest) {
   // Protected routes
   // Assuming these routes are meant for logged-in users only
   const isProtectedRoute = pathname.startsWith('/home') || 
+                           pathname.startsWith('/dashboard') || 
+                           pathname.startsWith('/matchmaking') || 
                            pathname.startsWith('/competitions') || 
                            pathname.startsWith('/achievements') || 
                            pathname.startsWith('/library') || 
                            pathname.startsWith('/notifications') || 
                            pathname.startsWith('/onboarding') ||
-                           pathname.startsWith('/profile');
+                           pathname.startsWith('/profile') ||
+                           pathname.startsWith('/team-invite');
 
-  // Redirect root to /home
+  // Redirect root to /dashboard
   if (pathname === '/') {
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/home'
+    redirectUrl.pathname = '/dashboard'
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  if (pathname === '/home') {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/dashboard'
     return NextResponse.redirect(redirectUrl)
   }
 
@@ -77,7 +86,7 @@ export async function middleware(request: NextRequest) {
   if (user) {
     if (isAuthRoute) {
       const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = isOnboarded ? '/home' : '/onboarding'
+      redirectUrl.pathname = isOnboarded ? '/dashboard' : '/onboarding'
       return NextResponse.redirect(redirectUrl)
     }
 
@@ -90,7 +99,7 @@ export async function middleware(request: NextRequest) {
 
       if (isOnboarded && pathname.startsWith('/onboarding')) {
         const redirectUrl = request.nextUrl.clone()
-        redirectUrl.pathname = '/home'
+        redirectUrl.pathname = '/dashboard'
         return NextResponse.redirect(redirectUrl)
       }
     }

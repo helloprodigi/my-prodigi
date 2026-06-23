@@ -7,6 +7,22 @@ export async function GET(request: Request) {
   const token = url.searchParams.get("token") ?? "";
   const email = url.searchParams.get("email") ?? "";
 
+  return handleVerification(email, token);
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const email = body.email ?? "";
+    const token = body.token ?? "";
+
+    return handleVerification(email, token);
+  } catch (err: any) {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
+}
+
+async function handleVerification(email: string, token: string) {
   if (!token || !email) {
     return NextResponse.json({ error: "Token atau email tidak lengkap." }, { status: 400 });
   }
@@ -14,7 +30,7 @@ export async function GET(request: Request) {
   const record = getVerificationRecord(token);
 
   if (!record || record.email.toLowerCase() !== email.toLowerCase()) {
-    return NextResponse.json({ error: "Link verifikasi tidak valid atau sudah kedaluwarsa." }, { status: 400 });
+    return NextResponse.json({ error: "Kode verifikasi tidak valid atau sudah kedaluwarsa." }, { status: 400 });
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

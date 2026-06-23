@@ -5,13 +5,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { LayoutGrid, Trophy, Sparkles, BookOpen, Bell, User, LogOut, Menu, X, ChevronRight, ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const navItems = [
-  { icon: LayoutGrid, href: "/home", label: "Dashboard" },
+  { icon: LayoutGrid, href: "/dashboard", label: "Dashboard" },
   { icon: Trophy, href: "/competitions", label: "Competition" },
   { icon: Sparkles, href: "/matchmaking", label: "Matchmaking" },
-  { icon: BookOpen, href: "/library", label: "Tutorial & FAQ" },
+  { icon: BookOpen, href: "/faq", label: "Tutorial & FAQ" },
   { icon: Bell, href: "/notifications", label: "Notifikasi" },
 ];
 
@@ -26,6 +26,22 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
   const pathname = usePathname();
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [userData, setUserData] = useState<{name: string, role: string, photoUrl?: string} | null>(null);
+
+  useEffect(() => {
+    async function loadUser() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserData({
+          name: user.user_metadata?.name || user.email?.split('@')[0] || "User",
+          role: user.user_metadata?.role || "Talent",
+          photoUrl: user.user_metadata?.photoUrl
+        });
+      }
+    }
+    loadUser();
+  }, []);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -123,19 +139,22 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
           
           <button 
             onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className={`flex items-center gap-3 w-full p-2 rounded-xl hover:bg-white/5 transition-colors ${!(isDesktopOpen || isMobileOpen) ? "justify-center" : "justify-start"}`}
+            className={`flex items-center w-full p-2 rounded-xl hover:bg-white/5 transition-colors ${!(isDesktopOpen || isMobileOpen) ? "justify-center" : "justify-start gap-3"}`}
           >
             <div className="w-10 h-10 shrink-0 rounded-full bg-[#1E2538] border-[1.5px] border-[#FFC700] flex items-center justify-center overflow-hidden">
-              {/* Replace with actual user image if available */}
-              <User className="w-5 h-5 text-gray-300" />
+              {userData?.photoUrl ? (
+                <img src={userData.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-5 h-5 text-gray-300" />
+              )}
             </div>
             
             <div className={`flex-1 text-left transition-all duration-300 whitespace-nowrap overflow-hidden flex justify-between items-center ${(isDesktopOpen || isMobileOpen) ? "opacity-100 w-auto" : "opacity-0 w-0"}`}>
               <div>
-                <p className="text-sm font-semibold text-white">Ahmad Tahalu</p>
-                <p className="text-xs text-gray-400">Administrator</p>
+                <p className="text-sm font-semibold text-white truncate max-w-[120px]">{userData?.name || "User Prodigi"}</p>
+                <p className="text-xs text-gray-400 capitalize">{userData?.role || "Talent"}</p>
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
+              <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
             </div>
           </button>
 

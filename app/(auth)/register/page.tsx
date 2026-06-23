@@ -41,6 +41,7 @@ export default function RegisterPage() {
         throw new Error(result.error || "Gagal mengirim email verifikasi.");
       }
 
+      localStorage.setItem("email_for_otp", email);
       window.location.href = `/verify-otp?email=${encodeURIComponent(email)}`;
     } catch (err: any) {
       setError(err.message || String(err));

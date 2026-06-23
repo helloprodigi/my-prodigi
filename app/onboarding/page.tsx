@@ -38,6 +38,8 @@ export default function OnboardingPage() {
     interests: [] as string[]
   });
 
+  const [isUploading, setIsUploading] = useState(false);
+
   const handleNext = () => setStep(s => Math.min(s + 1, 3));
   const handlePrev = () => setStep(s => Math.max(s - 1, 1));
 
@@ -51,27 +53,45 @@ export default function OnboardingPage() {
     setIsDragging(false);
   };
 
+  const uploadCVFile = async (file: File) => {
+    if (file.type !== "application/pdf") {
+      toast.error("Mohon unggah file dalam format PDF.");
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const data = new FormData();
+      data.append("file", file);
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: data,
+      });
+      if (res.ok) {
+        const result = await res.json();
+        setFormData(prev => ({ ...prev, cvUrl: result.url }));
+        toast.success("CV berhasil diunggah.");
+      } else {
+        toast.error("Gagal mengunggah file CV.");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      toast.error("Gagal mengunggah file CV.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      if (file.type === "application/pdf") {
-        setFormData({ ...formData, cvUrl: file.name });
-      } else {
-        toast.error("Mohon unggah file dalam format PDF.");
-      }
+      uploadCVFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      if (file.type === "application/pdf") {
-        setFormData({ ...formData, cvUrl: file.name });
-      } else {
-        toast.error("Mohon unggah file dalam format PDF.");
-      }
+      uploadCVFile(e.target.files[0]);
     }
   };
 
@@ -212,7 +232,11 @@ export default function OnboardingPage() {
                     <FileText className="w-8 h-8 text-[#FFC700]" />
                   </div>
                   <p className="font-semibold text-gray-900">
-                    {formData.cvUrl ? formData.cvUrl : "Drag & drop file here or click to browse"}
+                    {isUploading 
+                      ? "Mengunggah..." 
+                      : formData.cvUrl 
+                        ? (formData.cvUrl.includes("/") ? formData.cvUrl.split("/").pop() : formData.cvUrl)
+                        : "Drag & drop file here or click to browse"}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">Supported only PDF (Max 5MB)</p>
                   <input 
@@ -221,15 +245,16 @@ export default function OnboardingPage() {
                     accept=".pdf" 
                     ref={fileInputRef}
                     onChange={handleFileChange} 
+                    disabled={isUploading}
                   />
                 </div>
-                {formData.cvUrl && <p className="text-sm text-green-600 mt-2">✓ CV berhasil ditambahkan</p>}
+                {formData.cvUrl && !isUploading && <p className="text-sm text-green-600 mt-2">✓ CV berhasil ditambahkan</p>}
               </div>
 
               <div className="flex justify-end mt-10">
                 <button
                   onClick={handleNext}
-                  disabled={!formData.jurusan || !formData.angkatan || !formData.nomorWa || !formData.cvUrl}
+                  disabled={!formData.jurusan || !formData.angkatan || !formData.nomorWa || !formData.cvUrl || isUploading}
                   className="bg-[#FFC700] text-[#0A1024] font-semibold py-3 px-10 rounded-xl hover:bg-[#e6b400] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
