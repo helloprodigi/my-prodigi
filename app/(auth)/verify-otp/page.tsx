@@ -1,88 +1,75 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import React, { useState } from "react";
 
-function VerifyOtpContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const email = useMemo(() => searchParams.get("email") ?? "", [searchParams]);
-  const token = useMemo(() => searchParams.get("token") ?? "", [searchParams]);
-  const [status, setStatus] = useState<"idle" | "checking" | "verified" | "error">(
-    token ? "checking" : "idle",
-  );
-  const [message, setMessage] = useState("Cek inbox kamu untuk link verifikasi.");
-  const [resending, setResending] = useState(false);
+export default function VerifyOtpPage() {
+  const [token, setToken] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!token || !email) {
-      return;
-    }
-
-    const verify = async () => {
-      setStatus("checking");
-      const response = await fetch(
-        `/api/auth/verify-email?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`,
-      );
-      const result = await response.json();
-
-      if (!response.ok) {
-        setStatus("error");
-        setMessage(result.error || "Link verifikasi tidak valid.");
-        return;
-      }
-
-      setStatus("verified");
-      setMessage("Verifikasi berhasil! Anda akan diarahkan ke login page.");
-    };
-
-    void verify();
-  }, [email, token]);
-
-  useEffect(() => {
-    if (status !== "verified") {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      router.replace("/login?verified=1");
-    }, 2200);
-
-    return () => window.clearTimeout(timeout);
-  }, [status, router]);
-
-  const resend = async () => {
-    if (!email) return;
-
-    setResending(true);
-    setMessage("Mengirim ulang email verifikasi...");
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
 
     try {
-      const response = await fetch("/api/auth/send-verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+      const email = typeof window !== "undefined" ? localStorage.getItem("email_for_otp") || "" : "";
+
+      const response = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, token })
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Gagal mengirim ulang email.");
+        throw new Error(result.error || "Kode OTP salah atau telah kedaluwarsa.");
       }
 
-      setStatus("idle");
-      setMessage("Email verifikasi sudah dikirim ulang.");
-    } catch (error: any) {
-      setStatus("error");
-      setMessage(error.message || "Gagal mengirim ulang email.");
+      setSuccess("Verifikasi berhasil! Mengalihkan ke halaman utama...");
+      window.location.href = "/";
+    } catch (err: any) {
+      setError(err.message || "Kode OTP salah atau telah kedaluwarsa.");
     } finally {
-      setResending(false);
+      setLoading(false);
+    }
+  };
+
+  const resendOtp = async () => {
+    setResendLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const email = typeof window !== "undefined" ? localStorage.getItem("email_for_otp") || "" : "";
+      if (!email) throw new Error("Email tidak ditemukan. Silakan registrasi ulang.");
+
+      const response = await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Gagal mengirim ulang OTP.");
+      }
+      
+      setSuccess("Kode verifikasi baru berhasil dikirim ke email Anda.");
+    } catch (err: any) {
+      setError(err.message || String(err));
+    } finally {
+      setResendLoading(false);
     }
   };
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-cover bg-center font-sans" style={{ backgroundImage: "url('/assets/register/background.svg')" }}>
+    <div className="h-screen w-full overflow-hidden bg-cover bg-center font-sans" style={{ backgroundImage: "url('/assets/login/background.svg')" }}>
       <div className="h-full grid lg:grid-cols-12 items-center">
         
         {/* Sisi Kiri - Branding & Ilustrasi */}
@@ -96,89 +83,96 @@ function VerifyOtpContent() {
             </p>
 
             <div className="mt-8">
-              <Image src="/assets/register/puzzle.svg" alt="puzzle" width={440} height={290} priority />
+              <Image src="/assets/login/puzzle.svg" alt="puzzle" width={440} height={290} priority />
             </div>
           </div>
         </div>
 
         {/* Sisi Kanan - Container Kartu Putih */}
         <div className="lg:col-span-6 flex items-center justify-center w-full h-full lg:-translate-x-6 transition-transform">
-          {/* Lebar disamakan 380px dan padding p-5 agar compact */}
           <div 
-            className="bg-white rounded-lg shadow-xl p-5 pt-6 pb-6 flex flex-col justify-start items-center box-border" 
-            style={{ width: '380px' }}
+            className="bg-white rounded-lg shadow-xl p-7 pt-8 pb-8 flex flex-col justify-start box-border" 
+            style={{ width: '400px' }}
           >
             {/* Header Kartu */}
             <div className="flex flex-col items-center w-full">
               <div className="flex justify-center items-center w-full px-2">
                 <Image 
-                  src="/assets/register/myprodigi-logo.svg" 
+                  src="/assets/login/myprodigi-logo.svg" 
                   alt="logo" 
                   width={310} 
                   height={91.5} 
                   className="object-contain"
                 />
               </div>
-              <div className="w-full max-w-[310px] h-[1px] bg-gray-100 my-2.5" />
-              <h2 className="text-base font-bold text-gray-900 tracking-tight mt-0.5">Verifikasi Email</h2>
+              <div className="w-full max-w-[310px] h-[1px] bg-gray-100 my-3" />
+              <h2 className="text-base font-bold text-gray-900 tracking-tight mt-1">Verifikasi Email</h2>
+              <p className="text-[11px] text-[#6E7980] text-center max-w-[280px] mt-2 leading-relaxed">
+                Masukkan kode verifikasi yang telah dikirim ke email Anda
+              </p>
             </div>
 
-            {/* Konten Utama */}
-            <div className="flex flex-col items-center w-[320px] mt-4 text-center">
-              
-              {/* Status Icon Indicator */}
-              <div className="mb-4 w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center text-[#FFC917] transition-all">
-                {status === "verified" ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : status === "error" ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                ) : status === "checking" ? (
-                  <svg className="animate-spin h-5 w-5 text-[#FFC917]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-                  </svg>
-                )}
+            {/* Form Utama */}
+            <form onSubmit={submit} className="flex flex-col w-full items-center mt-6">
+              {error && <div className="text-xs text-red-600 bg-red-50 p-2 rounded-md w-[340px] mb-3 text-center">{error}</div>}
+              {success && <div className="text-xs text-green-600 bg-green-50 p-2 rounded-md w-[340px] mb-3 text-center">{success}</div>}
+
+              {/* Input Kode Verifikasi */}
+              <div className="w-[340px] mb-5">
+                <label className="block text-[11px] text-[#6E7980] font-semibold mb-1.5 pl-0.5">Kode Verifikasi</label>
+                <div className="relative w-full">
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    placeholder="000000"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value.replace(/\D/g, ""))} // Hanya menerima angka
+                    className="block w-full rounded-md bg-gray-100 text-gray-700 placeholder-gray-300 text-base font-bold text-center tracking-[0.5em] focus:outline-none border-0"
+                    style={{ height: '44px' }}
+                  />
+                </div>
               </div>
 
-              {/* Status Message */}
-              <p className={`text-xs leading-relaxed px-2 mb-5 min-h-[36px] flex items-center justify-center ${status === "verified" ? "text-green-600 font-semibold" : "text-[#6E7980]"}`}>
-                {message}
-              </p>
-
-              {/* Tombol Kirim Ulang */}
-              <div className="w-full mb-3">
+              {/* Tombol Verifikasi */}
+              <div className="w-[340px] mb-4">
                 <button
-                  type="button"
-                  onClick={resend}
-                  disabled={!email || resending}
+                  type="submit"
+                  disabled={loading || token.length < 6}
                   className="w-full text-black font-bold rounded-md text-xs tracking-wide transition-all hover:brightness-105 active:scale-[0.99] disabled:opacity-50"
                   style={{ height: '46px', backgroundColor: '#FFC917' }}
                 >
-                  {resending ? "Mengirim..." : "Kirim Ulang Email"}
+                  {loading ? "Memverifikasi..." : "Verifikasi"}
                 </button>
               </div>
+            </form>
 
+            {/* Footer Kartu - Kirim Ulang Kode / Kembali ke Login */}
+            <div className="w-full text-center mt-2">
+              {error && error.includes("already been registered") ? (
+                <button 
+                  type="button"
+                  onClick={() => window.location.href = "/login"}
+                  className="text-xs text-[#FFC917] font-semibold hover:underline bg-transparent border-0 cursor-pointer"
+                >
+                  Kembali ke Login
+                </button>
+              ) : (
+                <button 
+                  type="button"
+                  onClick={resendOtp}
+                  disabled={resendLoading || loading}
+                  className="text-xs text-[#FFC917] font-semibold hover:underline bg-transparent border-0 cursor-pointer disabled:opacity-50"
+                >
+                  {resendLoading ? "Mengirim ulang..." : "Kirim Ulang Kode"}
+                </button>
+              )}
             </div>
+
           </div>
         </div>
 
       </div>
     </div>
-  );
-}
-
-export default function VerifyOtpPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-[#6E7980]">Memuat verifikasi...</div>}>
-      <VerifyOtpContent />
-    </Suspense>
   );
 }

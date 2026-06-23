@@ -31,6 +31,7 @@ export async function PUT(req: Request) {
     
     // Save photoUrl to Auth user metadata
     if (photoUrl !== undefined) {
+      updateData.photoUrl = photoUrl;
       const { error: authError } = await supabase.auth.updateUser({
         data: { photoUrl }
       });

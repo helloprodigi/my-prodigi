@@ -29,7 +29,7 @@ export default async function Page() {
           <p className="text-[#6E7980] leading-relaxed">Anda telah berhasil login. Silahkan lanjutkan ke halaman Dashboard untuk melihat aktivitas Anda.</p>
         </div>
         <Link 
-          href="/home" 
+          href="/dashboard" 
           className="w-full bg-[#FFC700] text-[#0A1024] font-bold py-4 px-6 rounded-xl hover:bg-[#e6b400] transition-colors shadow-sm"
         >
           Go to Dashboard

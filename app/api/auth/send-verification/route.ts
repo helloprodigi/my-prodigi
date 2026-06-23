@@ -51,13 +51,13 @@ export async function POST(request: Request) {
           </div>
           <h2 style="margin: 0 0 12px; font-size: 24px; line-height: 1.3;">Halo ${name || "Pengguna"},</h2>
           <p style="margin: 0 0 16px; font-size: 15px; color:#374151;">Terima kasih telah mendaftar di MyProdigi.</p>
-          <p style="margin: 0 0 16px; font-size: 15px; color:#374151;">Satu langkah sebelum kemenangan, silakan verifikasi alamat email melalui tombol di bawah.</p>
-          <p style="margin: 24px 0;">
-            <a href="${verificationUrl}" style="display:inline-block;background:#FFC917;color:#111827;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:700;">Verifikasi Akun</a>
-          </p>
-          <p style="margin: 0 0 8px; font-size: 14px; color: #6B7280;">Jika tombol tidak berfungsi, salin tautan berikut ke browser:</p>
-          <p style="margin: 0; font-size: 14px; word-break: break-all; color: #2563EB;">${verificationUrl}</p>
-          <p style="margin: 24px 0 0; font-size: 13px; color:#6B7280;">Email ini dikirim otomatis. Jika kamu tidak mendaftar di MyProdigi, abaikan pesan ini.</p>
+          <p style="margin: 0 0 16px; font-size: 15px; color:#374151;">Satu langkah sebelum kemenangan, silakan masukkan kode verifikasi berikut di halaman pendaftaran:</p>
+          <div style="margin: 32px 0; text-align: center;">
+            <span style="display:inline-block; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #111827; background: #f3f4f6; padding: 16px 32px; border-radius: 12px; border: 1px solid #e5e7eb;">
+              ${record.token}
+            </span>
+          </div>
+          <p style="margin: 24px 0 0; font-size: 13px; color:#6B7280;">Kode ini akan kedaluwarsa dalam 15 menit. Email ini dikirim otomatis. Jika kamu tidak mendaftar di MyProdigi, abaikan pesan ini.</p>
         </div>
       `,
     });

@@ -76,6 +76,7 @@ model User {
   angkatan    String?
   nomorWa     String?
   cvUrl       String?
+  photoUrl    String?
   skills      String[]
   interests   String[]
   role        String   @default("talent") // Can be "talent", "asisten_lab", "admin"
@@ -85,6 +86,7 @@ model User {
   
   competitionsCreated Competition[] @relation("CreatedCompetitions")
   teamsAsLeader       Team[]        @relation("UserLedTeams")
+  teamMemberships     TeamMember[]  @relation("UserTeamMemberships")
   notifications       Notification[]
 }
 
@@ -118,8 +120,27 @@ model Team {
   requiredSkills     String[] 
   link               String
   category           String
+  status             String   @default("IN_PROGRESS") // "IN_PROGRESS", "COMPLETED"
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+
+  members            TeamMember[]
+}
+
+model TeamMember {
+  id          String   @id @default(uuid())
+  teamId      String
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation("UserTeamMemberships", fields: [userId], references: [id])
+  status      String   @default("WAITING") // "WAITING", "APPROVED"
+  slotNumber  Int?
+  inviteToken String?
+  invitedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([teamId, userId])
 }
 
 model Notification {

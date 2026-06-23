@@ -74,9 +74,9 @@ export default function ProfileClient({ profile }: { profile: any }) {
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   // State for Password Reset
-  const [passwordForm, setPasswordForm] = useState({ new: "", confirm: "" });
-  const [isSavingPassword, setIsSavingPassword] = useState(false);
-  const [passwordMessage, setPasswordMessage] = useState("");
+  const [resetEmail, setResetEmail] = useState("");
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
 
   // State for User Management (Admin only)
   const [users, setUsers] = useState<any[]>([]);
@@ -206,21 +206,35 @@ export default function ProfileClient({ profile }: { profile: any }) {
 
     setIsUploadingCv(true);
     try {
-      // Mock upload URL since we don't have Supabase Storage configured yet
-      const fakeUrl = `uploaded-cv-${Date.now()}.pdf`;
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("Gagal mengunggah file CV.");
+      }
+
+      const { url } = await uploadRes.json();
 
       const res = await fetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cvUrl: fakeUrl })
+        body: JSON.stringify({ cvUrl: url })
       });
 
       if (res.ok) {
         toast.success("CV berhasil diunggah.");
         router.refresh();
+      } else {
+        toast.error("Gagal memperbarui profil.");
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("CV upload error:", err);
+      toast.error(err.message || "Gagal mengunggah CV.");
     }
     setIsUploadingCv(false);
   };
@@ -270,34 +284,35 @@ export default function ProfileClient({ profile }: { profile: any }) {
     }
   };
 
-  const handleSavePassword = async () => {
-    if (passwordForm.new !== passwordForm.confirm) {
-      setPasswordMessage("Password tidak cocok.");
+  const handleRequestReset = async () => {
+    if (!resetEmail) {
+      setResetMessage("Masukkan email Anda.");
       return;
     }
-    if (passwordForm.new.length < 6) {
-      setPasswordMessage("Password minimal 6 karakter.");
+    if (resetEmail !== profile.email) {
+      setResetMessage("Email tidak sesuai dengan email yang terdaftar pada profil Anda.");
       return;
     }
 
-    setIsSavingPassword(true);
-    setPasswordMessage("");
+    setIsSendingReset(true);
+    setResetMessage("");
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.updateUser({
-        password: passwordForm.new
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/forgotPassword`
       });
 
       if (error) {
-        setPasswordMessage(error.message);
+        setResetMessage(error.message);
       } else {
-        setPasswordMessage("Password berhasil diubah!");
-        setPasswordForm({ new: "", confirm: "" });
+        setResetMessage("Tautan atur ulang kata sandi berhasil dikirim ke email Anda!");
+        setResetEmail("");
       }
     } catch (err) {
       console.error(err);
+      setResetMessage("Terjadi kesalahan.");
     }
-    setIsSavingPassword(false);
+    setIsSendingReset(false);
   };
 
   const toggleSkill = (skill: string) => {
@@ -693,10 +708,35 @@ export default function ProfileClient({ profile }: { profile: any }) {
                 </div>
 
                 <div className="flex gap-4">
-                  <button className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors">
+                  <button 
+                    onClick={() => {
+                      if (!profile.cvUrl) return;
+                      let targetUrl = profile.cvUrl;
+                      if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://") && !targetUrl.startsWith("/")) {
+                        targetUrl = `/uploads/${targetUrl}`;
+                      }
+                      window.open(targetUrl, "_blank");
+                    }}
+                    className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors"
+                  >
                     Buka
                   </button>
-                  <button className="flex-1 bg-[#FFC700] text-[#0A1024] py-2.5 rounded-xl font-medium text-sm hover:bg-[#e6b400] transition-colors">
+                  <button 
+                    onClick={() => {
+                      if (!profile.cvUrl) return;
+                      let targetUrl = profile.cvUrl;
+                      if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://") && !targetUrl.startsWith("/")) {
+                        targetUrl = `/uploads/${targetUrl}`;
+                      }
+                      const link = document.createElement("a");
+                      link.href = targetUrl;
+                      link.setAttribute("download", `CV_${profile.name || "User"}.pdf`);
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="flex-1 bg-[#FFC700] text-[#0A1024] py-2.5 rounded-xl font-medium text-sm hover:bg-[#e6b400] transition-colors"
+                  >
                     Unduh
                   </button>
                 </div>
@@ -737,38 +777,29 @@ export default function ProfileClient({ profile }: { profile: any }) {
             <h2 className="text-2xl font-bold text-[#0A1024] mb-8">Reset Password</h2>
             <div className="max-w-md space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-600">Password Baru</label>
+                <label className="text-sm font-medium text-gray-600">Email Address</label>
                 <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={passwordForm.new}
-                  onChange={e => setPasswordForm({ ...passwordForm, new: e.target.value })}
+                  type="email"
+                  placeholder="name@example.com"
+                  value={resetEmail}
+                  onChange={e => setResetEmail(e.target.value)}
                   className="w-full p-4 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
                 />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-600">Konfirmasi Password Baru</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={passwordForm.confirm}
-                  onChange={e => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
-                  className="w-full p-4 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
-                />
+                <p className="text-xs text-gray-500">Masukkan email Anda yang terdaftar untuk menerima tautan atur ulang kata sandi.</p>
               </div>
 
-              {passwordMessage && (
-                <p className={`text-sm ${passwordMessage.includes("berhasil") ? "text-green-600" : "text-red-500"}`}>
-                  {passwordMessage}
+              {resetMessage && (
+                <p className={`text-sm ${resetMessage.includes("berhasil") ? "text-green-600" : "text-red-500"}`}>
+                  {resetMessage}
                 </p>
               )}
 
               <button
-                onClick={handleSavePassword}
-                disabled={isSavingPassword || !passwordForm.new}
+                onClick={handleRequestReset}
+                disabled={isSendingReset || !resetEmail}
                 className="bg-[#FFC700] text-[#0A1024] px-8 py-3 rounded-xl font-semibold hover:bg-[#e6b400] transition-colors w-full mt-4 disabled:opacity-50"
               >
-                {isSavingPassword ? "Menyimpan..." : "Simpan Password Baru"}
+                {isSendingReset ? "Mengirim..." : "Kirim Tautan Reset Password"}
               </button>
             </div>
           </div>
