@@ -60,7 +60,7 @@ export default async function CompetitionsPage({
     query = query.eq("category", currentTab).eq("status", "APPROVED");
   }
 
-  query = query.order("createdAt", { ascending: false }).range(from, to);
+  query = query.gte("deadline", today).order("createdAt", { ascending: false }).range(from, to);
 
   const { data: competitions, error, count } = await query;
   

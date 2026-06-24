@@ -114,7 +114,7 @@ model Team {
   name               String
   memberCount        Int
   competitionId      String
-  competition        Competition @relation("CompetitionTeams", fields: [competitionId], references: [id])
+  competition        Competition @relation("CompetitionTeams", fields: [competitionId], references: [id], onDelete: Cascade)
   leaderId           String?  
   leader             User?    @relation("UserLedTeams", fields: [leaderId], references: [id])
   requiredSkills     String[] 
