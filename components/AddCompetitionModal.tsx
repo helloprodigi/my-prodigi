@@ -11,6 +11,7 @@ interface AddCompetitionModalProps {
   onClose: () => void;
   userRole?: string;
   competitionToApprove?: any;
+  isEditMode?: boolean;
 }
 
 const SKILL_CATEGORIES = [
@@ -20,7 +21,7 @@ const SKILL_CATEGORIES = [
   { name: "Web Development", activeClass: "bg-[#FFFBEB] text-[#D4AF37]" }
 ];
 
-export default function AddCompetitionModal({ isOpen, onClose, userRole = "talent", competitionToApprove }: AddCompetitionModalProps) {
+export default function AddCompetitionModal({ isOpen, onClose, userRole = "talent", competitionToApprove, isEditMode = false }: AddCompetitionModalProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -68,7 +69,14 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
 
     try {
       let res;
-      if (competitionToApprove) {
+      if (isEditMode && competitionToApprove) {
+        // Edit flow
+        res = await fetch(`/api/competitions/${competitionToApprove.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(submissionData)
+        });
+      } else if (competitionToApprove) {
         // Approve flow
         res = await fetch(`/api/competitions/${competitionToApprove.id}/approve`, {
           method: "POST",
@@ -116,9 +124,12 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 className="w-10 h-10 text-green-500" />
           </div>
-          <h3 className="text-2xl font-bold text-[#0A1024] mb-3">Terkirim!</h3>
+          <h3 className="text-2xl font-bold text-[#0A1024] mb-3">{isEditMode ? "Berhasil Disimpan!" : "Terkirim!"}</h3>
           <p className="text-[#6E7980] mb-8 leading-relaxed text-sm">
-            Terima kasih telah menambahkan informasi lomba. Informasi ini akan <span className="font-semibold text-[#0A1024]">di-review terlebih dahulu dan menunggu ACC (persetujuan) dari Admin</span> sebelum dipublikasikan.
+            {isEditMode 
+              ? "Perubahan pada informasi lomba berhasil disimpan."
+              : <><span className="font-semibold text-[#0A1024]">Terima kasih telah menambahkan informasi lomba. Informasi ini akan di-review terlebih dahulu dan menunggu ACC (persetujuan) dari Admin</span> sebelum dipublikasikan.</>
+            }
           </p>
           <button 
             onClick={() => { setShowSuccess(false); onClose(); }}
@@ -273,7 +284,7 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
                 disabled={loading || !isFormValid}
                 className="px-8 bg-[#FFC700] hover:bg-[#e6b400] text-[#0A1024] font-semibold py-3 rounded-xl transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Menyimpan..." : "Buat Lomba"}
+                {loading ? "Menyimpan..." : (isEditMode ? "Simpan Perubahan" : "Buat Lomba")}
               </button>
             </div>
           </form>

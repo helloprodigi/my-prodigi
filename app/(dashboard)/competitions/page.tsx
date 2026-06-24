@@ -7,6 +7,7 @@ import Image from "next/image";
 import CompetitionsHeader from "@/components/CompetitionsHeader";
 import AdminApproveButtons from "@/components/AdminApproveButtons";
 import PreviewLombaCard from "@/components/PreviewLombaCard";
+import AdminCompetitionActions from "@/components/AdminCompetitionActions";
 
 const getTagColors = (skill: string) => {
   if (skill.includes("Data Science")) return "bg-blue-50 text-blue-600";
@@ -118,9 +119,14 @@ export default async function CompetitionsPage({
 
             return (
               <div key={comp.id} className="relative bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow">
-                <p className="text-[#FFC700] text-sm font-semibold mb-3">
-                  Deadline • {new Date(comp.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                </p>
+                <div className="flex justify-between items-start mb-3">
+                  <p className="text-[#FFC700] text-sm font-semibold">
+                    Deadline • {new Date(comp.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
+                  {role === "admin" && (
+                    <AdminCompetitionActions competition={comp} />
+                  )}
+                </div>
                 <h3 className="text-xl font-bold text-[#0A1024] leading-tight mb-2">
                   {comp.title}
                 </h3>
