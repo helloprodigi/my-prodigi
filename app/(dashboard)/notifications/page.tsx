@@ -195,7 +195,7 @@ export default function NotificationsPage() {
           </Link>
         </div>
       ) : (
-        <div className="w-full max-w-[720px] pl-6 pr-4 pb-16">
+        <div className="w-full pl-6 pr-6 pb-16">
           <div className="flex flex-col gap-7">
             {displayed.map((notif) =>
               !notif.isRead ? (
