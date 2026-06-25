@@ -11,9 +11,9 @@ export default function CompetitionsHeader({ role }: { role: string }) {
       <div className="flex justify-end">
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-[#FFC700] text-[#0A1024] font-semibold py-2 px-6 rounded-lg hover:bg-[#e6b400] transition-colors shadow-sm"
+          className="bg-[#FFC700] text-[#0A1024] font-semibold py-1.5 px-4 sm:py-2 sm:px-6 rounded-lg text-[13px] sm:text-sm hover:bg-[#e6b400] transition-colors shadow-sm"
         >
-          Tambah Lomba
+          Buat tim
         </button>
       </div>
 

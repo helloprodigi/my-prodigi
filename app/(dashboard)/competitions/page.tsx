@@ -73,41 +73,39 @@ export default async function CompetitionsPage({
   }
 
   return (
-    <div className="p-10 w-full">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold text-[#0A1024]">Competitions</h1>
+    <div className="p-4 sm:p-6 md:p-10 w-full max-w-full overflow-hidden bg-[#FAFAFA] min-h-screen">
+      <div className="flex justify-between items-center mb-6 sm:mb-8">
+        <h1 className="text-[22px] sm:text-3xl md:text-4xl font-bold text-[#0A1024]">Competitions</h1>
+        <div className="flex-shrink-0">
+          <CompetitionsHeader role={role} />
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex justify-between items-center border-b border-gray-200 mb-8">
-        <div className="flex gap-6">
-          {tabs.map((t) => {
-            const isActive = currentTab === t;
-            return (
-              <Link
-                key={t}
-                href={`/competitions?tab=${t}`}
-                className={`pb-4 px-2 font-medium transition-colors ${
-                  isActive
-                    ? "text-[#0A1024] border-b-2 border-[#FFC700]"
-                    : "text-gray-500 hover:text-gray-800"
-                }`}
-              >
-                {t}
-              </Link>
-            );
-          })}
-        </div>
-        <div className="pb-2">
-          <CompetitionsHeader role={role} />
-        </div>
+      <div className="flex gap-4 sm:gap-6 w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] border-b border-gray-200 mb-6 sm:mb-8">
+        {tabs.map((t) => {
+          const isActive = currentTab === t;
+          return (
+            <Link
+              key={t}
+              href={`/competitions?tab=${t}`}
+              className={`whitespace-nowrap pb-2 sm:pb-3 px-1 font-medium text-[14px] sm:text-base transition-colors ${
+                isActive
+                  ? "text-[#0A1024] border-b-2 border-[#FFC700]"
+                  : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              {t}
+            </Link>
+          );
+        })}
       </div>
 
       {/* Content */}
       {error ? (
         <div className="text-red-500">Error loading competitions: {error.message}</div>
       ) : competitions && competitions.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
           {competitions.map((comp: any) => {
             if (currentTab === "Preview Lomba" && role === "admin") {
               return (
@@ -118,35 +116,35 @@ export default async function CompetitionsPage({
             }
 
             return (
-              <div key={comp.id} className="relative bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start mb-3">
-                  <p className="text-[#FFC700] text-sm font-semibold">
+              <div key={comp.id} className="relative bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col h-full hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start mb-2">
+                  <p className="text-[#FFC700] text-[11px] sm:text-xs font-semibold">
                     Deadline • {new Date(comp.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
                   </p>
                   {role === "admin" && (
                     <AdminCompetitionActions competition={comp} />
                   )}
                 </div>
-                <h3 className="text-xl font-bold text-[#0A1024] leading-tight mb-2">
+                <h3 className="text-[15px] sm:text-lg font-bold text-[#0A1024] leading-tight mb-2 line-clamp-2">
                   {comp.title}
                 </h3>
-                <p className="text-gray-500 text-sm mb-6 flex-1">
+                <p className="text-gray-500 text-[13px] sm:text-sm mb-4 flex-1 leading-relaxed">
                   Diselenggarakan oleh : {comp.organizer}
                 </p>
                 
-                <div className="flex flex-wrap gap-2 mb-6">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-4">
                   {comp.skills && comp.skills.map((skill: string) => (
-                    <span key={skill} className={`px-3 py-1 text-xs font-medium rounded-full ${getTagColors(skill)}`}>
+                    <span key={skill} className={`px-2.5 py-0.5 text-[11px] sm:text-xs font-medium rounded-full ${getTagColors(skill)}`}>
                       {skill}
                     </span>
                   ))}
                 </div>
 
-                <div className="flex gap-3 mt-auto flex-col sm:flex-row pt-6">
+                <div className="flex gap-2 sm:gap-3 mt-auto flex-row pt-2">
                   {role !== "admin" && (
                     <Link
                       href={`/matchmaking?competitionId=${comp.id}`}
-                      className="flex-1 bg-[#FFF9E6] text-[#0A1024] font-semibold py-2 rounded-lg text-sm hover:bg-[#ffe380] transition-colors text-center block"
+                      className="flex-1 bg-[#FFF9E6] text-[#0A1024] font-semibold py-2 rounded-lg text-[12px] sm:text-sm hover:bg-[#ffe380] transition-colors text-center flex items-center justify-center"
                     >
                       Buat Tim
                     </Link>
@@ -155,7 +153,7 @@ export default async function CompetitionsPage({
                     href={comp.link || "#"} 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="flex-1 bg-[#FFC700] text-[#0A1024] font-semibold py-2 rounded-lg text-sm hover:bg-[#e6b400] transition-colors text-center block"
+                    className="flex-1 bg-[#FFC700] text-[#0A1024] font-semibold py-2 rounded-lg text-[12px] sm:text-sm hover:bg-[#e6b400] transition-colors text-center flex items-center justify-center"
                   >
                     Lihat Detail
                   </Link>
@@ -178,7 +176,7 @@ export default async function CompetitionsPage({
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-4 mt-12 mb-8">
+        <div className="flex justify-center items-center gap-3 md:gap-4 mt-8 md:mt-12 mb-4 md:mb-8 flex-wrap">
           {currentPage > 1 ? (
             <Link 
               href={`/competitions?tab=${currentTab}&page=${currentPage - 1}`}
