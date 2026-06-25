@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/lib/supabase-admin";
-import { assignNextCandidate } from "@/lib/matchmaking";
+import { assignNextCandidate, assignAllCandidates } from "@/lib/matchmaking";
 import { sendTeamInviteEmail } from "@/lib/team-invite-email";
 import { unwrapRelation } from "@/lib/supabase-relations";
 import type { DashboardTeamCard, DashboardTeamDetail } from "@/types/team";
@@ -194,7 +194,7 @@ export async function getDashboardTeamsAction(): Promise<{
         .order("slotNumber", { ascending: true, nullsFirst: false });
 
       const members = membersResult.error ? [] : (membersResult.data ?? []);
-      const approvedCount = members.length + 1; // +1 to include the team leader
+      const approvedCount = members.filter((m) => m.userId !== team.leaderId).length;
       const leaderData = unwrapRelation(team.leader as any);
       const memberNames = [
         leaderData?.name ?? "Ketua",
@@ -363,7 +363,7 @@ export async function getTeamDetailAction(teamId: string): Promise<{
       }
     }
 
-    const approvedCount = (memberRows ?? []).filter((m) => m.status === "APPROVED").length;
+    const approvedCount = (memberRows ?? []).filter((m) => m.status === "APPROVED" && m.userId !== team.leaderId).length;
     const teamNeedsMembers = approvedCount < team.memberCount;
     const competition = unwrapRelation(
       team.competition as { title: string } | { title: string }[] | null,
@@ -384,6 +384,8 @@ export async function getTeamDetailAction(teamId: string): Promise<{
         competitionTitle: competition?.title ?? "-",
         competitionLink: team.link,
         leadName: leader?.name ?? "Ketua Tim",
+        leaderId: team.leaderId,
+        currentUserId: user.id,
         maxAdditionalMembersNeeded: team.memberCount,
         approvedCount,
         isLeader,
@@ -448,14 +450,14 @@ export async function findMemberAction(teamId: string) {
       return { success: false, error: "Hanya ketua tim yang dapat mencari anggota." };
     }
 
-    const assigned = await assignNextCandidate(adminDb, {
+    const assigned = await assignAllCandidates(adminDb, {
       id: team.id,
       leaderId: team.leaderId,
       memberCount: team.memberCount,
       requiredSkills: team.requiredSkills ?? [],
     });
 
-    if (!assigned) {
+    if (assigned === 0) {
       return { success: false, error: "Belum ada kandidat yang cocok saat ini." };
     }
 
@@ -475,7 +477,7 @@ export async function requestJoinAction(teamId: string) {
 
     const { data: team } = await adminDb
       .from("Team")
-      .select("id, leaderId, memberCount, requiredSkills")
+      .select("id, leaderId, memberCount, requiredSkills, name, competition:Competition(title)")
       .eq("id", teamId)
       .single();
 
@@ -526,6 +528,28 @@ export async function requestJoinAction(teamId: string) {
     });
 
     if (error) return { success: false, error: error.message };
+
+    try {
+      const { data: requester } = await adminDb.from("User").select("name").eq("id", user.id).single();
+      const requesterName = (requester as any)?.name ?? "Seseorang";
+      const teamName = (team as any).name ?? "Tim";
+      const compRaw = unwrapRelation((team as any).competition as { title: string } | { title: string }[] | null);
+      const competitionTitle = compRaw?.title ?? "Lomba";
+
+      const { error: notifError } = await adminDb.from("Notification").insert({
+        id: crypto.randomUUID(),
+        userId: team.leaderId,
+        type: "request_join",
+        title: `${requesterName} ingin bergabung ke timmu`,
+        description: `${requesterName} mengajukan permintaan bergabung ke tim "${teamName}" untuk kompetisi ${competitionTitle}. Buka halaman detail tim untuk menerima atau menolak permintaan ini.`,
+        isRead: false,
+        createdAt: now,
+      });
+      if (notifError) console.error("[Notification] requestJoin insert error:", notifError.message);
+    } catch (notifErr) {
+      console.error("[Notification] requestJoin unexpected error:", notifErr);
+    }
+
     return { success: true };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Gagal mengirim permintaan bergabung.";
@@ -774,7 +798,7 @@ export async function getMyTeamsAction(): Promise<{
         .order("slotNumber", { ascending: true, nullsFirst: false });
 
       const members = membersResult.error ? [] : (membersResult.data ?? []);
-      const approvedCount = members.length;
+      const approvedCount = members.filter((m) => m.userId !== team.leaderId).length;
       const memberNames = (members ?? []).map((m) => {
         const memberUser = unwrapRelation(
           m.user as { name: string | null } | { name: string | null }[] | null,
@@ -874,7 +898,7 @@ export async function getAllTeamsAction(): Promise<{
         .order("slotNumber", { ascending: true, nullsFirst: false });
 
       const members = membersResult.error ? [] : (membersResult.data ?? []);
-      const approvedCount = members.length;
+      const approvedCount = members.filter((m) => m.userId !== team.leaderId).length;
       const memberNames = (members ?? []).map((m) => {
         const memberUser = unwrapRelation(
           m.user as { name: string | null } | { name: string | null }[] | null,
@@ -936,7 +960,7 @@ export async function approveJoinRequestAction(teamId: string, memberId: string)
 
     const { data: team } = await adminDb
       .from("Team")
-      .select("id, name, leaderId, memberCount")
+      .select("id, name, leaderId, memberCount, competition:Competition(title)")
       .eq("id", teamId)
       .single();
 
@@ -971,33 +995,57 @@ export async function approveJoinRequestAction(teamId: string, memberId: string)
 
     const { error: updateError } = await adminDb
       .from("TeamMember")
-      .update({
-        status: "APPROVED",
-        slotNumber,
-        updatedAt: now,
-      })
+      .update({ status: "APPROVED", slotNumber, updatedAt: now })
       .eq("id", memberId);
 
     if (updateError) {
       return { success: false, error: updateError.message };
     }
 
+    const teamName = (team as any).name ?? "Tim";
+    const competitionTitle = unwrapRelation((team as any).competition as { title: string } | { title: string }[] | null)?.title ?? "Lomba";
+    const nonLeaderApproved = slotNumber - 1; // slot 1 is leader, so slotNumber-1 = non-leader count
+    const totalCount = team.memberCount;
+
+    const { data: memberUser } = await adminDb.from("User").select("name").eq("id", member.userId).single();
+    const memberName = (memberUser as any)?.name ?? "Anggota";
+
+    // Notify the member who was approved
     await adminDb.from("Notification").insert({
       id: crypto.randomUUID(),
       userId: member.userId,
       type: "team_approve",
-      title: "Permintaan Gabung Disetujui",
-      description: `Permintaan bergabung kamu di tim "${team.name ?? 'Tim'}" telah disetujui oleh ketua tim.`,
+      title: "Permintaan Gabung Disetujui!",
+      description: `Selamat! Permintaan bergabungmu ke tim "${teamName}" untuk kompetisi ${competitionTitle} telah disetujui oleh ketua tim. Kamu resmi menjadi anggota tim.`,
       isRead: false,
       createdAt: now,
     });
 
+    // Notify other approved members
+    const { data: otherApproved } = await adminDb
+      .from("TeamMember")
+      .select("userId")
+      .eq("teamId", teamId)
+      .eq("status", "APPROVED")
+      .neq("userId", team.leaderId)
+      .neq("userId", member.userId);
+
+    if (otherApproved && otherApproved.length > 0) {
+      await adminDb.from("Notification").insert(
+        otherApproved.map((m: any) => ({
+          id: crypto.randomUUID(),
+          userId: m.userId,
+          type: "member_joined",
+          title: `${memberName} bergabung ke tim`,
+          description: `${memberName} bergabung ke tim "${teamName}" untuk kompetisi ${competitionTitle}. Jumlah anggota tim saat ini menjadi ${nonLeaderApproved}/${totalCount} anggota.`,
+          isRead: false,
+          createdAt: now,
+        }))
+      );
+    }
+
     if (slotNumber >= team.memberCount) {
-      await adminDb
-        .from("TeamMember")
-        .delete()
-        .eq("teamId", teamId)
-        .eq("status", "WAITING");
+      await adminDb.from("TeamMember").delete().eq("teamId", teamId).eq("status", "WAITING");
     }
 
     return { success: true };
@@ -1016,7 +1064,7 @@ export async function rejectJoinRequestAction(teamId: string, memberId: string) 
 
     const { data: team } = await adminDb
       .from("Team")
-      .select("id, name, leaderId")
+      .select("id, name, leaderId, competition:Competition(title)")
       .eq("id", teamId)
       .single();
 
@@ -1046,15 +1094,21 @@ export async function rejectJoinRequestAction(teamId: string, memberId: string) 
       return { success: false, error: deleteError.message };
     }
 
-    await adminDb.from("Notification").insert({
-      id: crypto.randomUUID(),
-      userId: member.userId,
-      type: "team_reject",
-      title: "Permintaan Gabung Ditolak",
-      description: `Permintaan bergabung kamu di tim "${team.name ?? 'Tim'}" ditolak oleh ketua tim.`,
-      isRead: false,
-      createdAt: now,
-    });
+    try {
+      const rejectCompTitle = unwrapRelation((team as any).competition as { title: string } | { title: string }[] | null)?.title ?? "Lomba";
+      const { error: notifError } = await adminDb.from("Notification").insert({
+        id: crypto.randomUUID(),
+        userId: member.userId,
+        type: "team_reject",
+        title: "Permintaan Gabung Ditolak",
+        description: `Permintaan bergabungmu ke tim "${team.name ?? "Tim"}" untuk kompetisi ${rejectCompTitle} ditolak oleh ketua tim. Kamu dapat mencari dan bergabung ke tim lain yang sesuai dengan skillmu.`,
+        isRead: false,
+        createdAt: now,
+      });
+      if (notifError) console.error("[Notification] rejectJoin insert error:", notifError.message);
+    } catch (notifErr) {
+      console.error("[Notification] rejectJoin unexpected error:", notifErr);
+    }
 
     return { success: true };
   } catch (error: unknown) {

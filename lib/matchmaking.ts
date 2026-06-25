@@ -50,6 +50,60 @@ export async function findCandidateUserId(
   return pick.id;
 }
 
+export async function assignAllCandidates(
+  adminDb: SupabaseClient,
+  team: {
+    id: string;
+    leaderId: string;
+    memberCount: number;
+    requiredSkills: string[];
+  },
+): Promise<number> {
+  const { data: members } = await adminDb
+    .from("TeamMember")
+    .select("id, status, userId")
+    .eq("teamId", team.id);
+
+  const allMembers = members ?? [];
+  const approvedNonLeader = allMembers.filter(
+    (m) => m.status === "APPROVED" && m.userId !== team.leaderId,
+  ).length;
+  const waitingCount = allMembers.filter((m) => m.status === "WAITING").length;
+
+  const slotsNeeded = team.memberCount - approvedNonLeader - waitingCount;
+  if (slotsNeeded <= 0) return 0;
+
+  const excludeUserIds = await getExcludedUserIds(adminDb, team.id, team.leaderId);
+  let assigned = 0;
+
+  for (let i = 0; i < slotsNeeded; i++) {
+    const candidateId = await findCandidateUserId(
+      adminDb,
+      team.leaderId,
+      team.requiredSkills ?? [],
+      excludeUserIds,
+    );
+
+    if (!candidateId) break;
+
+    excludeUserIds.push(candidateId);
+
+    const now = new Date().toISOString();
+    const { error } = await adminDb.from("TeamMember").insert({
+      id: crypto.randomUUID(),
+      teamId: team.id,
+      userId: candidateId,
+      status: "WAITING",
+      inviteToken: crypto.randomUUID(),
+      updatedAt: now,
+    });
+
+    if (!error) assigned++;
+  }
+
+  return assigned;
+}
+
 export async function assignNextCandidate(
   adminDb: SupabaseClient,
   team: {
@@ -59,18 +113,6 @@ export async function assignNextCandidate(
     requiredSkills: string[];
   },
 ): Promise<boolean> {
-  const { data: members } = await adminDb
-    .from("TeamMember")
-    .select("id, status, userId")
-    .eq("teamId", team.id);
-
-  const approvedCount = (members ?? []).filter((m) => m.status === "APPROVED").length;
-  const waitingCount = (members ?? []).filter((m) => m.status === "WAITING").length;
-
-  if (approvedCount >= team.memberCount || waitingCount > 0) {
-    return false;
-  }
-
   const excludeUserIds = await getExcludedUserIds(adminDb, team.id, team.leaderId);
   const candidateId = await findCandidateUserId(
     adminDb,

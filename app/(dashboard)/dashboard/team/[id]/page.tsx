@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { Crown } from "lucide-react";
 import {
   findMemberAction,
   getTeamDetailAction,
@@ -54,9 +55,11 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
   const approvedCount = teamInfo?.approvedCount ?? 0;
   const maxMembers = teamInfo?.maxAdditionalMembersNeeded ?? 0;
   const isTeamComplete = approvedCount >= maxMembers;
-  const hasWaitingMember = teamInfo?.members.some((member) => member.status === "WAITING" && member.inviteToken !== "REQUEST_JOIN") ?? false;
+  const waitingCandidateCount = teamInfo?.members.filter(
+    (m) => m.status === "WAITING" && m.inviteToken !== "REQUEST_JOIN",
+  ).length ?? 0;
   const canFindMember =
-    teamInfo?.isLeader && !isTeamComplete && !hasWaitingMember;
+    teamInfo?.isLeader && !isTeamComplete && (approvedCount + waitingCandidateCount < maxMembers);
 
   const handleInvite = (memberId: string, name: string) => {
     startTransition(async () => {
@@ -125,16 +128,14 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
 
   const handleLihatCV = (cvUrl: string | null, fullName: string) => {
     if (!cvUrl) {
-      toast.error(`CV ${fullName} belum tersedia.`);
+      toast.error(`${fullName} belum mengupload CV.`);
       return;
     }
-    let targetUrl = cvUrl;
-    if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
-      if (!targetUrl.startsWith("/")) {
-        targetUrl = `/uploads/${targetUrl}`;
-      }
+    if (!cvUrl.startsWith("http://") && !cvUrl.startsWith("https://")) {
+      toast.error(`CV ${fullName} menggunakan format lama. Minta ${fullName} untuk re-upload CV di halaman profil.`, { duration: 5000 });
+      return;
     }
-    window.open(targetUrl, "_blank");
+    window.open(cvUrl, "_blank");
   };
 
   const handleFindMember = () => {
@@ -158,6 +159,34 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
       } else {
         toast.error(result.error ?? "Gagal mengirim permintaan bergabung.");
       }
+    });
+  };
+
+  const handleAcceptInvite = () => {
+    startTransition(async () => {
+      const res = await fetch("/api/teams/invite/respond", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId: teamInfo?.membershipId, token: teamInfo?.inviteToken, action: "accept" }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Gagal menerima undangan."); return; }
+      toast.success("Kamu berhasil bergabung ke tim!");
+      await loadTeam();
+    });
+  };
+
+  const handleDeclineInvite = () => {
+    startTransition(async () => {
+      const res = await fetch("/api/teams/invite/respond", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId: teamInfo?.membershipId, token: teamInfo?.inviteToken, action: "decline" }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Gagal menolak undangan."); return; }
+      toast.success("Undangan ditolak.");
+      router.push("/dashboard");
     });
   };
 
@@ -244,7 +273,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                           type="button"
                           onClick={() => handleRefreshMember(member.id)}
                           disabled={isRefreshing}
-                          title="Ganti rekomendasi anggota"
+                          title="Roll — ganti kandidat"
                           className="bg-[#FFC700] text-white p-1.5 rounded-[4px] hover:bg-[#e6b400] transition-colors inline-flex items-center justify-center shadow-sm disabled:opacity-50"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5">
@@ -255,7 +284,14 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                         <span className="text-gray-600 font-semibold">{member.no ?? "-"}</span>
                       )}
                     </td>
-                    <td className="py-4 px-4 font-semibold text-gray-700">{member.fullName}</td>
+                    <td className="py-4 px-4 font-semibold text-gray-700">
+                      <span className="flex items-center gap-1.5">
+                        {member.fullName}
+                        {member.userId === teamInfo.leaderId && (
+                          <Crown className="w-3.5 h-3.5 text-[#FFC700] fill-[#FFC700] shrink-0" />
+                        )}
+                      </span>
+                    </td>
                     <td className="py-4 px-4 text-gray-500 font-normal">{member.skills}</td>
                     <td className="py-4 px-4 text-center align-middle">
                       {member.status === "APPROVED" ? (
@@ -274,7 +310,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                     </td>
                     <td className="py-4 px-4 text-center align-middle">
                       <div className="flex items-center justify-center gap-2">
-                        {teamInfo.isLeader && (
+                        {member.userId !== teamInfo.currentUserId && (
                           <button
                             type="button"
                             onClick={() => handleLihatCV(member.cvUrl, member.fullName)}
@@ -284,7 +320,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                           </button>
                         )}
 
-                        {member.status === "APPROVED" ? (
+                        {member.status === "APPROVED" && member.userId !== teamInfo.currentUserId ? (
                           <button
                             type="button"
                             onClick={() => handleChatWhatsApp(member.whatsappNumber)}
@@ -292,7 +328,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                           >
                             Chat
                           </button>
-                        ) : teamInfo.isLeader ? (
+                        ) : member.status === "APPROVED" ? null : teamInfo.isLeader ? (
                           member.inviteToken === "REQUEST_JOIN" ? (
                             <>
                               <button
@@ -368,6 +404,33 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
               <p className="text-sm font-semibold italic text-[#E2A600]">
                 Permintaan bergabung kamu sedang menunggu persetujuan ketua tim.
               </p>
+            </div>
+          )}
+
+          {teamInfo.isInvited && (
+            <div className="w-full py-6 mt-4 border-t border-gray-100">
+              <p className="text-sm text-gray-600 mb-1">
+                Kamu diundang oleh <span className="font-bold text-[#0A1024]">{teamInfo.leadName}</span> untuk bergabung ke tim ini.
+              </p>
+              <p className="text-xs text-gray-400 mb-4">Lihat anggota dan CV di atas untuk mempertimbangkan keputusanmu.</p>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleAcceptInvite}
+                  disabled={isPending}
+                  className="bg-[#FFC700] text-[#0A1024] font-bold px-6 py-2.5 rounded-[6px] text-xs hover:brightness-95 transition-all disabled:opacity-60"
+                >
+                  Terima Undangan
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeclineInvite}
+                  disabled={isPending}
+                  className="border border-red-200 text-red-600 bg-white hover:bg-red-50 font-bold px-6 py-2.5 rounded-[6px] text-xs transition-all disabled:opacity-60"
+                >
+                  Tolak
+                </button>
+              </div>
             </div>
           )}
         </div>

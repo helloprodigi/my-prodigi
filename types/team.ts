@@ -52,6 +52,8 @@ export interface DashboardTeamDetail {
   competitionTitle: string;
   competitionLink: string;
   leadName: string;
+  leaderId: string;
+  currentUserId: string;
   maxAdditionalMembersNeeded: number;
   approvedCount: number;
   isLeader: boolean;

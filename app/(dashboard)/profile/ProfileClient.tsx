@@ -215,7 +215,8 @@ export default function ProfileClient({ profile }: { profile: any }) {
       });
 
       if (!uploadRes.ok) {
-        throw new Error("Gagal mengunggah file CV.");
+        const errData = await uploadRes.json().catch(() => ({}));
+        throw new Error(errData?.error ?? "Gagal mengunggah file CV.");
       }
 
       const { url } = await uploadRes.json();

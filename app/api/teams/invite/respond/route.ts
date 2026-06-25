@@ -8,9 +8,7 @@ export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: "Kamu harus login." }, { status: 401 });
@@ -47,13 +45,23 @@ export async function POST(request: Request) {
 
     const { data: team } = await adminDb
       .from("Team")
-      .select("id, leaderId, memberCount, requiredSkills")
+      .select("id, leaderId, memberCount, requiredSkills, name, competition:Competition(title)")
       .eq("id", member.teamId)
       .single();
 
     if (!team) {
       return NextResponse.json({ error: "Tim tidak ditemukan." }, { status: 404 });
     }
+
+    const { data: memberUser } = await adminDb
+      .from("User")
+      .select("name")
+      .eq("id", user.id)
+      .single();
+
+    const memberName = memberUser?.name ?? "Anggota baru";
+    const teamName = (team as any).name ?? "Tim";
+    const competitionTitle = (team as any).competition?.title ?? "Lomba";
 
     const now = new Date().toISOString();
 
@@ -68,15 +76,56 @@ export async function POST(request: Request) {
 
       const { error } = await adminDb
         .from("TeamMember")
-        .update({
-          status: "APPROVED",
-          slotNumber,
-          updatedAt: now,
-        })
+        .update({ status: "APPROVED", slotNumber, updatedAt: now })
         .eq("id", memberId);
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      // Count non-leader approved after join
+      const { count: approvedNonLeader } = await adminDb
+        .from("TeamMember")
+        .select("id", { count: "exact", head: true })
+        .eq("teamId", team.id)
+        .eq("status", "APPROVED")
+        .neq("userId", team.leaderId);
+
+      const currentCount = approvedNonLeader ?? 0;
+      const totalCount = team.memberCount;
+
+      // Notify leader
+      await adminDb.from("Notification").insert({
+        id: crypto.randomUUID(),
+        userId: team.leaderId,
+        type: "member_joined",
+        title: `${memberName} bergabung ke tim kamu`,
+        description: `${memberName} menerima undangan dan resmi bergabung sebagai anggota tim untuk kompetisi ${competitionTitle}. Jumlah anggota tim saat ini menjadi ${currentCount}/${totalCount} anggota.`,
+        isRead: false,
+        createdAt: now,
+      });
+
+      // Notify other approved members (not the leader, not the one who just joined)
+      const { data: otherMembers } = await adminDb
+        .from("TeamMember")
+        .select("userId")
+        .eq("teamId", team.id)
+        .eq("status", "APPROVED")
+        .neq("userId", team.leaderId)
+        .neq("userId", user.id);
+
+      if (otherMembers && otherMembers.length > 0) {
+        await adminDb.from("Notification").insert(
+          otherMembers.map((m: any) => ({
+            id: crypto.randomUUID(),
+            userId: m.userId,
+            type: "member_joined",
+            title: `${memberName} bergabung ke tim`,
+            description: `${memberName} menerima undangan dan resmi bergabung sebagai anggota tim "${teamName}" untuk kompetisi ${competitionTitle}. Jumlah anggota tim saat ini menjadi ${currentCount}/${totalCount} anggota.`,
+            isRead: false,
+            createdAt: now,
+          }))
+        );
       }
 
       await assignNextCandidate(adminDb, {
@@ -89,7 +138,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, status: "APPROVED" });
     }
 
+    // DECLINE
     await adminDb.from("TeamMember").delete().eq("id", memberId);
+
+    // Notify leader about decline
+    await adminDb.from("Notification").insert({
+      id: crypto.randomUUID(),
+      userId: team.leaderId,
+      type: "invite_declined",
+      title: `${memberName} menolak undangan timmu`,
+      description: `${memberName} menolak undangan untuk bergabung ke tim "${teamName}" pada kompetisi ${competitionTitle}. Sistem akan melanjutkan proses pencarian kandidat baru secara otomatis berdasarkan role dan skill yang dibutuhkan tim.`,
+      isRead: false,
+      createdAt: now,
+    });
 
     await assignNextCandidate(adminDb, {
       id: team.id,

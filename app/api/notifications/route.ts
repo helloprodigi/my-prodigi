@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -21,6 +21,19 @@ export async function GET() {
 
     const { createClient: createSupabaseClient } = require("@supabase/supabase-js");
     const adminDb = createSupabaseClient(supabaseUrl, serviceRoleKey);
+
+    const url = new URL(req.url);
+    const countOnly = url.searchParams.get("count") === "true";
+
+    if (countOnly) {
+      const { count, error } = await adminDb
+        .from("Notification")
+        .select("id", { count: "exact", head: true })
+        .eq("userId", user.id)
+        .eq("isRead", false);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ unread: count ?? 0 });
+    }
 
     const { data: notifications, error } = await adminDb
       .from("Notification")

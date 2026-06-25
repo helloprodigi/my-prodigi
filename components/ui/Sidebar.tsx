@@ -27,6 +27,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [userData, setUserData] = useState<{name: string, role: string, photoUrl?: string} | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     async function loadUser() {
@@ -41,6 +42,21 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
       }
     }
     loadUser();
+  }, []);
+
+  useEffect(() => {
+    async function fetchUnread() {
+      try {
+        const res = await fetch("/api/notifications?count=true");
+        if (res.ok) {
+          const data = await res.json();
+          setUnreadCount(data.unread ?? 0);
+        }
+      } catch {}
+    }
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleLogout = async () => {
@@ -114,14 +130,19 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
                 key={item.href}
                 href={item.href}
                 className={`relative w-full flex items-center rounded-xl p-3 transition-colors ${
-                  isActive 
-                    ? "bg-[#1E2538] text-[#FFC700]" 
+                  isActive
+                    ? "bg-[#1E2538] text-[#FFC700]"
                     : "text-gray-200 hover:text-white hover:bg-white/5"
                 }`}
                 title={!(isDesktopOpen || isMobileOpen) ? item.label : undefined}
-                onClick={() => setIsMobileOpen(false)} // Close on mobile after navigation
+                onClick={() => setIsMobileOpen(false)}
               >
-                <item.icon className="w-6 h-6 shrink-0" />
+                <span className="relative shrink-0">
+                  <item.icon className="w-6 h-6" />
+                  {item.href === "/notifications" && unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#FFC700] rounded-full border-2 border-[#0A1024]" />
+                  )}
+                </span>
                 <span className={`ml-4 font-medium transition-all duration-300 whitespace-nowrap ${(isDesktopOpen || isMobileOpen) ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
                   {item.label}
                 </span>
