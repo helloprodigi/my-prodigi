@@ -29,8 +29,8 @@ export default async function CompetitionDetailPage({
 
   if (error || !comp) {
     return (
-      <div className="p-10 w-full flex flex-col items-center justify-center">
-        <h1 className="text-2xl font-bold text-red-500 mb-4">Kompetisi Tidak Ditemukan</h1>
+      <div className="p-4 sm:p-6 md:p-10 w-full flex flex-col items-center justify-center">
+        <h1 className="text-xl md:text-2xl font-bold text-red-500 mb-4 text-center">Kompetisi Tidak Ditemukan</h1>
         <Link href="/competitions" className="text-blue-500 hover:underline">
           Kembali ke Daftar Kompetisi
         </Link>
@@ -39,8 +39,8 @@ export default async function CompetitionDetailPage({
   }
 
   return (
-    <div className="p-10 w-full max-w-4xl mx-auto">
-      <Link href="/competitions" className="inline-flex items-center gap-2 text-gray-500 hover:text-[#0A1024] font-medium mb-8 transition-colors">
+    <div className="p-4 sm:p-6 md:p-10 w-full max-w-4xl mx-auto">
+      <Link href="/competitions" className="inline-flex items-center gap-2 text-gray-500 hover:text-[#0A1024] font-medium mb-6 md:mb-8 transition-colors">
         <ArrowLeft className="w-5 h-5" />
         Kembali ke Daftar Kompetisi
       </Link>
@@ -53,10 +53,10 @@ export default async function CompetitionDetailPage({
           </div>
         </div>
 
-        <div className="p-8">
-          <h1 className="text-3xl font-bold text-[#0A1024] mb-4">{comp.title}</h1>
+        <div className="p-5 md:p-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-[#0A1024] mb-4">{comp.title}</h1>
           
-          <div className="flex flex-wrap gap-2 mb-8">
+          <div className="flex flex-wrap gap-2 mb-6 md:mb-8">
             {comp.skills && comp.skills.map((skill: string) => (
               <span key={skill} className={`px-4 py-1.5 text-sm font-medium rounded-full ${getTagColors(skill)}`}>
                 {skill}
@@ -108,9 +108,9 @@ export default async function CompetitionDetailPage({
           )}
 
           <div className="pt-6 border-t border-gray-100 flex gap-4">
-            <Link href={`/matchmaking?competitionId=${comp.id}`} className="flex-1 bg-[#FFC700] hover:bg-[#e6b400] text-[#0A1024] font-bold py-4 rounded-xl transition-colors text-lg flex items-center justify-center gap-2 shadow-sm">
-              <Users className="w-5 h-5" />
-              Buat Tim untuk Lomba Ini
+            <Link href={`/matchmaking?competitionId=${comp.id}`} className="flex-1 bg-[#FFC700] hover:bg-[#e6b400] text-[#0A1024] font-bold py-3 md:py-4 px-4 rounded-xl transition-colors text-base md:text-lg flex items-center justify-center gap-2 shadow-sm text-center">
+              <Users className="w-5 h-5 shrink-0" />
+              <span>Buat Tim untuk Lomba Ini</span>
             </Link>
           </div>
         </div>
