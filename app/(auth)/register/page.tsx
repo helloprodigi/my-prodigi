@@ -78,11 +78,11 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-cover bg-center font-sans" style={{ backgroundImage: "url('/assets/register/background.svg')" }}>
-      <div className="h-full grid lg:grid-cols-12 items-center">
-        
-        {/* Sisi Kiri - Branding & Ilustrasi */}
-        <div className="lg:col-span-6 px-16 py-12 flex flex-col justify-center h-full">
+    <div className="h-screen w-full overflow-y-auto bg-cover bg-center font-sans" style={{ backgroundImage: "url('/assets/register/background.svg')" }}>
+      <div className="flex flex-col lg:grid lg:grid-cols-12 lg:h-full lg:items-center">
+
+        {/* Sisi Kiri - Branding & Ilustrasi (hidden on mobile) */}
+        <div className="hidden lg:flex lg:col-span-6 px-16 py-12 flex-col justify-center h-full">
           <div className="max-w-xl text-left">
             <h1 className="text-3xl lg:text-4xl font-bold leading-tight text-white">
               Bangun tim <span className="text-[#FFC917]">Juara,</span> <br /> Menangkan Kompetisi
@@ -98,33 +98,31 @@ export default function RegisterPage() {
         </div>
 
         {/* Sisi Kanan - Container Kartu Putih */}
-        <div className="lg:col-span-6 flex items-center justify-center w-full h-full lg:-translate-x-6 transition-transform">
-          {/* Padding disesuaikan ke p-5 agar space luar komponen di dalam lebih fit */}
-          <div 
-            className="bg-white rounded-lg shadow-xl p-5 pt-6 pb-6 flex flex-col justify-start box-border" 
-            style={{ width: '380px' }}
+        <div className="min-h-screen flex items-center justify-center px-5 py-8 lg:min-h-0 lg:col-span-6 lg:h-full lg:px-0 lg:py-0 lg:-translate-x-6 transition-transform">
+          <div
+            className="bg-white rounded-2xl lg:rounded-lg shadow-xl p-5 pt-6 pb-6 flex flex-col justify-start box-border w-full max-w-[400px]"
           >
             {/* Header Kartu */}
             <div className="flex flex-col items-center w-full">
               <div className="flex justify-center items-center w-full px-2">
-                <Image 
-                  src="/assets/register/myprodigi-logo.svg" 
-                  alt="logo" 
-                  width={310} 
-                  height={91.5} 
-                  className="object-contain"
+                <Image
+                  src="/assets/register/myprodigi-logo.svg"
+                  alt="logo"
+                  width={310}
+                  height={91.5}
+                  className="object-contain w-full max-w-[310px] h-auto"
                 />
               </div>
               <div className="w-full max-w-[310px] h-[1px] bg-gray-100 my-2.5" />
               <h2 className="text-base font-bold text-gray-900 tracking-tight mt-0.5">Daftar Sekarang</h2>
             </div>
 
-            {/* Form Utama - mt dikurangi ke mt-4 */}
+            {/* Form Utama */}
             <form onSubmit={submit} className="flex flex-col w-full items-center mt-4">
-              {error && <div className="text-xs text-red-600 bg-red-50 p-2 rounded-md w-[320px] mb-2.5">{error}</div>}
+              {error && <div className="text-xs text-red-600 bg-red-50 p-2 rounded-md w-full mb-2.5">{error}</div>}
 
               {/* Input Nama */}
-              <div className="w-[320px] mb-3">
+              <div className="w-full mb-3">
                 <label className="block text-[11px] text-[#6E7980] font-semibold mb-1 pl-0.5">Nama</label>
                 <div className="relative w-full">
                   <span className="absolute inset-y-0 left-3 flex items-center text-[#6E7980] z-10">
@@ -145,7 +143,7 @@ export default function RegisterPage() {
               </div>
 
               {/* Input Email */}
-              <div className="w-[320px] mb-3">
+              <div className="w-full mb-3">
                 <label className="block text-[11px] text-[#6E7980] font-semibold mb-1 pl-0.5">Email Address</label>
                 <div className="relative w-full">
                   <span className="absolute inset-y-0 left-3 flex items-center text-[#6E7980] z-10">
@@ -166,7 +164,7 @@ export default function RegisterPage() {
               </div>
 
               {/* Input Password */}
-              <div className="w-[320px] mb-3">
+              <div className="w-full mb-3">
                 <label className="block text-[11px] text-[#6E7980] font-semibold mb-1 pl-0.5">Password</label>
                 <div className="relative w-full">
                   <span className="absolute inset-y-0 left-3 flex items-center text-[#6E7980] z-10">
@@ -203,7 +201,7 @@ export default function RegisterPage() {
               </div>
 
               {/* Input Confirm Password - mb dikurangi dari mb-5 ke mb-4 */}
-              <div className="w-[320px] mb-4">
+              <div className="w-full mb-4">
                 <label className="block text-[11px] text-[#6E7980] font-semibold mb-1 pl-0.5">Confirm Password</label>
                 <div className="relative w-full">
                   <span className="absolute inset-y-0 left-3 flex items-center text-[#6E7980] z-10">
@@ -240,7 +238,7 @@ export default function RegisterPage() {
               </div>
 
               {/* Tombol Daftar */}
-              <div className="w-[320px] mb-3">
+              <div className="w-full mb-3">
                 <button
                   type="submit"
                   disabled={loading}
@@ -252,7 +250,7 @@ export default function RegisterPage() {
               </div>
 
               {/* Tombol Google OAuth */}
-              <div className="w-[320px]">
+              <div className="w-full">
                 <button
                   type="button"
                   className="w-full rounded-md flex items-center justify-center gap-2 text-gray-600 font-medium text-[11px] transition-all hover:bg-gray-50 active:scale-[0.99] disabled:opacity-60"

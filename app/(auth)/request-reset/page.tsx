@@ -34,11 +34,11 @@ export default function RequestResetPage() {
     };
 
     return (
-        <div className="h-screen w-full overflow-hidden bg-cover bg-center font-sans" style={{ backgroundImage: "url('/assets/login/background.svg')" }}>
-            <div className="h-full grid lg:grid-cols-12 items-center">
+        <div className="h-screen w-full overflow-y-auto bg-cover bg-center font-sans" style={{ backgroundImage: "url('/assets/login/background.svg')" }}>
+            <div className="flex flex-col lg:grid lg:grid-cols-12 lg:h-full lg:items-center">
 
-                {/* Sisi Kiri - Branding & Ilustrasi */}
-                <div className="lg:col-span-6 px-16 py-12 flex flex-col justify-center h-full">
+                {/* Sisi Kiri - Branding & Ilustrasi (hidden on mobile) */}
+                <div className="hidden lg:flex lg:col-span-6 px-16 py-12 flex-col justify-center h-full">
                     <div className="max-w-xl text-left">
                         <h1 className="text-3xl lg:text-4xl font-bold leading-tight text-white">
                             Bangun tim <span className="text-[#FFC917]">Juara,</span> <br /> Menangkan Kompetisi
@@ -54,11 +54,9 @@ export default function RequestResetPage() {
                 </div>
 
                 {/* Sisi Kanan - Container Kartu Putih */}
-                <div className="lg:col-span-6 flex items-center justify-center w-full h-full lg:-translate-x-6 transition-transform">
-                    <div
-                        className="bg-white rounded-lg shadow-xl p-7 pt-8 pb-8 flex flex-col justify-start box-border"
-                        style={{ width: '400px' }}
-                    >
+                <div className="min-h-screen flex items-center justify-center px-5 py-8 lg:min-h-0 lg:col-span-6 lg:h-full lg:px-0 lg:py-0 lg:-translate-x-6 transition-transform">
+                    <div className="bg-white rounded-2xl lg:rounded-lg shadow-xl p-7 pt-8 pb-8 flex flex-col justify-start box-border w-full max-w-[400px]">
+
                         {/* Header Kartu */}
                         <div className="flex flex-col items-center w-full">
                             <div className="flex justify-center items-center w-full px-2">
@@ -67,7 +65,7 @@ export default function RequestResetPage() {
                                     alt="logo"
                                     width={310}
                                     height={91.5}
-                                    className="object-contain"
+                                    className="object-contain w-full max-w-[310px] h-auto"
                                 />
                             </div>
                             <div className="w-full max-w-[310px] h-[1px] bg-gray-100 my-3" />
@@ -79,13 +77,13 @@ export default function RequestResetPage() {
 
                         {/* Form Utama */}
                         <form onSubmit={submit} className="flex flex-col w-full items-center mt-6">
-                            {error && <div className="text-xs text-red-600 bg-red-50 p-2 rounded-md w-[340px] mb-3">{error}</div>}
-                            {success && <div className="text-xs text-green-600 bg-green-50 p-3 rounded-md w-[340px] mb-4 text-center leading-relaxed font-medium">{success}</div>}
+                            {error && <div className="text-xs text-red-600 bg-red-50 p-2 rounded-md w-full mb-3">{error}</div>}
+                            {success && <div className="text-xs text-green-600 bg-green-50 p-3 rounded-md w-full mb-4 text-center leading-relaxed font-medium">{success}</div>}
 
                             {!success && (
                                 <>
                                     {/* Input Email */}
-                                    <div className="w-[340px] mb-6">
+                                    <div className="w-full mb-6">
                                         <label className="block text-[11px] text-[#6E7980] font-semibold mb-1.5 pl-0.5">Email Address</label>
                                         <div className="relative w-full">
                                             <span className="absolute inset-y-0 left-3 flex items-center text-[#6E7980] z-10">
@@ -106,7 +104,7 @@ export default function RequestResetPage() {
                                     </div>
 
                                     {/* Tombol Kirim */}
-                                    <div className="w-[340px]">
+                                    <div className="w-full">
                                         <button
                                             type="submit"
                                             disabled={loading}

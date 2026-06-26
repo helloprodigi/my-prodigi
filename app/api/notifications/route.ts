@@ -95,3 +95,50 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      return NextResponse.json({ error: "Missing Supabase configuration" }, { status: 500 });
+    }
+
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { createClient: createSupabaseClient } = require("@supabase/supabase-js");
+    const adminDb = createSupabaseClient(supabaseUrl, serviceRoleKey);
+
+    const body = await req.json();
+    const { notificationId, deleteAllRead } = body;
+
+    let query = adminDb.from("Notification").delete().eq("userId", user.id);
+
+    if (notificationId) {
+      query = query.eq("id", notificationId);
+    } else if (deleteAllRead) {
+      query = query.eq("isRead", true);
+    } else {
+      return NextResponse.json({ error: "Missing notificationId or deleteAllRead" }, { status: 400 });
+    }
+
+    const { error } = await query;
+
+    if (error) {
+      console.error("Error deleting notification(s):", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("API Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

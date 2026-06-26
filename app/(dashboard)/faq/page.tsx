@@ -52,7 +52,7 @@ export default function TutorialFAQPage() {
         },
         {
             id: "faq-8",
-            question: "Bagaimana WinCom menjaga privasi pengguna?",
+            question: "Bagaimana MyProdigi menjaga privasi pengguna?",
             answer: "MyProdigi dirancang dengan memperhatikan keamanan dan privasi data pengguna. Informasi yang Anda berikan hanya digunakan untuk meningkatkan akurasi rekomendasi tim dan tidak digunakan untuk tujuan lain.",
         },
     ];
@@ -129,7 +129,7 @@ export default function TutorialFAQPage() {
                                 <button
                                     type="button"
                                     onClick={() => toggleFaq(item.id)}
-                                    className="w-full flex items-center justify-between py-4 text-left text-[13px] font-bold text-[#0A1024] hover:text-[#FFC700] transition-colors gap-4"
+                                    className="w-full flex items-center justify-between py-4 text-left text-[15px] font-bold text-[#0A1024] hover:text-[#FFC700] transition-colors gap-4"
                                 >
                                     <span>{item.question}</span>
                                     <span className="flex-shrink-0 text-gray-400">
@@ -148,9 +148,9 @@ export default function TutorialFAQPage() {
                                 </button>
 
                                 {/* Konten Jawaban Akordion */}
-                                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? "max-h-[200px] opacity-100 pb-5" : "max-h-0 opacity-0"
+                                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? "max-h-[300px] opacity-100 pb-5" : "max-h-0 opacity-0"
                                     }`}>
-                                    <p className="text-xs text-gray-400 font-medium leading-relaxed">
+                                    <p className="text-sm text-gray-400 font-medium leading-relaxed">
                                         {item.answer}
                                     </p>
                                 </div>

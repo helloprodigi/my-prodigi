@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { CheckCircle2, AlertCircle, CheckCheck, UserPlus } from "lucide-react";
+import { CheckCircle2, AlertCircle, CheckCheck, UserPlus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -57,6 +57,8 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingAllRead, setDeletingAllRead] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -121,29 +123,80 @@ export default function NotificationsPage() {
     }
   };
 
+  const deleteNotification = async (id: string) => {
+    setDeletingId(id);
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    try {
+      await fetch("/api/notifications", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationId: id }),
+      });
+    } catch {
+      fetchNotifications();
+      toast.error("Gagal menghapus notifikasi.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const deleteAllRead = async () => {
+    setDeletingAllRead(true);
+    setNotifications((prev) => prev.filter((n) => !n.isRead));
+    try {
+      await fetch("/api/notifications", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deleteAllRead: true }),
+      });
+      toast.success("Notifikasi yang sudah dibaca dihapus.");
+    } catch {
+      fetchNotifications();
+      toast.error("Gagal menghapus notifikasi.");
+    } finally {
+      setDeletingAllRead(false);
+    }
+  };
+
   const displayed = notifications.filter((n) =>
     activeTab === "Belum dibaca" ? !n.isRead : true
   );
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const readCount = notifications.filter((n) => n.isRead).length;
 
   return (
     <div className="min-h-screen bg-[#FBFBFB] flex flex-col">
-      {/* Header + Tabs — left-aligned */}
-      <div className="w-full max-w-[720px] pl-6 pr-4">
+      {/* Header — full width so justify-between reaches the right edge */}
+      <div className="w-full pl-6 pr-6">
         <div className="flex items-center justify-between pt-8 pb-6">
           <h1 className="text-3xl font-bold text-[#0A1024]">Notifikasi</h1>
-          {unreadCount > 0 && (
-            <button
-              onClick={markAllAsRead}
-              disabled={markingAll}
-              className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#0A1024] transition-colors disabled:opacity-50"
-            >
-              <CheckCheck className="w-3.5 h-3.5" />
-              Tandai semua dibaca
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllAsRead}
+                disabled={markingAll}
+                className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#0A1024] transition-colors disabled:opacity-50"
+              >
+                <CheckCheck className="w-3.5 h-3.5" />
+                Tandai semua dibaca
+              </button>
+            )}
+            {readCount > 0 && (
+              <button
+                onClick={deleteAllRead}
+                disabled={deletingAllRead}
+                className="flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-600 transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Hapus sudah dibaca
+              </button>
+            )}
+          </div>
         </div>
+      </div>
 
+      {/* Tabs */}
+      <div className="w-full max-w-[720px] pl-6 pr-4">
         <div className="flex gap-8 mb-6">
           {(["Semua", "Belum dibaca"] as const).map((tab) => (
             <button
@@ -224,7 +277,7 @@ export default function NotificationsPage() {
                 </div>
               ) : (
                 /* READ — no card, no border */
-                <div key={notif.id} className="flex items-start gap-3">
+                <div key={notif.id} className="flex items-start gap-3 group">
                   <NotifIcon type={notif.type} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-[#0A1024] leading-snug mb-1.5">
@@ -238,6 +291,14 @@ export default function NotificationsPage() {
                       <span>{formatTimestamp(notif.createdAt)}</span>
                     </div>
                   </div>
+                  <button
+                    onClick={() => deleteNotification(notif.id)}
+                    disabled={deletingId === notif.id}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-gray-300 hover:text-red-400 disabled:opacity-30 shrink-0"
+                    title="Hapus notifikasi"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               )
             )}
