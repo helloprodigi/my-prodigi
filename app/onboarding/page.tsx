@@ -29,6 +29,7 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [waError, setWaError] = useState("");
   const [formData, setFormData] = useState({
     jurusan: "S1 Informatika",
     angkatan: "",
@@ -209,13 +210,37 @@ export default function OnboardingPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-900">Nomor WA</label>
-                  <input
-                    type="text"
-                    placeholder="+62 8210 6767 6767"
-                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900 placeholder:text-gray-400"
-                    value={formData.nomorWa}
-                    onChange={(e) => setFormData({ ...formData, nomorWa: e.target.value })}
-                  />
+                  <div className={`flex bg-gray-50 border rounded-xl focus-within:ring-2 focus-within:ring-[#FFC700] overflow-hidden ${waError ? 'border-red-500' : 'border-gray-200'}`}>
+                    <div className="flex items-center px-4 bg-gray-100 text-gray-600 border-r border-gray-200 font-medium">
+                      +62
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="821 0676 7676"
+                      className="w-full p-4 bg-transparent outline-none text-gray-900 placeholder:text-gray-400"
+                      value={formData.nomorWa.replace(/^\+?62/, '').replace(/^0/, '')}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/\D/g, '');
+                        if (val.startsWith('0')) val = val.substring(1);
+                        if (val.startsWith('62')) val = val.substring(2);
+                        
+                        setFormData({ ...formData, nomorWa: val ? '+62' + val : '' });
+
+                        if (val.length === 0) {
+                          setWaError("Nomor WA harus diisi");
+                        } else if (val.length < 9) {
+                          setWaError("Nomor WA terlalu pendek (minimal 9 angka)");
+                        } else if (val.length > 13) {
+                          setWaError("Nomor WA terlalu panjang (maksimal 13 angka)");
+                        } else if (!val.startsWith('8')) {
+                          setWaError("Nomor tidak valid (harus diawali angka 8)");
+                        } else {
+                          setWaError("");
+                        }
+                      }}
+                    />
+                  </div>
+                  {waError && <p className="text-red-500 text-xs mt-1">{waError}</p>}
                 </div>
               </div>
 
@@ -254,7 +279,7 @@ export default function OnboardingPage() {
               <div className="flex justify-end mt-10">
                 <button
                   onClick={handleNext}
-                  disabled={!formData.jurusan || !formData.angkatan || !formData.nomorWa || !formData.cvUrl || isUploading}
+                  disabled={!formData.jurusan || !formData.angkatan || !formData.nomorWa || !formData.cvUrl || isUploading || !!waError}
                   className="bg-[#FFC700] text-[#0A1024] font-semibold py-3 px-10 rounded-xl hover:bg-[#e6b400] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue

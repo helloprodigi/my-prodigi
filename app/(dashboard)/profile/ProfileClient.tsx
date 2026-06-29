@@ -57,6 +57,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
     jurusan: profile.jurusan || "",
   });
   const [isSavingPersonal, setIsSavingPersonal] = useState(false);
+  const [waError, setWaError] = useState("");
 
   // State for Skills Edit
   const [isEditingSkills, setIsEditingSkills] = useState(false);
@@ -441,7 +442,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                   </button>
                   <button
                     onClick={handleSavePersonal}
-                    disabled={isSavingPersonal}
+                    disabled={isSavingPersonal || !!waError}
                     className="bg-[#FFC700] text-[#0A1024] px-6 py-2 rounded-lg font-semibold hover:bg-[#e6b400] transition-colors text-sm disabled:opacity-50"
                   >
                     {isSavingPersonal ? "Saving..." : "Save"}
@@ -485,12 +486,39 @@ export default function ProfileClient({ profile }: { profile: any }) {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-600">Nomor WA</label>
                 {isEditingPersonal ? (
-                  <input
-                    type="text"
-                    value={personalForm.nomorWa}
-                    onChange={e => setPersonalForm({ ...personalForm, nomorWa: e.target.value })}
-                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
-                  />
+                  <div>
+                    <div className={`flex bg-gray-50 border rounded-xl focus-within:ring-2 focus-within:ring-[#FFC700] overflow-hidden ${waError ? 'border-red-500' : 'border-gray-200'}`}>
+                      <div className="flex items-center px-4 bg-gray-100 text-gray-600 border-r border-gray-200 font-medium">
+                        +62
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="821 0676 7676"
+                        className="w-full p-4 bg-transparent outline-none text-gray-900"
+                        value={personalForm.nomorWa.replace(/^\+?62/, '').replace(/^0/, '')}
+                        onChange={e => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val.startsWith('0')) val = val.substring(1);
+                          if (val.startsWith('62')) val = val.substring(2);
+                          
+                          setPersonalForm({ ...personalForm, nomorWa: val ? '+62' + val : '' });
+
+                          if (val.length === 0) {
+                            setWaError("Nomor WA harus diisi");
+                          } else if (val.length < 9) {
+                            setWaError("Nomor WA terlalu pendek (minimal 9 angka)");
+                          } else if (val.length > 13) {
+                            setWaError("Nomor WA terlalu panjang (maksimal 13 angka)");
+                          } else if (!val.startsWith('8')) {
+                            setWaError("Nomor tidak valid (harus diawali angka 8)");
+                          } else {
+                            setWaError("");
+                          }
+                        }}
+                      />
+                    </div>
+                    {waError && <p className="text-red-500 text-xs mt-1">{waError}</p>}
+                  </div>
                 ) : (
                   <div className="w-full p-4 bg-gray-50 rounded-xl text-gray-900 text-sm border border-transparent">{profile.nomorWa || "-"}</div>
                 )}
