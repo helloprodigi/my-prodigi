@@ -408,7 +408,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                           </button>
                         )}
 
-                        {member.status === "APPROVED" && member.userId !== teamInfo.currentUserId ? (
+                        {member.status === "APPROVED" && member.userId !== teamInfo.currentUserId && (teamInfo.isLeader || teamInfo.isMember) ? (
                           <button
                             type="button"
                             onClick={() => handleChatWhatsApp(member.whatsappNumber)}
