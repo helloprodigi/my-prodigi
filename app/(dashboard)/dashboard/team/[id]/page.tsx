@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Crown } from "lucide-react";
 import {
-  findMemberAction,
   getTeamDetailAction,
   inviteMemberAction,
   refreshMemberAction,
@@ -55,12 +54,6 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
   const approvedCount = teamInfo?.approvedCount ?? 0;
   const maxMembers = teamInfo?.maxAdditionalMembersNeeded ?? 0;
   const isTeamComplete = approvedCount >= maxMembers;
-  const waitingCandidateCount = teamInfo?.members.filter(
-    (m) => m.status === "WAITING" && m.inviteToken !== "REQUEST_JOIN",
-  ).length ?? 0;
-  const canFindMember =
-    teamInfo?.isLeader && !isTeamComplete && (approvedCount + waitingCandidateCount < maxMembers);
-
   const handleInvite = (memberId: string, name: string) => {
     startTransition(async () => {
       const result = await inviteMemberAction(id, memberId);
@@ -136,18 +129,6 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
       return;
     }
     window.open(cvUrl, "_blank");
-  };
-
-  const handleFindMember = () => {
-    startTransition(async () => {
-      const result = await findMemberAction(id);
-      if (result.success) {
-        toast.success("Kandidat anggota ditemukan.");
-        await loadTeam();
-      } else {
-        toast.error(result.error ?? "Gagal mencari anggota.");
-      }
-    });
   };
 
   const handleRequestJoin = () => {
@@ -252,6 +233,20 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
               </div>
             </div>
           </div>
+
+          {teamInfo.isLeader && (
+            <div className="bg-[#FFF9E6] border border-[#FFE9A8] rounded-[6px] p-4 mb-4">
+              <p className="text-xs font-bold text-[#0A1024] mb-1.5">
+                Ini adalah tim yang kami rekomendasikan berdasarkan profil Anda.
+              </p>
+              <p className="text-xs text-gray-600 mb-1.5">
+                Pastikan untuk menganalisis calon anggota sebelum mengirimkan undangan.
+              </p>
+              <p className="text-xs font-semibold text-[#B45300]">
+                Peringatan: Anggota yang sudah menerima undangan dan bergabung tidak dapat di-kick dari tim.
+              </p>
+            </div>
+          )}
 
           {/* Mobile card list */}
           <div className="md:hidden space-y-3">
@@ -457,20 +452,9 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
 
           {!isTeamComplete && teamInfo.isLeader && (
             <div className="w-full text-center py-6 mt-4 tracking-wide">
-              {canFindMember ? (
-                <button
-                  type="button"
-                  onClick={handleFindMember}
-                  disabled={isPending}
-                  className="bg-[#FFC700] text-[#0A1024] font-bold px-6 py-2.5 rounded-[6px] text-xs hover:brightness-95 transition-all disabled:opacity-60"
-                >
-                  Cari Anggota
-                </button>
-              ) : (
-                <p className="text-sm font-semibold italic text-[#FFC700]">
-                  Sedang Mencari {maxMembers - approvedCount} Orang Lagi...
-                </p>
-              )}
+              <p className="text-sm font-semibold italic text-[#FFC700]">
+                Sedang Mencari {maxMembers - approvedCount} Orang Lagi...
+              </p>
             </div>
           )}
 

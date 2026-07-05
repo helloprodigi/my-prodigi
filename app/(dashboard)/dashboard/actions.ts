@@ -298,7 +298,8 @@ export async function getTeamDetailAction(teamId: string): Promise<{
         .from("TeamMember")
         .select("id", { count: "exact", head: true })
         .eq("teamId", teamId)
-        .eq("status", "APPROVED");
+        .eq("status", "APPROVED")
+        .neq("userId", team.leaderId);
 
       const teamNeedsMembers = (approvedTotal ?? 0) < team.memberCount;
       const canView =
@@ -511,7 +512,8 @@ export async function requestJoinAction(teamId: string) {
       .from("TeamMember")
       .select("id", { count: "exact", head: true })
       .eq("teamId", teamId)
-      .eq("status", "APPROVED");
+      .eq("status", "APPROVED")
+      .neq("userId", team.leaderId);
 
     if ((count ?? 0) >= team.memberCount) {
       return { success: false, error: "Tim sudah penuh." };
@@ -867,11 +869,11 @@ export async function getAllTeamsAction(): Promise<{
 
     const { data: myMemberships } = await adminDb
       .from("TeamMember")
-      .select("teamId, status, inviteToken")
+      .select("id, teamId, status, inviteToken")
       .eq("userId", user.id);
 
     const membershipByTeam = new Map(
-      (myMemberships ?? []).map((m) => [m.teamId, { status: m.status, inviteToken: m.inviteToken }]),
+      (myMemberships ?? []).map((m) => [m.teamId, { id: m.id, status: m.status, inviteToken: m.inviteToken }]),
     );
 
     const teamSelectWithStatus = `
@@ -916,8 +918,14 @@ export async function getAllTeamsAction(): Promise<{
       const userMembership = membershipByTeam.get(teamId);
       const isMember = !isLeader && userMembership?.status === "APPROVED";
       const hasJoinRequest = !isLeader && userMembership?.status === "WAITING" && userMembership?.inviteToken === "REQUEST_JOIN";
-      
+      const isInvited = !isLeader && userMembership?.status === "WAITING" && userMembership?.inviteToken !== "REQUEST_JOIN";
+
       const isDiscoverable = !isLeader && !isMember && !userMembership;
+      const isFull = approvedCount >= team.memberCount;
+
+      // Teams the viewer has no stake in (not leader/member/invited/requested) and
+      // that are already full shouldn't be shown — there's nothing they can do with them.
+      if (isDiscoverable && isFull) continue;
 
       cards.push({
         id: teamId,
@@ -934,8 +942,11 @@ export async function getAllTeamsAction(): Promise<{
         isLeader,
         isMember,
         isDiscoverable,
-        isComplete: approvedCount >= team.memberCount,
+        isComplete: isFull,
         hasJoinRequest,
+        isInvited,
+        membershipId: userMembership?.id,
+        inviteToken: userMembership?.inviteToken,
       });
     }
 
@@ -979,18 +990,24 @@ export async function approveJoinRequestAction(teamId: string, memberId: string)
       return { success: false, error: "Permintaan gabung tidak valid atau sudah diproses." };
     }
 
+    const { count: approvedNonLeaderCount } = await adminDb
+      .from("TeamMember")
+      .select("id", { count: "exact", head: true })
+      .eq("teamId", teamId)
+      .eq("status", "APPROVED")
+      .neq("userId", team.leaderId);
+
+    if ((approvedNonLeaderCount ?? 0) >= team.memberCount) {
+      return { success: false, error: "Tim sudah penuh." };
+    }
+
     const { count } = await adminDb
       .from("TeamMember")
       .select("id", { count: "exact", head: true })
       .eq("teamId", teamId)
       .eq("status", "APPROVED");
 
-    const approvedCount = count ?? 0;
-    if (approvedCount >= team.memberCount) {
-      return { success: false, error: "Tim sudah penuh." };
-    }
-
-    const slotNumber = approvedCount + 1;
+    const slotNumber = (count ?? 0) + 1;
     const now = new Date().toISOString();
 
     const { error: updateError } = await adminDb

@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import Image from "next/image";
 import Link from "next/link";
 import { createTeamAction } from "./actions";
+import { findMemberAction } from "../dashboard/actions";
 import type { CreateTeamInput } from "@/types/team";
 
 const SKILL_OPTIONS = [
@@ -53,6 +54,7 @@ export default function MatchmakingPage() {
   const [competitionCategory, setCompetitionCategory] = useState("");
   const [requiredSkills, setRequiredSkills] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
+  const [isMatchmaking, setIsMatchmaking] = useState(false);
   const router = useRouter();
 
   const handleSkillToggle = (skill: string) => {
@@ -74,6 +76,7 @@ export default function MatchmakingPage() {
       toast.error("Jumlah anggota tim yang valid adalah 1 - 99 orang.");
       return;
     }
+    setIsMatchmaking(true);
     startTransition(async () => {
       const input: CreateTeamInput = {
         teamName,
@@ -84,15 +87,21 @@ export default function MatchmakingPage() {
         requiredSkills,
       };
       const result = await createTeamAction(input);
-      if (result.success) {
-        toast.success("Tim berhasil dibuat!");
-        setTeamName("");
-        setMemberCount("");
-        setRequiredSkills([]);
-        router.push("/dashboard");
-      } else {
+      if (!result.success) {
+        setIsMatchmaking(false);
         toast.error(result.error || "Gagal membuat tim.");
+        return;
       }
+
+      const teamId = result.team.id;
+      const minDelay = new Promise((resolve) => setTimeout(resolve, 5000));
+      await Promise.all([findMemberAction(teamId).catch(() => {}), minDelay]);
+
+      toast.success("Tim berhasil dibuat!");
+      setTeamName("");
+      setMemberCount("");
+      setRequiredSkills([]);
+      router.push(`/dashboard/team/${teamId}`);
     });
   };
 
@@ -269,6 +278,18 @@ export default function MatchmakingPage() {
           priority
         />
       </div>
+
+      {isMatchmaking && (
+        <div className="fixed inset-0 z-50 bg-[#FBFBFB]/90 backdrop-blur-sm flex flex-col items-center justify-center gap-5">
+          <div className="relative w-16 h-16">
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#FFC700] border-r-[#FFC700]/50 animate-spin" />
+            <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-[#FFC700]/30 border-l-[#FFC700]/10 animate-spin" />
+          </div>
+          <p className="text-sm font-semibold italic text-[#0A1024]">
+            Memulai matchmaking otomatis... 
+          </p>
+        </div>
+      )}
     </div>
   );
 }
