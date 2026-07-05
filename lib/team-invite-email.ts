@@ -1,4 +1,4 @@
-import { resend, RESEND_FROM } from "@/lib/resend";
+import { resend, RESEND_FROM, isResendLimitError, ResendLimitError } from "@/lib/resend";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { unwrapRelation } from "@/lib/supabase-relations";
 import { teamInviteEmailHtml } from "@/lib/email-templates";
@@ -94,6 +94,9 @@ export async function sendTeamInviteEmail({
   });
 
   if (error) {
+    if (isResendLimitError(error)) {
+      throw new ResendLimitError(error.message);
+    }
     throw new Error(error.message);
   }
 }

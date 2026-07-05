@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { resend, RESEND_FROM } from "@/lib/resend";
+import { resend, RESEND_FROM, isResendLimitError } from "@/lib/resend";
 import { createVerificationRecord, getVerificationRecordByEmail } from "@/lib/email-verification-store";
 import { verificationEmailHtml } from "@/lib/email-templates";
 
@@ -41,6 +41,12 @@ export async function POST(request: Request) {
     });
 
     if (error) {
+      if (isResendLimitError(error)) {
+        return NextResponse.json(
+          { error: "Jumlah pendaftar hari ini sudah melebihi batas, silakan coba daftar lagi besok." },
+          { status: 429 },
+        );
+      }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
