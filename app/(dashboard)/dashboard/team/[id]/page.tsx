@@ -458,6 +458,14 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           )}
 
+          {isTeamComplete && teamInfo.isLeader && (
+            <div className="w-full text-center py-6 mt-4 tracking-wide">
+              <p className="text-sm font-semibold italic text-[#2E7D32]">
+                Tim anda sudah lengkap
+              </p>
+            </div>
+          )}
+
           {teamInfo.canJoin && (
             <div className="w-full text-center py-6 mt-4">
               <button

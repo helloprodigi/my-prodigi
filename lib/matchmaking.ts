@@ -113,6 +113,20 @@ export async function assignNextCandidate(
     requiredSkills: string[];
   },
 ): Promise<boolean> {
+  const { data: members } = await adminDb
+    .from("TeamMember")
+    .select("id, status, userId")
+    .eq("teamId", team.id);
+
+  const allMembers = members ?? [];
+  const approvedNonLeader = allMembers.filter(
+    (m) => m.status === "APPROVED" && m.userId !== team.leaderId,
+  ).length;
+  const waitingCount = allMembers.filter((m) => m.status === "WAITING").length;
+
+  const slotsNeeded = team.memberCount - approvedNonLeader - waitingCount;
+  if (slotsNeeded <= 0) return false;
+
   const excludeUserIds = await getExcludedUserIds(adminDb, team.id, team.leaderId);
   const candidateId = await findCandidateUserId(
     adminDb,
