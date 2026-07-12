@@ -24,3 +24,13 @@ body {
   color: var(--foreground);
   font-family: var(--font-jakarta-sans), Arial, Helvetica, sans-serif;
 }
+
+.select-clean:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.select-clean::-moz-focusring {
+  color: transparent;
+  text-shadow: 0 0 0 #171717;
+}

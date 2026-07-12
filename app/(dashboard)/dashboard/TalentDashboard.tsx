@@ -113,7 +113,7 @@ export default function TalentDashboard() {
       <div className="w-full z-10 max-w-[1400px] pl-6 pr-4">
         {/* Header */}
         <div className="flex items-center justify-between pt-8 pb-6 w-full">
-          <h1 className="text-3xl font-bold text-[#0A1024]">Dashboard</h1>
+          <h1 className="text-[22px] sm:text-3xl md:text-4xl font-bold text-[#0A1024]">Dashboard</h1>
           <Link href="/matchmaking">
             <button className="bg-[#FFC700] text-[#0A1024] font-bold px-9 py-3 rounded-[8px] text-sm hover:brightness-95 transition-all shadow-sm">
               Buat Tim

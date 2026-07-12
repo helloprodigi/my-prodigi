@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import { ChevronDown } from "lucide-react";
 import strukturOrganisasi from "@/data/struktur_organisasi.json";
 
 export default function AslabOnboardingPage() {
@@ -17,11 +18,28 @@ export default function AslabOnboardingPage() {
   // Extract all unique divisions
   const divisions = strukturOrganisasi.map((item) => item.divisi);
 
-  // Extract roles based on selected division
+  // Extract unique roles based on selected division, grouped per team with
+  // "Kepala Divisi" always placed above its regular members
   const availableRoles = formData.divisi
-    ? strukturOrganisasi
-        .find((item) => item.divisi === formData.divisi)
-        ?.members.map((m) => m.posisi) || []
+    ? (() => {
+        const members =
+          strukturOrganisasi.find((item) => item.divisi === formData.divisi)
+            ?.members || [];
+
+        const groups = new Map<string, { kepala?: string; anggota?: string }>();
+        for (const { posisi } of members) {
+          const isKepala = posisi.includes("(Kepala Divisi)");
+          const team = posisi.replace(" (Kepala Divisi)", "").trim();
+          const group = groups.get(team) || {};
+          if (isKepala) group.kepala = posisi;
+          else group.anggota = posisi;
+          groups.set(team, group);
+        }
+
+        return Array.from(groups.values()).flatMap((g) =>
+          [g.kepala, g.anggota].filter((v): v is string => Boolean(v))
+        );
+      })()
     : [];
 
   const handleSubmit = async () => {
@@ -88,45 +106,51 @@ export default function AslabOnboardingPage() {
           <div className="space-y-6">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-900">Divisi</label>
-              <select
-                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
-                value={formData.divisi}
-                onChange={(e) =>
-                  setFormData({ divisi: e.target.value, jabatan: "" })
-                }
-              >
-                <option value="" disabled>
-                  Pilih Divisi
-                </option>
-                {divisions.map((div) => (
-                  <option key={div} value={div}>
-                    {div}
+              <div className="relative">
+                <select
+                  className="select-clean w-full p-4 pr-10 bg-[#F6F6F6] border border-gray-200 rounded-xl outline-none focus:outline-none focus:ring-0 appearance-none text-gray-900"
+                  value={formData.divisi}
+                  onChange={(e) =>
+                    setFormData({ divisi: e.target.value, jabatan: "" })
+                  }
+                >
+                  <option value="" disabled>
+                    Pilih Divisi
                   </option>
-                ))}
-              </select>
+                  {divisions.map((div) => (
+                    <option key={div} value={div}>
+                      {div}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-500" />
+              </div>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-900">
                 Posisi/Jabatan
               </label>
-              <select
-                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900 disabled:opacity-50"
-                value={formData.jabatan}
-                onChange={(e) =>
-                  setFormData({ ...formData, jabatan: e.target.value })
-                }
-                disabled={!formData.divisi}
-              >
-                <option value="" disabled>
-                  Pilih Jabatan
-                </option>
-                {availableRoles.map((role, idx) => (
-                  <option key={idx} value={role}>
-                    {role}
+              <div className="relative">
+                <select
+                  className="select-clean w-full p-4 pr-10 bg-[#F6F6F6] border border-gray-200 rounded-xl outline-none focus:outline-none focus:ring-0 appearance-none text-gray-900 disabled:opacity-50"
+                  value={formData.jabatan}
+                  onChange={(e) =>
+                    setFormData({ ...formData, jabatan: e.target.value })
+                  }
+                  disabled={!formData.divisi}
+                >
+                  <option value="" disabled>
+                    Pilih Jabatan
                   </option>
-                ))}
-              </select>
+                  {availableRoles.map((role, idx) => (
+                    <option key={idx} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-500" />
+              </div>
             </div>
 
             <div className="flex justify-end mt-10">
