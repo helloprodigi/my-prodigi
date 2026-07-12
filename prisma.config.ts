@@ -3,9 +3,10 @@ import { defineConfig, env } from "prisma/config";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
-  migrations: { path: "prisma/migrations" },
+  migrations: {
+    path: "prisma/migrations",
+  },
   datasource: {
-    url: env("DATABASE_URL"),
-    shadowDatabaseUrl: env("DIRECT_URL"),
+    url: env("DIRECT_URL"), // pakai koneksi direct (port 5432) untuk CLI/migrate
   },
 });

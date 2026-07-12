@@ -1,0 +1,170 @@
+[
+    {
+        "divisi": "INTI",
+        "members": [
+            {
+                "posisi": "Ketua"
+            },
+            {
+                "posisi": "Wakil Ketua"
+            },
+            {
+                "posisi": "Bendahara"
+            },
+            {
+                "posisi": "Sekretaris I"
+            },
+            {
+                "posisi": "Sekretaris II"
+            },
+            {
+                "posisi": "Vice President External"
+            },
+            {
+                "posisi": "Vice President Internal"
+            }
+        ]
+    },
+    {
+        "divisi": "EXTERNAL",
+        "members": [
+            {
+                "posisi": "Partnership"
+            },
+            {
+                "posisi": "Partnership"
+            },
+            {
+                "posisi": "Partnership"
+            },
+            {
+                "posisi": "Partnership (Kepala Divisi)"
+            },
+            {
+                "posisi": "Partnership"
+            },
+            {
+                "posisi": "Event Organizer"
+            },
+            {
+                "posisi": "Event Organizer"
+            },
+            {
+                "posisi": "Event Organizer"
+            },
+            {
+                "posisi": "Event Organizer (Kepala Divisi)"
+            },
+            {
+                "posisi": "Media (Kepala Divisi)"
+            },
+            {
+                "posisi": "Media"
+            },
+            {
+                "posisi": "Media"
+            },
+            {
+                "posisi": "Media"
+            },
+            {
+                "posisi": "Media"
+            }
+        ]
+    },
+    {
+        "divisi": "INTERNAL",
+        "members": [
+            {
+                "posisi": "Product Team (Kepala Divisi)"
+            },
+            {
+                "posisi": "Product Team"
+            },
+            {
+                "posisi": "Product Team"
+            },
+            {
+                "posisi": "Product Team"
+            },
+            {
+                "posisi": "Product Team"
+            },
+            {
+                "posisi": "Product Team"
+            },
+            {
+                "posisi": "Competitive Programming (Kepala Divisi)"
+            },
+            {
+                "posisi": "Competitive Programming"
+            },
+            {
+                "posisi": "Competitive Programming"
+            },
+            {
+                "posisi": "Competitive Programming"
+            },
+            {
+                "posisi": "Entrepreneur (Kepala Divisi)"
+            },
+            {
+                "posisi": "Entrepreneur"
+            },
+            {
+                "posisi": "Entrepreneur"
+            },
+            {
+                "posisi": "Entrepreneur"
+            },
+            {
+                "posisi": "Data Mining (Kepala Divisi)"
+            },
+            {
+                "posisi": "Data Mining"
+            },
+            {
+                "posisi": "Data Mining"
+            },
+            {
+                "posisi": "Data Mining"
+            },
+            {
+                "posisi": "Inovasi"
+            },
+            {
+                "posisi": "Inovasi"
+            },
+            {
+                "posisi": "Inovasi"
+            },
+            {
+                "posisi": "Inovasi"
+            },
+            {
+                "posisi": "Inovasi (Kepala Divisi)"
+            },
+            {
+                "posisi": "Cyber (Kepala Divisi)"
+            },
+            {
+                "posisi": "Cyber"
+            },
+            {
+                "posisi": "Cyber"
+            },
+            {
+                "posisi": "Cyber"
+            },
+            {
+                "posisi": "Cyber"
+            },
+            {
+                "posisi": "Human Capital"
+            },
+            {
+                "posisi": "Human Capital"
+            }
+        ]
+    }
+]

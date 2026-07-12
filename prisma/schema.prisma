@@ -81,6 +81,8 @@ model User {
   interests   String[]
   role        String   @default("talent") // Can be "talent", "asisten_lab", "admin"
   isOnboarded Boolean  @default(false)
+  jabatan     String?
+  divisi      String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   

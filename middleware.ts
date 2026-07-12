@@ -34,15 +34,20 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   let isOnboarded = false;
+  let isAslab = false;
+  let isAslabOnboarded = false;
+
   if (user) {
     // Check onboarding status
     const { data: userData } = await supabase
       .from("User")
-      .select("isOnboarded")
+      .select("isOnboarded, role, divisi, jabatan")
       .eq("id", user.id)
       .single();
     
     isOnboarded = userData?.isOnboarded || false;
+    isAslab = userData?.role === 'asisten_lab';
+    isAslabOnboarded = !!(userData?.divisi && userData?.jabatan);
   }
 
   const { pathname } = request.nextUrl
@@ -60,6 +65,7 @@ export async function middleware(request: NextRequest) {
                            pathname.startsWith('/library') || 
                            pathname.startsWith('/notifications') || 
                            pathname.startsWith('/onboarding') ||
+                           pathname.startsWith('/aslab-onboarding') ||
                            pathname.startsWith('/profile') ||
                            pathname.startsWith('/team-invite');
 
@@ -98,6 +104,18 @@ export async function middleware(request: NextRequest) {
       }
 
       if (isOnboarded && pathname.startsWith('/onboarding')) {
+        const redirectUrl = request.nextUrl.clone()
+        redirectUrl.pathname = '/dashboard'
+        return NextResponse.redirect(redirectUrl)
+      }
+
+      if (isOnboarded && isAslab && !isAslabOnboarded && !pathname.startsWith('/aslab-onboarding')) {
+        const redirectUrl = request.nextUrl.clone()
+        redirectUrl.pathname = '/aslab-onboarding'
+        return NextResponse.redirect(redirectUrl)
+      }
+
+      if (isOnboarded && isAslab && isAslabOnboarded && pathname.startsWith('/aslab-onboarding')) {
         const redirectUrl = request.nextUrl.clone()
         redirectUrl.pathname = '/dashboard'
         return NextResponse.redirect(redirectUrl)
