@@ -2,16 +2,25 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, Trophy, Sparkles, BookOpen, Bell, User, LogOut, Menu, X, ChevronRight, ChevronLeft } from "lucide-react";
+import { LayoutGrid, Trophy, Sparkles, BookOpen, Bell, User, LogOut, Menu, X, ChevronRight, ChevronLeft, FileText, ShieldUser, CalendarClock } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import { useState, useEffect } from "react";
 
-const navItems = [
+const talentNavItems = [
+  { icon: LayoutGrid, href: "/dashboard", label: "Dashboard", disabled: false },
+  { icon: Trophy, href: "/competitions", label: "Competition", disabled: false },
+  { icon: Sparkles, href: "/matchmaking", label: "Matchmaking", disabled: false },
+  { icon: BookOpen, href: "/faq", label: "Tutorial & FAQ", disabled: false },
+  { icon: Bell, href: "/notifications", label: "Notifikasi", disabled: false },
+];
+
+const aslabNavItems = [
   { icon: LayoutGrid, href: "/dashboard", label: "Dashboard" },
   { icon: Trophy, href: "/competitions", label: "Competition" },
-  { icon: Sparkles, href: "/matchmaking", label: "Matchmaking" },
-  { icon: BookOpen, href: "/faq", label: "Tutorial & FAQ" },
+  { icon: FileText, href: "/aslab-proker", label: "Program Kerja", disabled: false },
+  { icon: ShieldUser, href: "#", label: "MyDivisi", disabled: true },
+  { icon: CalendarClock, href: "#", label: "MyShift", disabled: true },
   { icon: Bell, href: "/notifications", label: "Notifikasi" },
 ];
 
@@ -27,6 +36,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [userData, setUserData] = useState<{name: string, role: string, photoUrl?: string} | null>(null);
+  const [isAslab, setIsAslab] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -39,10 +49,19 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
           role: user.user_metadata?.role || "Talent",
           photoUrl: user.user_metadata?.photoUrl
         });
+
+        const { data: dbUser } = await supabase
+          .from("User")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        setIsAslab(dbUser?.role === "asisten_lab");
       }
     }
     loadUser();
   }, []);
+
+  const navItems = isAslab ? aslabNavItems : talentNavItems;
 
   useEffect(() => {
     async function fetchUnread() {
@@ -124,7 +143,25 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
         {/* Navigation */}
         <nav className="flex-1 flex flex-col gap-2 w-full px-4">
           {navItems.map((item) => {
-            const isActive = pathname.startsWith(item.href);
+            const isActive = !item.disabled && pathname.startsWith(item.href);
+
+            if (item.disabled) {
+              return (
+                <div
+                  key={item.label}
+                  className="relative w-full flex items-center rounded-xl p-3 text-gray-600 cursor-not-allowed"
+                  title={"Segera hadir"}
+                >
+                  <span className="relative shrink-0">
+                    <item.icon className="w-6 h-6" />
+                  </span>
+                  <span className={`ml-4 font-medium transition-all duration-300 whitespace-nowrap ${(isDesktopOpen || isMobileOpen) ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}`}>
+                    {item.label}
+                  </span>
+                </div>
+              );
+            }
+
             return (
               <Link
                 key={item.href}
@@ -173,7 +210,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
             <div className={`flex-1 text-left transition-all duration-300 whitespace-nowrap overflow-hidden flex justify-between items-center ${(isDesktopOpen || isMobileOpen) ? "opacity-100 w-auto" : "opacity-0 w-0"}`}>
               <div>
                 <p className="text-sm font-semibold text-white truncate max-w-[120px]">{userData?.name || "User Prodigi"}</p>
-                <p className="text-xs text-gray-400 capitalize">{userData?.role || "Talent"}</p>
+                <p className="text-xs text-gray-400 capitalize">{isAslab ? "Asisten Lab" : (userData?.role || "Talent")}</p>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
             </div>

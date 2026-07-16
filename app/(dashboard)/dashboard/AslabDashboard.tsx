@@ -3,6 +3,20 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { divisions } from "@/lib/divisions";
+
+const legendLabels: Record<string, string> = {
+  "Competitive Programming": "Divisi Competitive Programming",
+  "Data Minning": "Divisi Data Mining",
+  "Cybersecurity": "Divisi Cybersecurity",
+  "Entrepreneurship": "Divisi Entrepreneurship",
+  "Event Originazer": "Data Event Organizer",
+  "Human Capital": "Divisi Human Capital",
+  "Innovation": "Divisi Innovation",
+  "Media & Design": "Divisi Media & Design",
+  "Partnertship": "Divisi Partnership",
+  "Product": "Divisi Product",
+};
 
 export default function AslabDashboard() {
   const [currentDate] = useState(new Date("2026-07-14"));
@@ -188,46 +202,12 @@ export default function AslabDashboard() {
           <div className="w-full lg:w-72 bg-white rounded-xl p-6 flex-shrink-0 self-start">
             <h3 className="text-lg font-bold text-[#0A1024] mb-6">Legenda Divisi</h3>
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-[#2979FF]"></div>
-                <span className="text-sm text-gray-600">Divisi Competitive Programming</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-[#FF6D00]"></div>
-                <span className="text-sm text-gray-600">Divisi Data Mining</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-[#7C4DFF]"></div>
-                <span className="text-sm text-gray-600">Divisi Cybersecurity</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-[#9C27B0]"></div>
-                <span className="text-sm text-gray-600">Divisi Entrepreneurship</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-[#E53935]"></div>
-                <span className="text-sm text-gray-600">Data Event Organizer</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-[#43A047]"></div>
-                <span className="text-sm text-gray-600">Divisi Human Capital</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-[#00BFA5]"></div>
-                <span className="text-sm text-gray-600">Divisi Innovation</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-[#795548]"></div>
-                <span className="text-sm text-gray-600">Divisi Media & Design</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-[#F57C00]"></div>
-                <span className="text-sm text-gray-600">Divisi Partnership</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-[#00C853]"></div>
-                <span className="text-sm text-gray-600">Divisi Product</span>
-              </div>
+              {divisions.map((division) => (
+                <div key={division.name} className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: division.color }}></div>
+                  <span className="text-sm text-gray-600">{legendLabels[division.name]}</span>
+                </div>
+              ))}
             </div>
           </div>
         </section>
