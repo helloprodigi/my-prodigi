@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
 import { divisions } from "@/lib/divisions";
+import { getCreatableDivisionNames } from "@/lib/permissions";
 
 const DIVISION_NAMES = divisions.map((d) => d.name);
 
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
 
     const { data: publicUser } = await adminDb
       .from("User")
-      .select("role")
+      .select("role, jabatan, hasProkerAccess")
       .eq("id", user.id)
       .single();
 
@@ -68,6 +69,14 @@ export async function POST(req: Request) {
 
     if (!divisi || !DIVISION_NAMES.includes(divisi)) {
       return NextResponse.json({ error: "Divisi tidak valid" }, { status: 400 });
+    }
+
+    const allowedDivisions = getCreatableDivisionNames(publicUser.jabatan, publicUser.hasProkerAccess);
+    if (!allowedDivisions.includes(divisi)) {
+      return NextResponse.json(
+        { error: "Anda tidak memiliki akses untuk membuat program kerja di divisi ini" },
+        { status: 403 }
+      );
     }
     if (!nama || !tanggalMulai || !tanggalSelesai) {
       return NextResponse.json({ error: "Nama program kerja dan waktu pelaksanaan wajib diisi" }, { status: 400 });

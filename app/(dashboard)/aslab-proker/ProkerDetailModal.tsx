@@ -107,7 +107,7 @@ export function ProkerDetailModal({
 
         <div className="shrink-0 px-6">
           <div className="relative overflow-hidden rounded-2xl px-8 py-6" style={{ backgroundColor: division.color }}>
-            <div className="absolute bottom-0 right-0 pointer-events-none w-36 h-24 select-none flex items-end justify-end opacity-90 [filter:brightness(0)_invert(1)]">
+            <div className="absolute bottom-0 right-0 pointer-events-none w-20 h-14 sm:w-28 sm:h-20 md:w-36 md:h-24 select-none flex items-end justify-end opacity-90 [filter:brightness(0)_invert(1)]">
               <Image
                 src="/assets/matchmaking/cropped-yellowcircle.svg"
                 alt=""

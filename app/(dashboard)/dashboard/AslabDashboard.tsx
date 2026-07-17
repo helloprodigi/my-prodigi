@@ -7,7 +7,7 @@ import { divisions } from "@/lib/divisions";
 
 const legendLabels: Record<string, string> = {
   "Competitive Programming": "Divisi Competitive Programming",
-  "Data Minning": "Divisi Data Mining",
+  "Data Mining": "Divisi Data Mining",
   "Cybersecurity": "Divisi Cybersecurity",
   "Entrepreneurship": "Divisi Entrepreneurship",
   "Event Originazer": "Data Event Organizer",

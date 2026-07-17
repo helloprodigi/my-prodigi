@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
+import { getCreatableDivisionNames } from "@/lib/permissions";
 
 function getAdminDb() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
 
     const { data: publicUser } = await adminDb
       .from("User")
-      .select("role")
+      .select("role, jabatan, hasProkerAccess")
       .eq("id", user.id)
       .single();
 
@@ -44,12 +45,20 @@ export async function POST(req: Request) {
 
     const { data: programKerja } = await adminDb
       .from("ProgramKerja")
-      .select("id")
+      .select("id, divisi")
       .eq("id", programKerjaId)
       .single();
 
     if (!programKerja) {
       return NextResponse.json({ error: "Program kerja tidak ditemukan" }, { status: 404 });
+    }
+
+    const allowedDivisions = getCreatableDivisionNames(publicUser.jabatan, publicUser.hasProkerAccess);
+    if (!allowedDivisions.includes(programKerja.divisi)) {
+      return NextResponse.json(
+        { error: "Anda tidak memiliki akses untuk membuat laporan di divisi ini" },
+        { status: 403 }
+      );
     }
 
     const now = new Date().toISOString();

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
-import { canEditProker, isKetuaOrWakilKetua } from "@/lib/permissions";
+import { getCreatableDivisionNames, isKetuaOrWakilKetua } from "@/lib/permissions";
 
 function getAdminDb() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -19,11 +19,15 @@ async function getCurrentUserJabatan(adminDb: ReturnType<typeof getAdminDb>) {
 
   const { data: publicUser } = await adminDb!
     .from("User")
-    .select("jabatan")
+    .select("jabatan, hasProkerAccess")
     .eq("id", user.id)
     .single();
 
-  return { user, jabatan: publicUser?.jabatan as string | null } as const;
+  return {
+    user,
+    jabatan: publicUser?.jabatan as string | null,
+    hasProkerAccess: publicUser?.hasProkerAccess as boolean | null,
+  } as const;
 }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -72,7 +76,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { nama, deskripsi, tanggalMulai, tanggalSelesai, status } = body;
 
   const editingFields = [nama, deskripsi, tanggalMulai, tanggalSelesai].some((v) => v !== undefined);
-  if (editingFields && !canEditProker(auth.jabatan, existing.divisi)) {
+  if (editingFields && !getCreatableDivisionNames(auth.jabatan, auth.hasProkerAccess).includes(existing.divisi)) {
     return NextResponse.json(
       { error: "Hanya Ketua/Wakil Ketua atau PIC divisi yang dapat mengedit program kerja" },
       { status: 403 }
@@ -127,7 +131,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
-  if (!canEditProker(auth.jabatan, existing.divisi)) {
+  if (!getCreatableDivisionNames(auth.jabatan, auth.hasProkerAccess).includes(existing.divisi)) {
     return NextResponse.json(
       { error: "Hanya Ketua/Wakil Ketua atau PIC divisi yang dapat membatalkan program kerja" },
       { status: 403 }

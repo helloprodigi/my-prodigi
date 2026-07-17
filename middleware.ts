@@ -67,6 +67,7 @@ export async function middleware(request: NextRequest) {
                            pathname.startsWith('/onboarding') ||
                            pathname.startsWith('/aslab-onboarding') ||
                            pathname.startsWith('/aslab-proker') ||
+                           pathname.startsWith('/my-divisi') ||
                            pathname.startsWith('/profile') ||
                            pathname.startsWith('/team-invite');
 

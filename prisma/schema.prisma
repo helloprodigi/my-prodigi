@@ -83,6 +83,7 @@ model User {
   isOnboarded Boolean  @default(false)
   jabatan     String?
   divisi      String?
+  hasProkerAccess Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   

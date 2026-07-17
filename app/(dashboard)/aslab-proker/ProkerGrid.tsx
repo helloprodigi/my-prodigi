@@ -57,10 +57,12 @@ export function ProkerGrid({
   divisionsData,
   isKetua,
   myDivisionName,
+  canEditMyDivision,
 }: {
   divisionsData: DivisionData[];
   isKetua: boolean;
   myDivisionName: string | null;
+  canEditMyDivision: boolean;
 }) {
   const [openDivision, setOpenDivision] = useState<DivisionData | null>(null);
 
@@ -76,7 +78,7 @@ export function ProkerGrid({
         <ProkerDetailModal
           division={openDivision}
           canCheck={isKetua}
-          canEdit={isKetua || myDivisionName === openDivision.name}
+          canEdit={isKetua || (myDivisionName === openDivision.name && canEditMyDivision)}
           onClose={() => setOpenDivision(null)}
         />
       )}

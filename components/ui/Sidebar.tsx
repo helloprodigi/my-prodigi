@@ -19,7 +19,7 @@ const aslabNavItems = [
   { icon: LayoutGrid, href: "/dashboard", label: "Dashboard" },
   { icon: Trophy, href: "/competitions", label: "Competition" },
   { icon: FileText, href: "/aslab-proker", label: "Program Kerja", disabled: false },
-  { icon: ShieldUser, href: "#", label: "MyDivisi", disabled: true },
+  { icon: ShieldUser, href: "/my-divisi", label: "MyDivisi", disabled: false },
   { icon: CalendarClock, href: "#", label: "MyShift", disabled: true },
   { icon: Bell, href: "/notifications", label: "Notifikasi" },
 ];
@@ -59,6 +59,21 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
       }
     }
     loadUser();
+  }, []);
+
+  // The sidebar mounts once for the whole dashboard layout, so it never
+  // re-runs the effect above on client-side navigation. Profile edits (e.g.
+  // uploading a new photo) dispatch this event so the sidebar can reflect it
+  // immediately instead of requiring a full page reload.
+  useEffect(() => {
+    function handleProfileUpdated(e: Event) {
+      const { photoUrl } = (e as CustomEvent<{ photoUrl?: string }>).detail ?? {};
+      if (photoUrl !== undefined) {
+        setUserData((prev) => (prev ? { ...prev, photoUrl } : prev));
+      }
+    }
+    window.addEventListener("myprodigi:profile-updated", handleProfileUpdated);
+    return () => window.removeEventListener("myprodigi:profile-updated", handleProfileUpdated);
   }, []);
 
   const navItems = isAslab ? aslabNavItems : talentNavItems;

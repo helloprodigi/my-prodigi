@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { createClient } from "@/utils/supabase/server";
 import { divisions } from "@/lib/divisions";
-import { isKetuaOrWakilKetua } from "@/lib/permissions";
+import { canEditProker, getCreatableDivisionNames, isKetuaOrWakilKetua } from "@/lib/permissions";
 import { ProkerGrid } from "./ProkerGrid";
 
 export default async function AslabProkerPage() {
@@ -35,15 +35,19 @@ export default async function AslabProkerPage() {
 
   let isKetua = false;
   let myDivisionName: string | null = null;
+  let canEditMyDivision = false;
+  let canCreateAnything = false;
   if (user) {
     const { data: currentUser } = await supabase
       .from("User")
-      .select("jabatan")
+      .select("jabatan, hasProkerAccess")
       .eq("id", user.id)
       .single();
     isKetua = isKetuaOrWakilKetua(currentUser?.jabatan);
-    const myOrgName = currentUser?.jabatan?.match(/^(.+) \(Kepala Divisi\)$/)?.[1];
+    const myOrgName = currentUser?.jabatan?.replace(" (Kepala Divisi)", "").trim();
     myDivisionName = divisions.find((d) => d.orgName === myOrgName)?.name ?? null;
+    canEditMyDivision = canEditProker(currentUser?.jabatan, myDivisionName ?? "", currentUser?.hasProkerAccess);
+    canCreateAnything = getCreatableDivisionNames(currentUser?.jabatan, currentUser?.hasProkerAccess).length > 0;
   }
 
   const divisionsData = divisions.map((division) => {
@@ -60,23 +64,30 @@ export default async function AslabProkerPage() {
     <div className="min-h-screen bg-[#FBFBFB] p-8">
       <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <h1 className="text-[22px] sm:text-3xl md:text-4xl font-bold text-[#0A1024]">Program Kerja</h1>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/aslab-proker/buat-laporan"
-            className="bg-[#0A1024] text-white font-semibold px-5 py-2.5 rounded-lg text-sm hover:bg-[#1E2538] transition-colors"
-          >
-            Buat Laporan
-          </Link>
-          <Link
-            href="/aslab-proker/buat-proker"
-            className="bg-[#FFC700] text-[#0A1024] font-semibold px-5 py-2.5 rounded-lg text-sm hover:bg-[#e6b400] transition-colors"
-          >
-            Buat Proker
-          </Link>
-        </div>
+        {canCreateAnything && (
+          <div className="flex items-center gap-3">
+            <Link
+              href="/aslab-proker/buat-laporan"
+              className="bg-[#0A1024] text-white font-semibold px-5 py-2.5 rounded-lg text-sm hover:bg-[#1E2538] transition-colors"
+            >
+              Buat Laporan
+            </Link>
+            <Link
+              href="/aslab-proker/buat-proker"
+              className="bg-[#FFC700] text-[#0A1024] font-semibold px-5 py-2.5 rounded-lg text-sm hover:bg-[#e6b400] transition-colors"
+            >
+              Buat Proker
+            </Link>
+          </div>
+        )}
       </div>
 
-      <ProkerGrid divisionsData={divisionsData} isKetua={isKetua} myDivisionName={myDivisionName} />
+      <ProkerGrid
+        divisionsData={divisionsData}
+        isKetua={isKetua}
+        myDivisionName={myDivisionName}
+        canEditMyDivision={canEditMyDivision}
+      />
     </div>
   );
 }

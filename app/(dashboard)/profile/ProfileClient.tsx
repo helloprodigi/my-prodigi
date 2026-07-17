@@ -274,6 +274,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
         
         if (res.ok) {
           toast.success("Foto profil berhasil diubah.");
+          window.dispatchEvent(new CustomEvent("myprodigi:profile-updated", { detail: { photoUrl: url } }));
           router.refresh();
         } else {
           toast.error("Gagal mengubah foto profil.");
@@ -544,6 +545,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                     onChange={e => setPersonalForm({ ...personalForm, jurusan: e.target.value })}
                     className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
                   >
+                    <option value="" disabled>Pilih Jurusan</option>
                     <option value="S1 Informatika">S1 Informatika</option>
                     <option value="S1 Teknologi Informasi">S1 Teknologi Informasi</option>
                     <option value="S1 Rekayasa Perangkat Lunak">S1 Rekayasa Perangkat Lunak</option>
