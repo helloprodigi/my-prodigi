@@ -1,27 +1,35 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight, FileText } from "lucide-react";
 import toast from "react-hot-toast";
 
-const PROKER_OPTIONS = [
-  "Pembinaan Lomba Satria Data",
-  "Master Design Systems",
-  "Workshop UI/UX",
-  "Rapat Koordinasi",
-  "Audit Inventaris",
-];
+type ProgramKerjaOption = { id: string; nama: string; divisi: string };
 
 export default function BuatLaporanPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [namaProker, setNamaProker] = useState("");
+  const [prokerOptions, setProkerOptions] = useState<ProgramKerjaOption[]>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(true);
+  const [programKerjaId, setProgramKerjaId] = useState("");
   const [catatan, setCatatan] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/proker")
+      .then((res) => res.json())
+      .then((data) => {
+        const pending = (data.programKerja ?? []).filter((p: any) => p.status === "BELUM_SELESAI");
+        setProkerOptions(pending);
+      })
+      .catch(() => toast.error("Gagal memuat daftar program kerja"))
+      .finally(() => setIsLoadingOptions(false));
+  }, []);
 
   const acceptFile = (candidate: File | undefined) => {
     if (!candidate) return;
@@ -38,14 +46,44 @@ export default function BuatLaporanPage() {
     acceptFile(e.dataTransfer.files?.[0]);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) {
       toast.error("Silahkan unggah file laporan (PDF)");
       return;
     }
-    toast.success("Laporan berhasil dibuat");
-    router.push("/aslab-proker");
+
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) {
+        toast.error(uploadData.error || "Gagal mengunggah file");
+        return;
+      }
+
+      const res = await fetch("/api/proker/laporan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ programKerjaId, catatan, fileUrl: uploadData.url }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Gagal membuat laporan");
+        return;
+      }
+
+      toast.success("Laporan berhasil dibuat");
+      router.push("/aslab-proker");
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+      toast.error("Terjadi kesalahan sistem");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -63,14 +101,17 @@ export default function BuatLaporanPage() {
             <label className="block text-sm text-[#0A1024] mb-2">Nama Program Kerja</label>
             <div className="relative">
               <select
-                value={namaProker}
-                onChange={(e) => setNamaProker(e.target.value)}
+                value={programKerjaId}
+                onChange={(e) => setProgramKerjaId(e.target.value)}
                 className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 pr-10 text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700] appearance-none"
                 required
+                disabled={isLoadingOptions}
               >
-                <option value="" disabled>Pilih program kerja</option>
-                {PROKER_OPTIONS.map((proker) => (
-                  <option key={proker} value={proker}>{proker}</option>
+                <option value="" disabled>
+                  {isLoadingOptions ? "Memuat..." : prokerOptions.length ? "Pilih program kerja" : "Belum ada program kerja"}
+                </option>
+                {prokerOptions.map((proker) => (
+                  <option key={proker.id} value={proker.id}>{proker.nama} — {proker.divisi}</option>
                 ))}
               </select>
               <ChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -123,9 +164,10 @@ export default function BuatLaporanPage() {
 
           <button
             type="submit"
-            className="w-full bg-[#FFC700] text-[#0A1024] font-bold py-3.5 rounded-lg text-sm hover:bg-[#e6b400] transition-colors"
+            disabled={isSubmitting}
+            className="w-full bg-[#FFC700] text-[#0A1024] font-bold py-3.5 rounded-lg text-sm hover:bg-[#e6b400] transition-colors disabled:opacity-60"
           >
-            Buat Laporan
+            {isSubmitting ? "Menyimpan..." : "Buat Laporan"}
           </button>
         </form>
       </div>

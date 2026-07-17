@@ -4,20 +4,43 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import toast from "react-hot-toast";
+
+import { divisions } from "@/lib/divisions";
 
 export default function BuatProkerPage() {
   const router = useRouter();
+  const [divisi, setDivisi] = useState("");
   const [nama, setNama] = useState("");
   const [deskripsi, setDeskripsi] = useState("");
   const [tanggalMulai, setTanggalMulai] = useState("");
   const [tanggalSelesai, setTanggalSelesai] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Program kerja berhasil dibuat");
-    router.push("/aslab-proker");
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/proker", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ divisi, nama, deskripsi, tanggalMulai, tanggalSelesai }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Gagal membuat program kerja");
+        return;
+      }
+      toast.success("Program kerja berhasil dibuat");
+      router.push("/aslab-proker");
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+      toast.error("Terjadi kesalahan sistem");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -31,6 +54,24 @@ export default function BuatProkerPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-8 space-y-6">
+          <div>
+            <label className="block text-sm text-[#0A1024] mb-2">Divisi</label>
+            <div className="relative">
+              <select
+                value={divisi}
+                onChange={(e) => setDivisi(e.target.value)}
+                className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 pr-10 text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700] appearance-none"
+                required
+              >
+                <option value="" disabled>Pilih divisi</option>
+                {divisions.map((d) => (
+                  <option key={d.name} value={d.name}>{d.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm text-[#0A1024] mb-2">Nama Program Kerja</label>
             <input
@@ -77,9 +118,10 @@ export default function BuatProkerPage() {
 
           <button
             type="submit"
-            className="w-full bg-[#FFC700] text-[#0A1024] font-bold py-3.5 rounded-lg text-sm hover:bg-[#e6b400] transition-colors"
+            disabled={isSubmitting}
+            className="w-full bg-[#FFC700] text-[#0A1024] font-bold py-3.5 rounded-lg text-sm hover:bg-[#e6b400] transition-colors disabled:opacity-60"
           >
-            Buat Proker
+            {isSubmitting ? "Menyimpan..." : "Buat Proker"}
           </button>
         </form>
       </div>

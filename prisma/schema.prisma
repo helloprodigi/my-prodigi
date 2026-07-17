@@ -86,10 +86,12 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  competitionsCreated Competition[] @relation("CreatedCompetitions")
-  teamsAsLeader       Team[]        @relation("UserLedTeams")
-  teamMemberships     TeamMember[]  @relation("UserTeamMemberships")
+  competitionsCreated Competition[]  @relation("CreatedCompetitions")
+  teamsAsLeader       Team[]         @relation("UserLedTeams")
+  teamMemberships     TeamMember[]   @relation("UserTeamMemberships")
   notifications       Notification[]
+  programKerjaCreated ProgramKerja[] @relation("ProgramKerjaCreatedBy")
+  laporanCreated      Laporan[]      @relation("LaporanCreatedBy")
 }
 
 model Competition {
@@ -153,6 +155,34 @@ model Notification {
   description String
   isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())
-  
+
   user        User     @relation(fields: [userId], references: [id])
+}
+
+model ProgramKerja {
+  id             String   @id @default(uuid())
+  divisi         String   // matches the `name` field in lib/divisions.ts
+  nama           String
+  deskripsi      String?
+  tanggalMulai   DateTime
+  tanggalSelesai DateTime
+  status         String   @default("BELUM_SELESAI") // "BELUM_SELESAI", "SELESAI"
+  createdById    String?
+  createdBy      User?    @relation("ProgramKerjaCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  laporan        Laporan[]
+}
+
+model Laporan {
+  id             String   @id @default(uuid())
+  programKerjaId String
+  programKerja   ProgramKerja @relation(fields: [programKerjaId], references: [id], onDelete: Cascade)
+  catatan        String?
+  fileUrl        String
+  createdById    String?
+  createdBy      User?    @relation("LaporanCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
