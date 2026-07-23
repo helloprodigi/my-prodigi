@@ -93,6 +93,10 @@ model User {
   notifications       Notification[]
   programKerjaCreated ProgramKerja[] @relation("ProgramKerjaCreatedBy")
   laporanCreated      Laporan[]      @relation("LaporanCreatedBy")
+  
+  absensiAgendaCreated AbsensiAgenda[] @relation("AbsensiAgendaCreatedBy")
+  shiftAssignments     ShiftAssignment[] @relation("UserShiftAssignments")
+  absensiRecords       AbsensiRecord[]   @relation("UserAbsensiRecords")
 }
 
 model Competition {
@@ -186,4 +190,52 @@ model Laporan {
   createdBy      User?    @relation("LaporanCreatedBy", fields: [createdById], references: [id])
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+model AbsensiAgenda {
+  id           String   @id @default(uuid())
+  nama         String
+  deskripsi    String?
+  divisi       String
+  waktuMulai   DateTime
+  waktuSelesai DateTime
+  kodeQrDatang String?  // Optional token for attendance check-in
+  kodeQrPulang String?  // Optional token for attendance check-out
+  createdAt    DateTime @default(now())
+  
+  createdById  String?
+  createdBy    User?    @relation("AbsensiAgendaCreatedBy", fields: [createdById], references: [id])
+  
+  assignedUsers ShiftAssignment[] 
+  records       AbsensiRecord[]
+}
+
+model ShiftAssignment {
+  id          String        @id @default(uuid())
+  agendaId    String
+  agenda      AbsensiAgenda @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?         @relation("UserShiftAssignments", fields: [userId], references: [id])
+  nama        String
+  nim         String
+  
+  @@unique([agendaId, nim])
+}
+
+model AbsensiRecord {
+  id             String        @id @default(uuid())
+  agendaId       String
+  agenda         AbsensiAgenda @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?         @relation("UserAbsensiRecords", fields: [userId], references: [id])
+  nama           String?
+  nim            String?
+  waktuDatang    DateTime?
+  waktuPulang    DateTime?
+  status         String        @default("ALPA") // "HADIR", "ALPA", "IZIN"
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([agendaId, userId])
 }

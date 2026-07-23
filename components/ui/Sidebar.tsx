@@ -20,7 +20,13 @@ const aslabNavItems = [
   { icon: Trophy, href: "/competitions", label: "Competition" },
   { icon: FileText, href: "/aslab-proker", label: "Program Kerja", disabled: false },
   { icon: ShieldUser, href: "/my-divisi", label: "MyDivisi", disabled: false },
-  { icon: CalendarClock, href: "#", label: "MyShift", disabled: true },
+  { icon: CalendarClock, href: "/myshift", label: "MyShift", disabled: false },
+  { icon: Bell, href: "/notifications", label: "Notifikasi" },
+];
+
+const adminNavItems = [
+  { icon: LayoutGrid, href: "/dashboard", label: "Dashboard" },
+  { icon: CalendarClock, href: "/absensi", label: "Absensi", disabled: false },
   { icon: Bell, href: "/notifications", label: "Notifikasi" },
 ];
 
@@ -36,7 +42,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [userData, setUserData] = useState<{name: string, role: string, photoUrl?: string} | null>(null);
-  const [isAslab, setIsAslab] = useState(false);
+  const [userRole, setUserRole] = useState<string>("talent");
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -55,7 +61,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
           .select("role")
           .eq("id", user.id)
           .single();
-        setIsAslab(dbUser?.role === "asisten_lab");
+        setUserRole(dbUser?.role || "talent");
       }
     }
     loadUser();
@@ -76,7 +82,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
     return () => window.removeEventListener("myprodigi:profile-updated", handleProfileUpdated);
   }, []);
 
-  const navItems = isAslab ? aslabNavItems : talentNavItems;
+  const navItems = userRole === "admin" ? adminNavItems : userRole === "asisten_lab" ? aslabNavItems : talentNavItems;
 
   useEffect(() => {
     async function fetchUnread() {
@@ -225,7 +231,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
             <div className={`flex-1 text-left transition-all duration-300 whitespace-nowrap overflow-hidden flex justify-between items-center ${(isDesktopOpen || isMobileOpen) ? "opacity-100 w-auto" : "opacity-0 w-0"}`}>
               <div>
                 <p className="text-sm font-semibold text-white truncate max-w-[120px]">{userData?.name || "User Prodigi"}</p>
-                <p className="text-xs text-gray-400 capitalize">{isAslab ? "Asisten Lab" : (userData?.role || "Talent")}</p>
+                <p className="text-xs text-gray-400 capitalize">{userRole === "admin" ? "Admin" : userRole === "asisten_lab" ? "Asisten Lab" : (userData?.role || "Talent")}</p>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
             </div>
