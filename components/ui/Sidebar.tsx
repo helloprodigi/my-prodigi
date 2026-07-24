@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, Trophy, Sparkles, BookOpen, Bell, User, LogOut, Menu, X, ChevronRight, ChevronLeft, FileText, ShieldUser, CalendarClock } from "lucide-react";
+import { LayoutGrid, Trophy, Sparkles, BookOpen, Bell, User, LogOut, Menu, X, ChevronRight, ChevronLeft, FileText, ShieldUser, CalendarClock, Calendar } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import { useState, useEffect } from "react";
@@ -21,12 +21,14 @@ const aslabNavItems = [
   { icon: FileText, href: "/aslab-proker", label: "Program Kerja", disabled: false },
   { icon: ShieldUser, href: "/my-divisi", label: "MyDivisi", disabled: false },
   { icon: CalendarClock, href: "/myshift", label: "MyShift", disabled: false },
+  { icon: Calendar, href: "/agenda", label: "Kelola Agenda", disabled: false },
   { icon: Bell, href: "/notifications", label: "Notifikasi" },
 ];
 
 const adminNavItems = [
   { icon: LayoutGrid, href: "/dashboard", label: "Dashboard" },
-  { icon: CalendarClock, href: "/absensi", label: "Absensi", disabled: false },
+  { icon: CalendarClock, href: "/absensi", label: "Kelola Shift", disabled: false },
+  { icon: Calendar, href: "/agenda", label: "Kelola Agenda", disabled: false },
   { icon: Bell, href: "/notifications", label: "Notifikasi" },
 ];
 

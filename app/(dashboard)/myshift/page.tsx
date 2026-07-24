@@ -40,6 +40,7 @@ export default function MyShiftPage() {
   const [activeAgenda, setActiveAgenda] = useState<Agenda | null>(null);
   const [qrType, setQrType] = useState<"datang" | "pulang" | "none">("none");
   const [timeRemaining, setTimeRemaining] = useState<string>("");
+  const [showAgendaSelectionModal, setShowAgendaSelectionModal] = useState(false);
 
   // QR Scanner Modal
   const [showScannerModal, setShowScannerModal] = useState(false);
@@ -107,25 +108,16 @@ export default function MyShiftPage() {
 
   const handleOpenQRGenerator = () => {
     if (agendas.length === 0) {
-      toast.error("Tidak ada jadwal shift pada tanggal ini.");
+      toast.error("Tidak ada jadwal shift/agenda pada tanggal ini.");
       return;
     }
 
-    // Find active agenda right now based on time
-    const now = new Date().getTime();
-    const active = agendas.find(a => {
-      const start = new Date(a.waktuMulai).getTime();
-      const end = new Date(a.waktuSelesai).getTime();
-      return now >= start && now <= end;
-    });
-
-    if (active) {
-      setActiveAgenda(active);
-    } else {
-      // fallback to first agenda today
+    if (agendas.length === 1) {
       setActiveAgenda(agendas[0]);
+      setShowQRModal(true);
+    } else {
+      setShowAgendaSelectionModal(true);
     }
-    setShowQRModal(true);
   };
 
   const handlePrevDay = () => {
@@ -317,6 +309,41 @@ export default function MyShiftPage() {
                 Download PNG
               </button>
             </>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Agenda Selection */}
+      {showAgendaSelectionModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-sm relative flex flex-col items-center text-center shadow-2xl">
+            <button 
+              onClick={() => setShowAgendaSelectionModal(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            
+            <h2 className="text-xl font-bold text-[#0B132B] mb-6">
+              Pilih Absensi
+            </h2>
+            
+            <div className="w-full space-y-3">
+              {agendas.map(agenda => (
+                <button
+                  key={agenda.id}
+                  onClick={() => {
+                    setActiveAgenda(agenda);
+                    setShowAgendaSelectionModal(false);
+                    setShowQRModal(true);
+                  }}
+                  className="w-full bg-gray-50 hover:bg-gray-100 border border-gray-200 text-[#0B132B] font-medium py-3 px-4 rounded-xl transition-colors text-left flex flex-col"
+                >
+                  <span className="font-semibold text-[#0B132B]">{agenda.nama}</span>
+                  <span className="text-xs text-gray-500">{formatTime(agenda.waktuMulai)} - {formatTime(agenda.waktuSelesai)}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
