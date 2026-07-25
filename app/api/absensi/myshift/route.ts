@@ -84,6 +84,9 @@ export async function GET(req: Request) {
             }
           }
         },
+        createdBy: {
+          select: { role: true }
+        },
         records: true
       },
       orderBy: {
@@ -127,6 +130,7 @@ export async function GET(req: Request) {
         waktuSelesai: agenda.waktuSelesai,
         kodeQrDatang: agenda.kodeQrDatang,
         kodeQrPulang: agenda.kodeQrPulang,
+        jenis: agenda.createdBy?.role === "admin" && !agenda.deskripsi ? "MyShift" : "Agenda",
         myStatus: myRecord ? myRecord.status : "BELUM ABSEN",
         waktuDatang: myRecord?.waktuDatang || null,
         waktuPulang: myRecord?.waktuPulang || null,

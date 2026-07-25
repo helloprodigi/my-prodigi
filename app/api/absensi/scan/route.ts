@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/utils/supabase/server";
 
 // Coordinates for TULT (Telkom University Landmark Tower)
-const TULT_LAT = -6.969143548676223;
-const TULT_LNG = 107.62812480949316;
+const TULT_LAT = -6.977046522238311;
+const TULT_LNG = 107.63434332899644;
 const MAX_RADIUS_METERS = 50;
 
 function getDistanceFromLatLonInM(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -54,9 +54,9 @@ export async function POST(req: Request) {
     // Verify distance
     const distance = getDistanceFromLatLonInM(lat, lng, TULT_LAT, TULT_LNG);
     if (distance > MAX_RADIUS_METERS) {
-      return NextResponse.json({ 
-        error: "Location out of bounds", 
-        message: `Anda berada di luar jangkauan TULT (${Math.round(distance)}m > ${MAX_RADIUS_METERS}m)` 
+      return NextResponse.json({
+        error: "Location out of bounds",
+        message: `Anda berada di luar jangkauan TULT (${Math.round(distance)}m > ${MAX_RADIUS_METERS}m)`
       }, { status: 400 });
     }
 
@@ -110,32 +110,54 @@ export async function POST(req: Request) {
     // Update based on type
     const now = new Date();
     let newStatus = record.status;
-    
+
     if (isDatang) {
+      const deadlineDatang = new Date(agenda.waktuMulai.getTime() + 30 * 60 * 1000);
+      if (now > deadlineDatang) {
+        return NextResponse.json({
+          error: "Terlambat",
+          errorCode: "LATE_DATANG",
+          message: "Kamu telah melewati batas waktu absensi datang dan saat ini berstatus alpa. Silakan laporkan kepada petugas apabila terjadi kekeliruan."
+        }, { status: 400 });
+      }
+
       if (record.waktuDatang) {
         return NextResponse.json({ error: "Anda sudah melakukan absen Datang" }, { status: 400 });
       }
-      
+
       // Update datang time
       record = await prisma.absensiRecord.update({
         where: { id: record.id },
         data: { waktuDatang: now }
       });
-      
+
     } else {
+      const deadlinePulang = new Date(agenda.waktuSelesai.getTime() + 30 * 60 * 1000);
+      if (now > deadlinePulang) {
+        return NextResponse.json({
+          error: "Terlambat",
+          errorCode: "LATE_PULANG",
+          message: "Batas waktu absensi pulang telah berakhir. QR absensi sudah tidak dapat digunakan. Jika terjadi kesalahan, silakan hubungi petugas untuk melakukan pengecekan."
+        }, { status: 400 });
+      }
+
       if (record.waktuPulang) {
         return NextResponse.json({ error: "Anda sudah melakukan absen Pulang" }, { status: 400 });
       }
       if (!record.waktuDatang) {
-        return NextResponse.json({ error: "Anda tidak absen Datang, tidak bisa absen Pulang" }, { status: 400 });
+        return NextResponse.json({
+          error: "Tidak Absen Datang",
+          errorCode: "MISSED_DATANG",
+          message: "Maaf, kamu tidak melakukan absensi datang sehingga saat ini status kamu tercatat sebagai alpa. Silakan laporkan kepada petugas apabila terjadi kekeliruan."
+        }, { status: 400 });
       }
-      
+
       // Update pulang time and set to HADIR if both are filled
       newStatus = "HADIR";
-      
+
       record = await prisma.absensiRecord.update({
         where: { id: record.id },
-        data: { 
+        data: {
           waktuPulang: now,
           status: newStatus
         }

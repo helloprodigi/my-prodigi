@@ -35,6 +35,7 @@ export async function middleware(request: NextRequest) {
 
   let isOnboarded = false;
   let isAslab = false;
+  let isAdmin = false;
   let isAslabOnboarded = false;
 
   if (user) {
@@ -47,6 +48,7 @@ export async function middleware(request: NextRequest) {
     
     isOnboarded = userData?.isOnboarded || false;
     isAslab = userData?.role === 'asisten_lab';
+    isAdmin = userData?.role === 'admin';
     isAslabOnboarded = !!(userData?.divisi && userData?.jabatan);
   }
 
@@ -121,6 +123,19 @@ export async function middleware(request: NextRequest) {
         const redirectUrl = request.nextUrl.clone()
         redirectUrl.pathname = '/dashboard'
         return NextResponse.redirect(redirectUrl)
+      }
+      
+      // Role-based route protection
+      if (pathname.startsWith('/absensi') && !isAdmin) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+      
+      if (pathname.startsWith('/myshift') && !isAslab) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+      
+      if (pathname.startsWith('/agenda') && !isAdmin && !isAslab) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
       }
     }
   }

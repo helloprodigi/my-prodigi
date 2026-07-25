@@ -53,11 +53,11 @@ export async function GET(
       const status = record ? record.status : "BELUM ABSEN";
       
       const waktuDatang = record?.waktuDatang 
-        ? `"${new Date(record.waktuDatang).toLocaleString('id-ID')}"` 
+        ? `"${new Date(record.waktuDatang).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}"` 
         : "-";
         
       const waktuPulang = record?.waktuPulang 
-        ? `"${new Date(record.waktuPulang).toLocaleString('id-ID')}"` 
+        ? `"${new Date(record.waktuPulang).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}"` 
         : "-";
 
       csvContent += `${no},${nim},${nama},${divisi},${status},${waktuDatang},${waktuPulang}\n`;
