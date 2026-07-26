@@ -33,9 +33,13 @@ export default async function CompetitionsPage({
   const supabase = createClient(cookieStore);
 
   // Lazy cleanup: hapus otomatis kompetisi yang melewati batas waktu
-  const adminDb = createAdminClient();
   const today = new Date().toISOString();
-  await adminDb.from("Competition").delete().lt("deadline", today);
+    try {
+      const adminDb = createAdminClient();
+      await adminDb.from("Competition").delete().lt("deadline", today);
+    } catch (error) {
+      console.warn("Skipping expired competition cleanup:", error);
+    }
 
   const { data: { user } } = await supabase.auth.getUser();
   let role = "talent";
