@@ -1,4 +1,4 @@
-import { resend, RESEND_FROM, isResendLimitError, ResendLimitError } from "@/lib/resend";
+import { getResend, RESEND_FROM, isResendLimitError, ResendLimitError } from "@/lib/resend";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { unwrapRelation } from "@/lib/supabase-relations";
 import { teamInviteEmailHtml } from "@/lib/email-templates";
@@ -78,7 +78,7 @@ export async function sendTeamInviteEmail({
   const competitionTitle = team.competition?.title ?? "Lomba";
   const leaderName = team.leader?.name ?? "Ketua Tim";
 
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from: RESEND_FROM,
     to: user.email,
     subject: `${leaderName} mengundangmu ke tim "${team.name}" — MyProdigi`,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { resend, RESEND_FROM, isResendLimitError } from "@/lib/resend";
+import { getResend, RESEND_FROM, isResendLimitError } from "@/lib/resend";
 import { createVerificationRecord, getVerificationRecordByEmail } from "@/lib/email-verification-store";
 import { verificationEmailHtml } from "@/lib/email-templates";
 
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Data registrasi belum ditemukan. Silakan daftar ulang." }, { status: 400 });
     }
 
-    const { error } = await resend.emails.send({
+    const { error } = await getResend().emails.send({
       from: RESEND_FROM,
       to: email,
       subject: `${record.token} — Kode Verifikasi MyProdigi kamu`,

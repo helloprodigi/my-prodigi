@@ -1,10 +1,15 @@
 import { Resend } from "resend";
 
-if (!process.env.RESEND_API_KEY) {
-  throw new Error("RESEND_API_KEY belum di-set.");
-}
+const resendApiKey = process.env.RESEND_API_KEY ?? "";
+const resendClient = resendApiKey ? new Resend(resendApiKey) : null;
 
-export const resend = new Resend(process.env.RESEND_API_KEY);
+export function getResend() {
+  if (!resendClient) {
+    throw new Error("RESEND_API_KEY belum di-set.");
+  }
+
+  return resendClient;
+}
 
 export const RESEND_FROM = process.env.RESEND_FROM_EMAIL ?? "HelloProdigi <onboarding@resend.dev>";
 
