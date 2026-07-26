@@ -17,7 +17,7 @@ const talentNavItems = [
 
 const aslabNavItems = [
   { icon: LayoutGrid, href: "/dashboard", label: "Dashboard" },
-  { icon: Trophy, href: "/competitions", label: "Competition" },
+  { icon: Trophy, href: "/competitions", label: "Draft Competition" },
   { icon: FileText, href: "/aslab-proker", label: "Program Kerja", disabled: false },
   { icon: ShieldUser, href: "/my-divisi", label: "MyDivisi", disabled: false },
   { icon: CalendarClock, href: "/myshift", label: "MyShift", disabled: false },
@@ -48,9 +48,13 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadUser() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
+      if (!isMounted) return;
+
       if (user) {
         setUserData({
           name: user.user_metadata?.name || user.email?.split('@')[0] || "User",
@@ -64,10 +68,36 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
           .eq("id", user.id)
           .single();
         setUserRole(dbUser?.role || "talent");
+      } else {
+        setUserData(null);
+        setUserRole("talent");
       }
     }
+
     loadUser();
-  }, []);
+
+    const supabase = createClient();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === "SIGNED_OUT") {
+        if (!isMounted) return;
+        setUserData(null);
+        setUserRole("talent");
+        setUnreadCount(0);
+        router.refresh();
+        return;
+      }
+
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        await loadUser();
+        router.refresh();
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   // The sidebar mounts once for the whole dashboard layout, so it never
   // re-runs the effect above on client-side navigation. Profile edits (e.g.
@@ -103,8 +133,13 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
 
   const handleLogout = async () => {
     const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
+    await supabase.auth.signOut({ scope: "local" });
+    setUserData(null);
+    setUserRole("talent");
+    setUnreadCount(0);
+    router.replace("/login");
+    router.refresh();
+    window.location.assign("/login");
   };
 
   return (

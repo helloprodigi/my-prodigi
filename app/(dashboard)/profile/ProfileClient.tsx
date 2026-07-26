@@ -130,8 +130,10 @@ export default function ProfileClient({ profile }: { profile: any }) {
 
   const handleLogout = async () => {
     const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
+    await supabase.auth.signOut({ scope: "local" });
+    router.replace("/login");
+    router.refresh();
+    window.location.assign("/login");
   };
 
   const handleSavePersonal = async () => {

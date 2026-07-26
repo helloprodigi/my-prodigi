@@ -5,10 +5,10 @@ import { ArrowLeft, Calendar, Building, Link as LinkIcon, Users } from "lucide-r
 import Image from "next/image";
 
 const getTagColors = (skill: string) => {
-  if (skill.includes("Data Science")) return "bg-blue-50 text-blue-600";
-  if (skill.includes("UI/UX")) return "bg-purple-50 text-purple-600";
-  if (skill.includes("Business")) return "bg-red-50 text-red-600";
-  if (skill.includes("Web") || skill.includes("Frontend")) return "bg-yellow-50 text-yellow-600";
+  if (skill.includes("UI/UX")) return "bg-blue-50 text-blue-700";
+  if (skill.includes("Innovation")) return "bg-green-50 text-green-700";
+  if (skill.includes("Web") || skill.includes("Frontend")) return "bg-yellow-50 text-yellow-700";
+  if (skill.includes("Business")) return "bg-red-50 text-red-700";
   return "bg-gray-50 text-gray-600";
 };
 

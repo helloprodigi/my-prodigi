@@ -2,10 +2,10 @@ import React from "react";
 import Image from "next/image";
 
 const CATEGORY_COLORS: Record<string, string> = {
-  "Data Science": "bg-[#E0F2FE] text-[#0A1024]",
-  "UI/UX Design": "bg-[#E0E7FF] text-[#0A1024]",
-  "Business Plan": "bg-[#FEE2E2] text-[#0A1024]",
-  "Web Development": "bg-[#FEF9C3] text-[#0A1024]",
+  "UI/UX Design": "bg-[#E0E7FF] text-[#1D4ED8]",
+  "Innovation": "bg-[#DCFCE7] text-[#15803D]",
+  "Web Development": "bg-[#FEF3C7] text-[#D97706]",
+  "Business Plan": "bg-[#FEE2E2] text-[#DC2626]",
 };
 
 export function getCategoryClass(category: string) {
