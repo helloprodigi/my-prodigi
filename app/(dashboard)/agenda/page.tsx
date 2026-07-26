@@ -194,7 +194,8 @@ export default function AgendaAdminPage() {
               <div className="pt-4 border-t border-gray-200">
                 <button 
                   onClick={handleBuatAgenda}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  className="w-full font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  style={{ backgroundColor: '#FFC917', color: '#000000' }}
                 >
                   <Plus className="w-5 h-5" /> Buat QR Code Absensi
                 </button>

@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/utils/supabase/server";
 
 // Coordinates for TULT (Telkom University Landmark Tower)
-const TULT_LAT = -6.977046522238311;
-const TULT_LNG = 107.63434332899644;
+const TULT_LAT = -6.969260270985497;
+const TULT_LNG = 107.62816532337784;
 const MAX_RADIUS_METERS = 50;
 
 function getDistanceFromLatLonInM(lat1: number, lon1: number, lat2: number, lon2: number) {
