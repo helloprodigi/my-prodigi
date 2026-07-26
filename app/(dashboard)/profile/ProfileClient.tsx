@@ -128,12 +128,12 @@ export default function ProfileClient({ profile }: { profile: any }) {
     setUpdatingRole(null);
   };
 
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut({ scope: "local" });
-    router.replace("/login");
-    router.refresh();
-    window.location.assign("/login");
+  const handleLogout = () => {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch {}
+    window.location.href = "/auth/logout";
   };
 
   const handleSavePersonal = async () => {
@@ -400,8 +400,12 @@ export default function ProfileClient({ profile }: { profile: any }) {
         </div>
 
         <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-medium text-red-500 hover:bg-red-50 transition-colors mt-auto"
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleLogout();
+          }}
+          className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-medium text-red-500 hover:bg-red-50 transition-colors mt-auto cursor-pointer"
         >
           <LogOut className="w-5 h-5 text-red-500" />
           Log Out

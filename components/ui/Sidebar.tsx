@@ -131,15 +131,12 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
     return () => clearInterval(interval);
   }, []);
 
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut({ scope: "local" });
-    setUserData(null);
-    setUserRole("talent");
-    setUnreadCount(0);
-    router.replace("/login");
-    router.refresh();
-    window.location.assign("/login");
+  const handleLogout = () => {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch {}
+    window.location.href = "/auth/logout";
   };
 
   return (
@@ -288,8 +285,12 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
               </Link>
               <div className="h-px w-full bg-gray-700/50" />
               <button 
-                onClick={handleLogout}
-                className="w-full text-left px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-white/5 flex items-center gap-3 font-medium transition-colors"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLogout();
+                }}
+                className="w-full text-left px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-white/5 flex items-center gap-3 font-medium transition-colors cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 Logout
