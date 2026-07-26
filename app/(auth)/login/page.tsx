@@ -43,11 +43,12 @@ export default function LoginPage() {
 
     try {
       await supabase.auth.signOut({ scope: "local" });
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/&intent=login`,
+          redirectTo: `${appUrl}/auth/callback?next=/&intent=login`,
           queryParams: {
             prompt: "select_account",
           },
