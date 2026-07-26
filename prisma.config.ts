@@ -7,6 +7,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: env("DIRECT_URL"), // pakai koneksi direct (port 5432) untuk CLI/migrate
+    url: process.env.DIRECT_URL || process.env.DATABASE_URL || "",
   },
 });
