@@ -79,7 +79,15 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
             ? ["talent", "asisten_lab"]
             : ["talent"];
 
-        const savedRole = typeof window !== "undefined" ? localStorage.getItem("activeRole") : null;
+        const getCookie = (name: string) => {
+          if (typeof document === "undefined") return null;
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+          return null;
+        };
+
+        const savedRole = (typeof window !== "undefined" ? localStorage.getItem("activeRole") : null) || getCookie("activeRole");
         const normalizedSavedRole = savedRole === "aslab" ? "asisten_lab" : savedRole;
 
         const effectiveRole = (normalizedSavedRole && availableRoles.includes(normalizedSavedRole))

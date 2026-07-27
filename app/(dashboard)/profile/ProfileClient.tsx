@@ -674,11 +674,12 @@ export default function ProfileClient({ profile }: { profile: any }) {
                       if (!isChangingRole) {
                         setIsChangingRole(true);
                       } else {
+                        document.cookie = `activeRole=${selectedRole}; path=/; max-age=31536000; SameSite=Lax`;
                         localStorage.setItem('activeRole', selectedRole);
                         setActiveRole(selectedRole);
                         setIsChangingRole(false);
                         window.dispatchEvent(new CustomEvent("myprodigi:profile-updated", { detail: { role: selectedRole } }));
-                        router.push('/');
+                        router.push('/dashboard');
                         router.refresh();
                       }
                     }}

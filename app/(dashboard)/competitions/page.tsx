@@ -7,6 +7,7 @@ import AdminDraftActions from "@/components/AdminDraftActions";
 import CompetitionsHeader from "@/components/CompetitionsHeader";
 import DownloadDraftButton from "@/components/DownloadDraftButton";
 import PreviewLombaCard from "@/components/PreviewLombaCard";
+import { getEffectiveRole } from "@/lib/get-effective-role";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { createClient } from "@/utils/supabase/server";
 
@@ -62,7 +63,7 @@ export default async function CompetitionsPage({
   let role = "talent";
   if (user) {
     const { data: publicUser } = await supabase.from("User").select("role").eq("id", user.id).single();
-    role = publicUser?.role || "talent";
+    role = await getEffectiveRole(publicUser?.role);
   }
 
   const isDraftView = role === "asisten_lab" || (role === "admin" && viewParam === "draft");

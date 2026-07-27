@@ -3,6 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import TalentDashboard from "./TalentDashboard";
 import AslabDashboard from "./AslabDashboard";
 import { redirect } from "next/navigation";
+import { getEffectiveRole } from "@/lib/get-effective-role";
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
@@ -21,7 +22,9 @@ export default async function DashboardPage() {
     .eq("id", user.id)
     .single();
 
-  if (userData?.role === "asisten_lab") {
+  const effectiveRole = await getEffectiveRole(userData?.role);
+
+  if (effectiveRole === "asisten_lab") {
     return <AslabDashboard />;
   }
 
