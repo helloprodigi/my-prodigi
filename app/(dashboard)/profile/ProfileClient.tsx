@@ -677,6 +677,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                         localStorage.setItem('activeRole', selectedRole);
                         setActiveRole(selectedRole);
                         setIsChangingRole(false);
+                        window.dispatchEvent(new CustomEvent("myprodigi:profile-updated", { detail: { role: selectedRole } }));
                         router.push('/');
                         router.refresh();
                       }

@@ -56,18 +56,43 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
       if (!isMounted) return;
 
       if (user) {
+        let dbRole = user.user_metadata?.role;
+        try {
+          const { data: dbUser } = await supabase
+            .from("User")
+            .select("role")
+            .eq("id", user.id)
+            .single();
+          if (dbUser?.role) {
+            dbRole = dbUser.role;
+          }
+        } catch (e) {
+          console.warn("Sidebar loadUser role fetch error:", e);
+        }
+
+        const rawRealRole = (dbRole || "talent").toLowerCase();
+        const realRole = rawRealRole === "aslab" ? "asisten_lab" : rawRealRole;
+
+        const availableRoles = realRole === "admin"
+          ? ["talent", "asisten_lab", "admin"]
+          : realRole === "asisten_lab"
+            ? ["talent", "asisten_lab"]
+            : ["talent"];
+
+        const savedRole = typeof window !== "undefined" ? localStorage.getItem("activeRole") : null;
+        const normalizedSavedRole = savedRole === "aslab" ? "asisten_lab" : savedRole;
+
+        const effectiveRole = (normalizedSavedRole && availableRoles.includes(normalizedSavedRole))
+          ? normalizedSavedRole
+          : realRole;
+
         setUserData({
           name: user.user_metadata?.name || user.email?.split('@')[0] || "User",
-          role: user.user_metadata?.role || "Talent",
+          role: effectiveRole,
           photoUrl: user.user_metadata?.photoUrl
         });
 
-        const { data: dbUser } = await supabase
-          .from("User")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-        setUserRole(dbUser?.role || "talent");
+        setUserRole(effectiveRole);
       } else {
         setUserData(null);
         setUserRole("talent");
@@ -99,19 +124,31 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
     };
   }, [router]);
 
-  // The sidebar mounts once for the whole dashboard layout, so it never
-  // re-runs the effect above on client-side navigation. Profile edits (e.g.
-  // uploading a new photo) dispatch this event so the sidebar can reflect it
-  // immediately instead of requiring a full page reload.
   useEffect(() => {
     function handleProfileUpdated(e: Event) {
-      const { photoUrl } = (e as CustomEvent<{ photoUrl?: string }>).detail ?? {};
+      const { photoUrl, role } = (e as CustomEvent<{ photoUrl?: string; role?: string }>).detail ?? {};
       if (photoUrl !== undefined) {
         setUserData((prev) => (prev ? { ...prev, photoUrl } : prev));
       }
+      if (role !== undefined) {
+        const normalizedRole = role === "aslab" ? "asisten_lab" : role;
+        setUserRole(normalizedRole);
+        setUserData((prev) => (prev ? { ...prev, role: normalizedRole } : prev));
+      }
+    }
+    function handleStorageChange(e: StorageEvent) {
+      if (e.key === "activeRole" && e.newValue) {
+        const normalizedRole = e.newValue === "aslab" ? "asisten_lab" : e.newValue;
+        setUserRole(normalizedRole);
+        setUserData((prev) => (prev ? { ...prev, role: normalizedRole } : prev));
+      }
     }
     window.addEventListener("myprodigi:profile-updated", handleProfileUpdated);
-    return () => window.removeEventListener("myprodigi:profile-updated", handleProfileUpdated);
+    window.addEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("myprodigi:profile-updated", handleProfileUpdated);
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
 
   const navItems = userRole === "admin" ? adminNavItems : userRole === "asisten_lab" ? aslabNavItems : talentNavItems;
