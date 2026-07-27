@@ -89,34 +89,34 @@ export default function DraftCompetitionManager() {
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Judul</label>
-          <input className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#FFC700]" value={form.title} onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))} required />
+          <input className="w-full rounded-xl border border-transparent bg-gray-50 px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all" value={form.title} onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))} required />
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Organizer</label>
-          <input className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#FFC700]" value={form.organizer} onChange={(e) => setForm((prev) => ({ ...prev, organizer: e.target.value }))} required />
+          <input className="w-full rounded-xl border border-transparent bg-gray-50 px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all" value={form.organizer} onChange={(e) => setForm((prev) => ({ ...prev, organizer: e.target.value }))} required />
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Tab</label>
-          <select className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#FFC700]" value={form.tab} onChange={(e) => setForm((prev) => ({ ...prev, tab: e.target.value }))}>
+          <select className="w-full rounded-xl border border-transparent bg-gray-50 px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all" value={form.tab} onChange={(e) => setForm((prev) => ({ ...prev, tab: e.target.value }))}>
             {TAB_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Tags</label>
-          <input className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#FFC700]" placeholder="UI/UX Design, Innovation" value={form.tags} onChange={(e) => setForm((prev) => ({ ...prev, tags: e.target.value }))} />
+          <input className="w-full rounded-xl border border-transparent bg-gray-50 px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all" placeholder="UI/UX Design, Innovation" value={form.tags} onChange={(e) => setForm((prev) => ({ ...prev, tags: e.target.value }))} />
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Deskripsi</label>
-          <textarea className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#FFC700] min-h-28" value={form.description} onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))} />
+          <textarea className="w-full rounded-xl border border-transparent bg-gray-50 px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all min-h-28" value={form.description} onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))} />
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Link</label>
-          <input className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#FFC700]" value={form.link} onChange={(e) => setForm((prev) => ({ ...prev, link: e.target.value }))} />
+          <input className="w-full rounded-xl border border-transparent bg-gray-50 px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all" value={form.link} onChange={(e) => setForm((prev) => ({ ...prev, link: e.target.value }))} />
         </div>
 
         <button disabled={submitting} className="w-full rounded-xl bg-[#FFC700] px-4 py-3 font-semibold text-[#0A1024] hover:bg-[#e6b400] disabled:opacity-60">

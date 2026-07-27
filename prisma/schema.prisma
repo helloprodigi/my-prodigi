@@ -124,6 +124,7 @@ model DraftCompetition {
   title       String
   organizer   String
   tab         String   // Guidebook, Proposal, Pitch Deck
+  category    String?  // Belmawa, Non-Belmawa, Internal
   skills      String[]
   description String?
   link        String?

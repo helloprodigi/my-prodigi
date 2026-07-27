@@ -165,8 +165,8 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
                   <input 
                     type="text" 
                     required
-                    className="w-full bg-[#F4F4F5] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC700] transition-all text-[#0A1024]"
-                    placeholder="masukkan nama lomba"
+                    className="w-full bg-[#F4F4F5] border border-transparent rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all text-[#0A1024]"
+                    placeholder="Masukkan Nama Lomba"
                     value={formData.title}
                     onChange={e => setFormData({...formData, title: e.target.value})}
                   />
@@ -177,7 +177,7 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
                   <input 
                     type="text" 
                     required
-                    className="w-full bg-[#F4F4F5] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC700] transition-all text-[#0A1024]"
+                    className="w-full bg-[#F4F4F5] border border-transparent rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all text-[#0A1024]"
                     placeholder="Nama penyelenggara lomba"
                     value={formData.organizer}
                     onChange={e => setFormData({...formData, organizer: e.target.value})}
@@ -190,7 +190,7 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
                     type="date" 
                     required
                     min={new Date().toISOString().split("T")[0]}
-                    className="w-full bg-[#F4F4F5] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC700] transition-all text-[#0A1024]"
+                    className="w-full bg-[#F4F4F5] border border-transparent rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all text-[#0A1024]"
                     value={formData.deadline}
                     onChange={e => setFormData({...formData, deadline: e.target.value})}
                   />
@@ -203,7 +203,7 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
               <input 
                 type="url" 
                 required
-                className="w-full bg-[#F4F4F5] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC700] transition-all text-[#0A1024]"
+                className="w-full bg-[#F4F4F5] border border-transparent rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all text-[#0A1024]"
                 placeholder="https://lomba-isme70-informatic-system-memorable-exhibition"
                 value={formData.link}
                 onChange={e => setFormData({...formData, link: e.target.value})}
@@ -266,7 +266,7 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Jenis Lomba</label>
                   <select 
-                    className="w-full bg-[#F4F4F5] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC700] transition-all text-[#0A1024] appearance-none"
+                    className="w-full bg-[#F4F4F5] border border-transparent rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all text-[#0A1024] appearance-none"
                     value={formData.category}
                     onChange={e => setFormData({...formData, category: e.target.value})}
                   >

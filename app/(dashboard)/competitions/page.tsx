@@ -3,7 +3,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import AdminCompetitionActions from "@/components/AdminCompetitionActions";
+import AdminDraftActions from "@/components/AdminDraftActions";
 import CompetitionsHeader from "@/components/CompetitionsHeader";
+import DownloadDraftButton from "@/components/DownloadDraftButton";
 import PreviewLombaCard from "@/components/PreviewLombaCard";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { createClient } from "@/utils/supabase/server";
@@ -15,6 +17,7 @@ type DraftCompetitionRecord = {
   title: string;
   organizer: string;
   tab: string;
+  category?: string | null;
   skills: string[];
   description: string | null;
   link: string | null;
@@ -31,10 +34,11 @@ const getTagColors = (skill: string) => {
 export default async function CompetitionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; page?: string }>;
+  searchParams: Promise<{ tab?: string; page?: string; view?: string }>;
 }) {
   const params = await searchParams;
   const currentTab = params.tab || "Belmawa";
+  const viewParam = params.view;
   const currentPage = Number.parseInt(params.page || "1", 10);
   const limit = 8;
   const from = (currentPage - 1) * limit;
@@ -61,13 +65,15 @@ export default async function CompetitionsPage({
     role = publicUser?.role || "talent";
   }
 
-  if (role === "asisten_lab") {
+  const isDraftView = role === "asisten_lab" || (role === "admin" && viewParam === "draft");
+
+  if (isDraftView) {
     const draftTabs: DraftCompetitionTab[] = ["Guidebook", "Proposal", "Pitch Deck"];
     const requestedTab = draftTabs.includes(currentTab as DraftCompetitionTab) ? (currentTab as DraftCompetitionTab) : "Guidebook";
 
     const { data: draftCompetitions, error: draftError } = await supabase
       .from("DraftCompetition")
-      .select("id,title,organizer,tab,skills,description,link,createdAt")
+      .select("id,title,organizer,tab,category,skills,description,link,createdAt")
       .eq("tab", requestedTab)
       .order("createdAt", { ascending: false });
 
@@ -75,15 +81,19 @@ export default async function CompetitionsPage({
       <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 md:p-10 w-full overflow-hidden">
         <div className="mb-6 sm:mb-8 flex items-center justify-between">
           <h1 className="text-[22px] font-bold text-[#0A1024] sm:text-3xl md:text-4xl">Draft Competition</h1>
+          <div className="flex-shrink-0">
+            <CompetitionsHeader role={role} isDraftView={true} />
+          </div>
         </div>
 
         <div className="mb-6 flex w-full gap-4 overflow-x-auto border-b border-gray-200 pb-1 sm:mb-8 sm:gap-6">
           {draftTabs.map((tab) => {
             const isActive = requestedTab === tab;
+            const tabHref = role === "admin" ? `/competitions?view=draft&tab=${tab}` : `/competitions?tab=${tab}`;
             return (
               <Link
                 key={tab}
-                href={`/competitions?tab=${tab}`}
+                href={tabHref}
                 className={`whitespace-nowrap px-1 pb-2 text-[14px] font-medium transition-colors sm:pb-3 sm:text-base ${
                   isActive ? "border-b-2 border-[#FFC700] text-[#0A1024]" : "text-gray-500 hover:text-gray-800"
                 }`}
@@ -100,14 +110,24 @@ export default async function CompetitionsPage({
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4 md:gap-8">
             {draftCompetitions.map((item: DraftCompetitionRecord) => (
               <div key={item.id} className="flex h-full flex-col rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                <p className="mb-4 text-[11px] font-semibold text-[#FFC700]">{item.tab}</p>
+                <div className="mb-3 flex items-center justify-between min-h-[28px]">
+                  <p className="text-[11px] font-semibold text-[#FFC700]">
+                    {item.category || "Belmawa"}
+                  </p>
+                  {(role === "admin" || role === "asisten_lab") && (
+                    <AdminDraftActions draftId={item.id} draftTitle={item.title} />
+                  )}
+                </div>
+
                 <div className="mb-4 flex items-start gap-3">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#FFF6D8]">
                     <FileText className="h-6 w-6 text-[#FFC700]" />
                   </div>
                   <h2 className="text-lg font-bold leading-tight text-[#0A1024] sm:text-xl">{item.title}</h2>
                 </div>
-                <p className="mb-4 text-sm text-gray-500">Dibuat Oleh : {item.organizer}</p>
+                {item.tab !== "Guidebook" && (
+                  <p className="mb-4 text-sm text-gray-500">Dibuat Oleh : {item.organizer}</p>
+                )}
                 <p className="mb-5 flex-1 text-sm leading-relaxed text-gray-500">
                   {item.description || "Panduan lengkap mengenai kompetisi, alur pendaftaran, teknis pelaksanaan, serta penilaian"}
                 </p>
@@ -120,19 +140,16 @@ export default async function CompetitionsPage({
                 </div>
                 <div className="mt-auto flex gap-3">
                   <Link
-                    href={item.link ? (item.link.startsWith("http") ? item.link : `https://${item.link}`) : "/admin/staging"}
+                    href={item.link ? (item.link.startsWith("http") ? item.link : `https://${item.link}`) : "#"}
+                    target="_blank"
                     className="flex-1 rounded-lg bg-amber-50 py-2.5 text-center text-sm font-semibold text-[#0A1024] transition-colors hover:bg-amber-100"
                   >
                     Lihat
                   </Link>
-                  <a
-                    href={item.link ? (item.link.startsWith("http") ? item.link : `https://${item.link}`) : "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 rounded-lg bg-[#FFC700] py-2.5 text-center text-sm font-semibold text-[#0A1024] transition-colors hover:bg-[#e6b400]"
-                  >
-                    Download
-                  </a>
+                  <DownloadDraftButton
+                    url={item.link || "#"}
+                    filename={`${item.title}.pdf`}
+                  />
                 </div>
               </div>
             ))}
@@ -174,7 +191,7 @@ export default async function CompetitionsPage({
       <div className="mb-6 flex items-center justify-between sm:mb-8">
         <h1 className="text-[22px] font-bold text-[#0A1024] sm:text-3xl md:text-4xl">Competitions</h1>
         <div className="flex-shrink-0">
-          <CompetitionsHeader role={role} />
+          <CompetitionsHeader role={role} isDraftView={false} />
         </div>
       </div>
 

@@ -8,6 +8,7 @@ export async function GET(request: Request) {
     const supabase = createClient(cookieStore);
     const url = new URL(request.url);
     const tab = url.searchParams.get("tab");
+    const category = url.searchParams.get("category");
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -16,6 +17,7 @@ export async function GET(request: Request) {
 
     let query = supabase.from("DraftCompetition").select("*").order("createdAt", { ascending: false });
     if (tab) query = query.eq("tab", tab);
+    if (category) query = query.eq("category", category);
 
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -49,7 +51,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { title, organizer, tab, skills, description, link } = body;
+    const { title, organizer, tab, category, skills, description, link } = body;
 
     if (!title || !organizer || !tab) {
       return NextResponse.json({ error: "Title, organizer, dan tab wajib diisi" }, { status: 400 });
@@ -58,8 +60,9 @@ export async function POST(req: Request) {
     const { error } = await adminDb.from("DraftCompetition").insert({
       id: crypto.randomUUID(),
       title,
-      organizer,
+      organizer: organizer || "Admin",
       tab,
+      category: category || null,
       skills: Array.isArray(skills) ? skills : [],
       description: description || null,
       link: link || null,
