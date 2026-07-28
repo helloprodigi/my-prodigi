@@ -108,11 +108,11 @@ export default function AbsensiAdminPage() {
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 space-y-6 w-full">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Kelola Absensi</h1>
-          <p className="text-gray-500">Atur jadwal shift dan pantau kehadiran Asisten Lab.</p>
+          <h1 className="text-[22px] font-bold text-[#0A1024] sm:text-3xl md:text-4xl">Kelola Absensi</h1>
+          <p className="text-gray-500 mt-1">Atur jadwal shift dan pantau kehadiran Asisten Lab.</p>
         </div>
       </div>
 

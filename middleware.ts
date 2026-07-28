@@ -37,6 +37,8 @@ export async function middleware(request: NextRequest) {
   let isAslab = false;
   let isAdmin = false;
   let isAslabOnboarded = false;
+  let effectiveIsAslab = false;
+  let effectiveIsAdmin = false;
 
   if (user) {
     // Check onboarding status
@@ -45,11 +47,28 @@ export async function middleware(request: NextRequest) {
       .select("isOnboarded, role, divisi, jabatan")
       .eq("id", user.id)
       .single();
-    
+
     isOnboarded = userData?.isOnboarded || false;
     isAslab = userData?.role === 'asisten_lab';
     isAdmin = userData?.role === 'admin';
     isAslabOnboarded = !!(userData?.divisi && userData?.jabatan);
+
+    // Respect the "view as" role switch (see ProfileClient / Sidebar) so that
+    // an admin who switched their active role to Asisten Lab (or vice versa)
+    // isn't blocked from the routes that role's sidebar links to.
+    const rawActiveRole = request.cookies.get('activeRole')?.value;
+    const normalizedActiveRole = rawActiveRole === 'aslab' ? 'asisten_lab' : rawActiveRole;
+    const availableRoles = isAdmin
+      ? ['talent', 'asisten_lab', 'admin']
+      : isAslab
+        ? ['talent', 'asisten_lab']
+        : ['talent'];
+    const effectiveRole = (normalizedActiveRole && availableRoles.includes(normalizedActiveRole))
+      ? normalizedActiveRole
+      : (isAdmin ? 'admin' : isAslab ? 'asisten_lab' : 'talent');
+
+    effectiveIsAslab = effectiveRole === 'asisten_lab';
+    effectiveIsAdmin = effectiveRole === 'admin';
   }
 
   const { pathname } = request.nextUrl
@@ -70,6 +89,7 @@ export async function middleware(request: NextRequest) {
                            pathname.startsWith('/aslab-onboarding') ||
                            pathname.startsWith('/aslab-proker') ||
                            pathname.startsWith('/my-divisi') ||
+                           pathname.startsWith('/myshift') ||
                            pathname.startsWith('/profile') ||
                            pathname.startsWith('/team-invite');
 
@@ -125,16 +145,20 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(redirectUrl)
       }
       
-      // Role-based route protection
-      if (pathname.startsWith('/absensi') && !isAdmin) {
+      // Role-based route protection (based on the currently active/viewed role)
+      if (pathname.startsWith('/absensi') && !effectiveIsAdmin) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
-      
-      if (pathname.startsWith('/myshift') && !isAslab) {
+
+      if (pathname.startsWith('/myshift') && !effectiveIsAslab && !effectiveIsAdmin) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
-      
-      if (pathname.startsWith('/agenda') && !isAdmin && !isAslab) {
+
+      if (pathname.startsWith('/agenda') && !effectiveIsAdmin && !effectiveIsAslab) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+
+      if (pathname.startsWith('/matchmaking') && effectiveIsAdmin) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
     }

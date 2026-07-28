@@ -203,11 +203,11 @@ export default function MyShiftPage() {
 
   return (
     <div className="min-h-screen bg-[#F9FAFC] relative">
-      <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-8">
+      <div className="p-6 md:p-10 w-full space-y-8">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold text-[#0B132B]">MyShift</h1>
+          <h1 className="text-[22px] font-bold text-[#0A1024] sm:text-3xl md:text-4xl">MyShift</h1>
           <button 
             onClick={handleOpenQRGenerator}
             className="bg-[#FFC727] hover:bg-[#e5b323] text-[#0B132B] font-semibold px-6 py-2.5 rounded-lg transition-colors shadow-sm"

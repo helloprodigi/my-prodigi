@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, Trophy, Sparkles, BookOpen, Bell, User, LogOut, Menu, X, ChevronRight, ChevronLeft, FileText, ShieldUser, CalendarClock, Calendar } from "lucide-react";
+import { LayoutGrid, Trophy, Sparkles, BookOpen, Bell, User, LogOut, Menu, X, ChevronRight, ChevronLeft, FileText, ShieldUser, CalendarClock, Calendar, ClipboardCheck } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import { useState, useEffect } from "react";
@@ -27,9 +27,9 @@ const aslabNavItems = [
 
 const adminNavItems = [
   { icon: LayoutGrid, href: "/dashboard", label: "Dashboard" },
-  { icon: CalendarClock, href: "/absensi", label: "Kelola Shift", disabled: false },
-  { icon: Calendar, href: "/agenda", label: "Kelola Agenda", disabled: false },
-  { icon: Bell, href: "/notifications", label: "Notifikasi" },
+  { icon: Trophy, href: "/competitions", label: "Competition", disabled: false },
+  { icon: CalendarClock, href: "/myshift", label: "MyShift", disabled: false },
+  { icon: ClipboardCheck, href: "/absensi", label: "Kelola Absensi", disabled: false },
 ];
 
 interface SidebarProps {
@@ -39,60 +39,61 @@ interface SidebarProps {
   setIsDesktopOpen: (open: boolean) => void;
 }
 
+const getCookie = (name: string) => {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+  return null;
+};
+
 export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDesktopOpen }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [userData, setUserData] = useState<{name: string, role: string, photoUrl?: string} | null>(null);
-  const [userRole, setUserRole] = useState<string>("talent");
+  const [userRole, setUserRole] = useState<string>(() => {
+    if (typeof document !== "undefined") {
+      const saved = getCookie("activeRole") || localStorage.getItem("activeRole");
+      if (saved) return saved === "aslab" ? "asisten_lab" : saved;
+    }
+    return "talent";
+  });
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadUser() {
+      try {
+        const res = await fetch("/api/profile");
+        if (!isMounted) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.role) {
+            setUserData({
+              name: data.name,
+              role: data.role,
+              photoUrl: data.photoUrl
+            });
+            setUserRole(data.role);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("Sidebar loadUser API error:", e);
+      }
+
+      // Fallback if API fails
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!isMounted) return;
 
       if (user) {
         let dbRole = user.user_metadata?.role;
-        try {
-          const { data: dbUser } = await supabase
-            .from("User")
-            .select("role")
-            .eq("id", user.id)
-            .single();
-          if (dbUser?.role) {
-            dbRole = dbUser.role;
-          }
-        } catch (e) {
-          console.warn("Sidebar loadUser role fetch error:", e);
-        }
-
-        const rawRealRole = (dbRole || "talent").toLowerCase();
-        const realRole = rawRealRole === "aslab" ? "asisten_lab" : rawRealRole;
-
-        const availableRoles = realRole === "admin"
-          ? ["talent", "asisten_lab", "admin"]
-          : realRole === "asisten_lab"
-            ? ["talent", "asisten_lab"]
-            : ["talent"];
-
-        const getCookie = (name: string) => {
-          if (typeof document === "undefined") return null;
-          const value = `; ${document.cookie}`;
-          const parts = value.split(`; ${name}=`);
-          if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
-          return null;
-        };
-
-        const savedRole = (typeof window !== "undefined" ? localStorage.getItem("activeRole") : null) || getCookie("activeRole");
+        const savedRole = getCookie("activeRole") || (typeof window !== "undefined" ? localStorage.getItem("activeRole") : null);
         const normalizedSavedRole = savedRole === "aslab" ? "asisten_lab" : savedRole;
-
-        const effectiveRole = (normalizedSavedRole && availableRoles.includes(normalizedSavedRole))
-          ? normalizedSavedRole
-          : realRole;
+        const effectiveRole = normalizedSavedRole || dbRole || "talent";
 
         setUserData({
           name: user.user_metadata?.name || user.email?.split('@')[0] || "User",
@@ -180,6 +181,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
     try {
       localStorage.clear();
       sessionStorage.clear();
+      document.cookie = "activeRole=; path=/; max-age=0; SameSite=Lax";
     } catch {}
     window.location.href = "/auth/logout";
   };

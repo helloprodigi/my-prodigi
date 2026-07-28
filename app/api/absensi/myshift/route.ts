@@ -18,7 +18,7 @@ export async function GET(req: Request) {
       select: { id: true, role: true, nim: true, name: true, email: true }
     });
 
-    if (dbUser?.role !== "asisten_lab") {
+    if (dbUser?.role !== "asisten_lab" && dbUser?.role !== "admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -60,21 +60,23 @@ export async function GET(req: Request) {
     const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // Find all agendas for this user on the target date
+    // Find all agendas for target date
     const myAgendas = await prisma.absensiAgenda.findMany({
       where: {
         waktuMulai: {
           gte: startOfDay,
           lte: endOfDay
         },
-        assignedUsers: {
-          some: {
-            OR: [
-              { userId: user.id },
-              ...(dbUser.nim ? [{ nim: dbUser.nim }] : [])
-            ]
+        ...(dbUser.role === "admin" ? {} : {
+          assignedUsers: {
+            some: {
+              OR: [
+                { userId: user.id },
+                ...(dbUser.nim ? [{ nim: dbUser.nim }] : [])
+              ]
+            }
           }
-        }
+        })
       },
       include: {
         assignedUsers: {

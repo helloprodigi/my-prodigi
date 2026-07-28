@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import TalentDashboard from "./TalentDashboard";
 import AslabDashboard from "./AslabDashboard";
+import AdminDashboard from "./AdminDashboard";
 import { redirect } from "next/navigation";
 import { getEffectiveRole } from "@/lib/get-effective-role";
 
@@ -26,6 +27,10 @@ export default async function DashboardPage() {
 
   if (effectiveRole === "asisten_lab") {
     return <AslabDashboard />;
+  }
+
+  if (effectiveRole === "admin") {
+    return <AdminDashboard />;
   }
 
   return <TalentDashboard />;

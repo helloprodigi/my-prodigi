@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { User, Lock, LogOut, FileText, CheckCircle2, Briefcase, Link as LinkIcon, Download, ExternalLink, Info, Upload, Users } from "lucide-react";
+import { User, Lock, LogOut, FileText, CheckCircle2, Briefcase, Link as LinkIcon, Download, ExternalLink, Info, Upload } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -39,7 +39,15 @@ export default function ProfileClient({ profile }: { profile: any }) {
   const [selectedRole, setSelectedRole] = useState(profile.role);
 
   useEffect(() => {
-    const saved = localStorage.getItem('activeRole');
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+      return null;
+    };
+    // Cookie is authoritative: it's the only source the server (middleware) can read,
+    // so the client must agree with it rather than trusting a possibly-stale localStorage value.
+    const saved = getCookie('activeRole') || localStorage.getItem('activeRole');
     if (saved && availableRoles.includes(saved)) {
       setActiveRole(saved);
       setSelectedRole(saved);
@@ -79,59 +87,11 @@ export default function ProfileClient({ profile }: { profile: any }) {
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
 
-  // State for User Management (Admin only)
-  const [users, setUsers] = useState<any[]>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
-  const [updatingRole, setUpdatingRole] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-
-  const fetchUsers = async (page: number = 1) => {
-    setIsLoadingUsers(true);
-    try {
-      const res = await fetch(`/api/admin/users?page=${page}&limit=10`);
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(data.users || []);
-        setCurrentPage(data.currentPage || 1);
-        setTotalPages(data.totalPages || 1);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-    setIsLoadingUsers(false);
-  };
-
-  useEffect(() => {
-    if (activeTab === "management" && activeRole === "admin") {
-      fetchUsers(currentPage);
-    }
-  }, [activeTab, activeRole, currentPage]);
-
-  const handleUpdateRole = async (userId: string, newRole: string) => {
-    setUpdatingRole(userId);
-    try {
-      const res = await fetch("/api/admin/users", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, role: newRole })
-      });
-      if (res.ok) {
-        toast.success("Role berhasil diupdate!");
-        fetchUsers(currentPage);
-      } else {
-        toast.error("Gagal update role.");
-      }
-    } catch (err) {
-      console.error(err);
-    }
-    setUpdatingRole(null);
-  };
-
   const handleLogout = () => {
     try {
       localStorage.clear();
       sessionStorage.clear();
+      document.cookie = "activeRole=; path=/; max-age=0; SameSite=Lax";
     } catch {}
     window.location.href = "/auth/logout";
   };
@@ -337,10 +297,6 @@ export default function ProfileClient({ profile }: { profile: any }) {
     { id: "cv", label: "CV", icon: FileText },
     { id: "password", label: "Reset Password", icon: Lock },
   ];
-
-  if (activeRole === "admin") {
-    tabs.push({ id: "management", label: "Management Akun", icon: Users });
-  }
 
   return (
     <div className="flex flex-col lg:flex-row gap-8">
@@ -841,121 +797,6 @@ export default function ProfileClient({ profile }: { profile: any }) {
                 {isSendingReset ? "Mengirim..." : "Kirim Tautan Reset Password"}
               </button>
             </div>
-          </div>
-        )}
-
-        {/* TAB: Management Akun (Admin Only) */}
-        {activeTab === "management" && activeRole === "admin" && (
-          <div className="animate-in fade-in duration-300">
-            <h2 className="text-2xl font-bold text-[#0A1024] mb-8">Management Akun</h2>
-
-            {isLoadingUsers ? (
-              <div className="flex justify-center p-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FFC700]"></div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="py-4 px-4 font-semibold text-gray-600">Nama</th>
-                      <th className="py-4 px-4 font-semibold text-gray-600">Email</th>
-                      <th className="py-4 px-4 font-semibold text-gray-600">Role Saat Ini</th>
-                      <th className="py-4 px-4 font-semibold text-gray-600">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((u: any) => (
-                      <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td className="py-4 px-4 text-gray-900">{u.name || "-"}</td>
-                        <td className="py-4 px-4 text-gray-600 text-sm">{u.email}</td>
-                        <td className="py-4 px-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${u.role === "admin" ? "bg-red-100 text-red-700" :
-                            u.role === "asisten_lab" ? "bg-blue-100 text-blue-700" :
-                              "bg-gray-100 text-gray-700"
-                            }`}>
-                            {u.role === "asisten_lab" ? "Asisten Lab" : u.role.charAt(0).toUpperCase() + u.role.slice(1)}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-3">
-                            <select
-                              className="
-        min-w-[220px]
-        px-4 py-2.5
-        bg-white
-        border border-gray-300
-        rounded-xl
-        text-sm font-medium text-gray-700
-        shadow-sm
-        transition-all duration-200
-
-        hover:border-gray-400
-        focus:outline-none
-        focus:ring-2
-        focus:ring-[#FFC700]/30
-        focus:border-[#FFC700]
-
-        disabled:bg-gray-50
-        disabled:text-gray-500
-        disabled:border-gray-200
-        disabled:cursor-not-allowed
-      "
-                              value={u.role}
-                              onChange={(event) =>
-                                handleUpdateRole(u.id, event.target.value)
-                              }
-                              disabled={updatingRole === u.id || u.id === profile.id}
-                            >
-                              <option value="talent">Talent</option>
-                              <option value="asisten_lab">Asisten Laboratorium</option>
-                              <option value="admin">Admin</option>
-                            </select>
-
-                            {updatingRole === u.id && (
-                              <div
-                                className="
-          animate-spin
-          h-5 w-5
-          rounded-full
-          border-2 border-gray-200
-          border-t-[#FFC700]
-        "
-                                role="status"
-                                aria-label="Memperbarui role pengguna"
-                              />
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Pagination Controls for Management Akun */}
-            {!isLoadingUsers && totalPages > 1 && (
-              <div className="flex justify-center items-center gap-4 mt-8">
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage <= 1}
-                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <span className="text-sm font-medium text-gray-600">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage >= totalPages}
-                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            )}
           </div>
         )}
 
