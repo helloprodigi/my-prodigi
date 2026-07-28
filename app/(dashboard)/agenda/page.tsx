@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Users, Search, RefreshCw, Calendar, Clock, Download, Check } from "lucide-react";
+import { Plus, Users, Search, RefreshCw, Calendar, Clock, Download, Check, X, CheckCircle2 } from "lucide-react";
 import QRCode from "react-qr-code";
 
 const posisiOptions: Record<string, string[]> = {
@@ -40,6 +40,10 @@ export default function AgendaAdminPage() {
   // Riwayat State
   const [riwayat, setRiwayat] = useState<Agenda[]>([]);
 
+  // Modal states
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   useEffect(() => {
     if (activeTab === "riwayat") {
       fetch("/api/absensi/agenda-divisi")
@@ -50,7 +54,12 @@ export default function AgendaAdminPage() {
 
   const handleBuatAgenda = async () => {
     if (!namaShift || !waktuMulai || !waktuSelesai || !divisi) {
-      alert("Harap lengkapi semua field yang wajib diisi.");
+      setErrorMessage("Harap lengkapi semua field yang wajib diisi.");
+      return;
+    }
+
+    if (new Date(waktuSelesai) <= new Date(waktuMulai)) {
+      setErrorMessage("Waktu Selesai harus setelah Waktu Mulai.");
       return;
     }
 
@@ -71,9 +80,9 @@ export default function AgendaAdminPage() {
       if (res.ok) {
         const data = await res.json();
         setCreatedAgenda(data.agenda);
-        alert("Agenda berhasil dibuat!");
+        setSuccessMessage("Agenda berhasil dibuat!");
       } else {
-        alert("Gagal membuat agenda");
+        setErrorMessage("Gagal membuat agenda");
       }
     } catch (error) {
       console.error(error);
@@ -142,7 +151,14 @@ export default function AgendaAdminPage() {
                     <input 
                       type="datetime-local" 
                       value={waktuMulai}
-                      onChange={(e) => setWaktuMulai(e.target.value)}
+                      onChange={(e) => {
+                        const newMulai = e.target.value;
+                        setWaktuMulai(newMulai);
+                        if (waktuSelesai && newMulai && new Date(waktuSelesai) <= new Date(newMulai)) {
+                          setWaktuSelesai("");
+                          setErrorMessage("Waktu Selesai di-reset karena harus setelah Waktu Mulai");
+                        }
+                      }}
                       className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                     />
                   </div>
@@ -151,7 +167,15 @@ export default function AgendaAdminPage() {
                     <input 
                       type="datetime-local" 
                       value={waktuSelesai}
-                      onChange={(e) => setWaktuSelesai(e.target.value)}
+                      min={waktuMulai}
+                      onChange={(e) => {
+                        const newSelesai = e.target.value;
+                        if (waktuMulai && newSelesai && new Date(newSelesai) <= new Date(waktuMulai)) {
+                          setErrorMessage("Waktu Selesai harus setelah Waktu Mulai");
+                          return;
+                        }
+                        setWaktuSelesai(newSelesai);
+                      }}
                       className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                     />
                   </div>
@@ -303,6 +327,67 @@ export default function AgendaAdminPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Error Popup Modal */}
+      {errorMessage && (
+        <div className="fixed inset-0 bg-black/80 z-[80] flex flex-col items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden relative flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-200 shadow-2xl">
+            <button 
+              onClick={() => setErrorMessage(null)}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-900 transition-colors rounded-full hover:bg-gray-100"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            
+            <img 
+              src="/assets/absen/pop-up/ups.png" 
+              alt="Warning Icon" 
+              className="w-28 h-28 mb-6 object-contain drop-shadow-md"
+            />
+            
+            <h3 className="text-2xl font-bold text-[#0B132B] mb-4">
+              Waduhh!!
+            </h3>
+            
+            <p className="text-gray-700 font-medium leading-relaxed max-w-sm">
+              {errorMessage}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Success Popup Modal */}
+      {successMessage && (
+        <div className="fixed inset-0 bg-black/80 z-[80] flex flex-col items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-[2rem] w-full max-w-md overflow-hidden relative flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-300 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]">
+            <button 
+              onClick={() => setSuccessMessage(null)}
+              className="absolute top-5 right-5 p-2 text-gray-400 hover:text-gray-900 transition-colors rounded-full hover:bg-gray-100"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            
+            <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6">
+              <CheckCircle2 className="w-14 h-14 text-green-500" />
+            </div>
+            
+            <h3 className="text-2xl font-bold text-[#0B132B] mb-4">
+              Hebat!
+            </h3>
+            
+            <p className="text-gray-600 font-medium leading-relaxed max-w-sm">
+              {successMessage}
+            </p>
+            
+            <button 
+              onClick={() => setSuccessMessage(null)}
+              className="mt-8 w-full bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-semibold py-3.5 rounded-xl transition-colors"
+            >
+              Oke, Mengerti
+            </button>
           </div>
         </div>
       )}

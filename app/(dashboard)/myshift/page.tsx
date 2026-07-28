@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Clock, CheckCircle2, XCircle, X, ChevronLeft, ChevronRight, AlertCircle, QrCode } from "lucide-react";
 import QRCode from "react-qr-code";
-import { Html5QrcodeScanner } from "html5-qrcode";
 import toast from "react-hot-toast";
 
 interface Aslab {
@@ -45,10 +44,6 @@ export default function MyShiftPage() {
   const [showEmptyAgendaModal, setShowEmptyAgendaModal] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
   const [pageInfo, setPageInfo] = useState<string | null>(null);
-
-  // QR Scanner Modal
-  const [showScannerModal, setShowScannerModal] = useState(false);
-  const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
 
   const fetchAgendas = (date: Date) => {
     fetch(`/api/absensi/myshift?date=${date.toISOString()}`)
@@ -92,25 +87,7 @@ export default function MyShiftPage() {
     return () => clearInterval(interval);
   }, [showQRModal, activeAgenda]);
 
-  // Request Location on mount
-  useEffect(() => {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-          toast.error("Gagal mendapatkan lokasi. Absensi memerlukan akses lokasi.");
-        }
-      );
-    }
-  }, []);
-
-  const handlePreScanCheck = (action: "scan" | "lihat") => {
+  const handleOpenQRGenerator = () => {
     if (agendas.length === 0) {
       setShowEmptyAgendaModal(true);
       return;
@@ -154,17 +131,6 @@ export default function MyShiftPage() {
       } else {
         setPageInfo("Semua jadwal absensi kamu hari ini telah selesai. Terima kasih!");
       }
-      return;
-    }
-
-    if (action === "scan") {
-      setShowScannerModal(true);
-    }
-  };
-
-  const handleOpenQRGenerator = () => {
-    if (agendas.length === 0) {
-      setShowEmptyAgendaModal(true);
       return;
     }
 
@@ -301,23 +267,7 @@ export default function MyShiftPage() {
         </div>
       </div>
 
-      {/* FAB (Floating Action Button) for Scanner */}
-      <div className="fixed bottom-8 right-8 z-40">
-        <div className="relative">
-          {/* Yellow swoosh decoration around FAB */}
-          <svg className="absolute -inset-6 w-[120px] h-[120px] pointer-events-none -z-10 text-[#FFC727]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M 10 90 C 10 30, 80 10, 90 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-            <path d="M 25 90 C 25 45, 70 25, 90 25" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          
-          <button 
-            onClick={() => handlePreScanCheck("scan")}
-            className="w-16 h-16 bg-[#0B132B] hover:bg-[#1a2b5e] text-white rounded-2xl flex items-center justify-center shadow-2xl transition-transform hover:scale-105"
-          >
-            <QrCode className="w-8 h-8" />
-          </button>
-        </div>
-      </div>
+
 
       {/* Modal: QR Generator */}
       {showQRModal && activeAgenda && (
@@ -445,17 +395,7 @@ export default function MyShiftPage() {
         </div>
       )}
 
-      {/* Modal: QR Scanner */}
-      {showScannerModal && (
-        <QRScannerModal 
-          onClose={() => setShowScannerModal(false)} 
-          location={location}
-          onSuccess={() => {
-            setShowScannerModal(false);
-            fetchAgendas(selectedDate); // Refresh data
-          }}
-        />
-      )}
+
 
       {/* Empty Agenda Popup Modal */}
       {showEmptyAgendaModal && (
@@ -549,216 +489,4 @@ export default function MyShiftPage() {
   );
 }
 
-// Sub-component for Scanner to encapsulate html5-qrcode
-function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void, location: {lat: number, lng: number} | null, onSuccess: () => void }) {
-  const [scanError, setScanError] = useState<string | null>(null);
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
-  const isScanningRef = useRef(false);
 
-  useEffect(() => {
-    let isMounted = true;
-    let timer = setTimeout(() => {
-      if (!isMounted) return;
-      
-      const element = document.getElementById("qr-reader");
-      if (element) {
-        element.innerHTML = "";
-      }
-
-      scannerRef.current = new Html5QrcodeScanner(
-        "qr-reader",
-        { 
-          fps: 10, 
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0
-        },
-        /* verbose= */ false
-      );
-
-    scannerRef.current.render(
-      async (decodedText) => {
-        // Debounce scan
-        if (isScanningRef.current) return;
-        isScanningRef.current = true;
-
-        try {
-          if (!location) {
-            toast.error("Lokasi Anda belum terdeteksi. Izinkan akses lokasi.");
-            isScanningRef.current = false;
-            return;
-          }
-
-          // Parse decoded text. Example: http://localhost:3000/scan-absensi?token=abc&type=datang
-          const url = new URL(decodedText);
-          const token = url.searchParams.get("token");
-          const type = url.searchParams.get("type");
-
-          if (!token || !type) {
-            toast.error("Format QR Code tidak valid.");
-            isScanningRef.current = false;
-            return;
-          }
-
-          toast.loading("Memproses absensi...", { id: "absensi" });
-          
-          const res = await fetch("/api/absensi/scan", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              token,
-              type,
-              lat: location.lat,
-              lng: location.lng
-            })
-          });
-
-          const data = await res.json();
-          if (!res.ok) {
-            if (data.errorCode === "LATE_DATANG" || data.errorCode === "LATE_PULANG" || data.errorCode === "MISSED_DATANG") {
-              setScanError(data.message);
-              // Pause scanner instead of clearing so it doesn't keep scanning the same QR while modal is open
-              if (scannerRef.current) scannerRef.current.pause(true);
-            } else {
-              toast.error(data.message || data.error || "Gagal absen", { id: "absensi" });
-            }
-          } else {
-            toast.success(data.message || "Absensi berhasil!", { id: "absensi" });
-            if (scannerRef.current) {
-              scannerRef.current.clear();
-            }
-            onSuccess();
-          }
-        } catch (err) {
-          console.error(err);
-          toast.error("Gagal membaca QR", { id: "absensi" });
-        } finally {
-          // Add a small delay before allowing next scan to prevent rapid firing
-          setTimeout(() => { isScanningRef.current = false; }, 3000);
-        }
-      },
-      (error) => {
-        // Ignored. HTML5QrcodeScanner throws error for every frame without a QR code.
-      }
-    );
-    
-    }, 50); // 50ms delay for strict mode
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(console.error);
-        scannerRef.current = null;
-      }
-    };
-  }, [location, onSuccess]);
-
-  return (
-    <div className="fixed inset-0 bg-black/80 z-[60] flex flex-col items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden relative">
-        <div className="p-4 bg-[#0B132B] flex justify-between items-center text-white">
-          <h3 className="font-semibold text-lg">Scan QR Absensi</h3>
-          <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-full transition-colors">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-        
-        <div className="p-4">
-          {!location && (
-            <div className="bg-yellow-50 text-yellow-700 p-3 rounded-lg text-sm mb-4 border border-yellow-200">
-              Mendeteksi lokasi Anda... Izinkan akses lokasi pada browser untuk dapat absen.
-            </div>
-          )}
-          
-          <style dangerouslySetInnerHTML={{__html: `
-            #qr-reader {
-              border: none !important;
-              background: transparent !important;
-            }
-            #qr-reader__scan_region {
-              border-radius: 16px;
-              overflow: hidden;
-            }
-            #qr-reader video {
-              object-fit: cover !important;
-              border-radius: 16px !important;
-              width: 100% !important;
-            }
-            #qr-reader__dashboard_section_csr span {
-              display: none !important;
-            }
-            #qr-reader__dashboard_section_csr button {
-              background: #0B132B !important;
-              color: white !important;
-              border: none !important;
-              padding: 12px 24px !important;
-              border-radius: 8px !important;
-              font-weight: 600 !important;
-              margin-top: 12px !important;
-              cursor: pointer !important;
-              transition: all 0.2s !important;
-              width: 100% !important;
-            }
-            #qr-reader__dashboard_section_csr button:hover {
-              background: #1a2b5e !important;
-            }
-            #qr-reader__dashboard_section_swaplink {
-              display: none !important;
-            }
-            #qr-reader__dashboard_section_csr select {
-              padding: 10px !important;
-              border-radius: 8px !important;
-              border: 1px solid #e5e7eb !important;
-              width: 100% !important;
-              font-size: 14px !important;
-              background: #f9fafb !important;
-              margin-bottom: 8px !important;
-            }
-            #qr-reader__dashboard_section_b {
-              display: none !important;
-            }
-            #qr-reader__dashboard {
-              padding: 0 !important;
-              margin-top: 16px !important;
-            }
-          `}} />
-          <div id="qr-reader" className="w-full"></div>
-        </div>
-        <div className="bg-gray-50 p-4 text-center border-t border-gray-100">
-          <p className="text-sm text-gray-500 font-medium">
-            Arahkan kamera ke QR Code yang ditampilkan oleh teman Anda.
-          </p>
-        </div>
-
-        {/* Error Popup Modal */}
-        {scanError && (
-          <div className="absolute inset-0 bg-white z-[70] flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-200">
-            <button 
-              onClick={() => {
-                setScanError(null);
-                if (scannerRef.current) scannerRef.current.resume();
-              }}
-              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-900 transition-colors rounded-full hover:bg-gray-100"
-            >
-              <X className="w-6 h-6" />
-            </button>
-            
-            <img 
-              src="/assets/absen/pop-up/ups.png" 
-              alt="Warning Icon" 
-              className="w-32 h-32 mb-6 object-contain drop-shadow-md"
-            />
-            
-            <h3 className="text-2xl font-bold text-[#0B132B] mb-4">
-              Waduhh!!
-            </h3>
-            
-            <p className="text-gray-700 font-medium leading-relaxed max-w-sm">
-              {scanError}
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}

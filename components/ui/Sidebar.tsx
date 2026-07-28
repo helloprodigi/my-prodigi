@@ -29,6 +29,7 @@ const adminNavItems = [
   { icon: LayoutGrid, href: "/dashboard", label: "Dashboard" },
   { icon: Trophy, href: "/competitions", label: "Competition", disabled: false },
   { icon: CalendarClock, href: "/myshift", label: "MyShift", disabled: false },
+  { icon: Calendar, href: "/agenda", label: "Kelola Agenda", disabled: false },
   { icon: ClipboardCheck, href: "/absensi", label: "Kelola Absensi", disabled: false },
 ];
 
