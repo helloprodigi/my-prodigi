@@ -662,8 +662,8 @@ export default function ProfileClient({ profile }: { profile: any }) {
                         : "border-gray-200 bg-gray-50 opacity-60"
                     } ${isChangingRole ? "cursor-pointer hover:border-[#FFC700]" : ""}`}
                   >
-                    {isActive && <CheckCircle2 className="w-6 h-6 text-[#FFC700] absolute top-6 right-6" />}
-                    <h3 className="text-lg font-bold text-[#0A1024] mb-2">{roleInfo.title}</h3>
+                    {isActive && <CheckCircle2 className="w-6 h-6 text-[#FFC700] absolute top-6 right-6 shrink-0" />}
+                    <h3 className="text-lg font-bold text-[#0A1024] mb-2 pr-8">{roleInfo.title}</h3>
                     <p className="text-sm text-gray-600 leading-relaxed">
                       {roleInfo.desc}
                     </p>

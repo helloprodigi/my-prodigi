@@ -44,7 +44,7 @@ export function GlobalScannerFAB() {
         const savedRole = (typeof window !== "undefined" ? localStorage.getItem("activeRole") : null) || getCookie("activeRole");
         const normalizedSavedRole = savedRole === "aslab" ? "asisten_lab" : savedRole;
 
-        const availableRoles = realRole === "admin" 
+        const availableRoles = realRole === "admin"
           ? ["talent", "asisten_lab", "admin"]
           : realRole === "asisten_lab"
             ? ["talent", "asisten_lab"]
@@ -94,13 +94,7 @@ export function GlobalScannerFAB() {
     <>
       <div className="fixed bottom-8 right-8 z-40">
         <div className="relative">
-          {/* Yellow swoosh decoration around FAB */}
-          <svg className="absolute -inset-6 w-[120px] h-[120px] pointer-events-none -z-10 text-[#FFC727]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M 10 90 C 10 30, 80 10, 90 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-            <path d="M 25 90 C 25 45, 70 25, 90 25" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          
-          <button 
+          <button
             onClick={() => setShowScannerModal(true)}
             className="w-16 h-16 bg-[#0B132B] hover:bg-[#1a2b5e] text-white rounded-2xl flex items-center justify-center shadow-2xl transition-transform hover:scale-105"
           >
@@ -110,8 +104,8 @@ export function GlobalScannerFAB() {
       </div>
 
       {showScannerModal && (
-        <QRScannerModal 
-          onClose={() => setShowScannerModal(false)} 
+        <QRScannerModal
+          onClose={() => setShowScannerModal(false)}
           location={location}
           onSuccess={() => {
             setShowScannerModal(false);
@@ -130,9 +124,9 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
 
   useEffect(() => {
     let isMounted = true;
-    let timer = setTimeout(() => {
+    const timer = setTimeout(() => {
       if (!isMounted) return;
-      
+
       const element = document.getElementById("qr-reader");
       if (element) {
         element.innerHTML = "";
@@ -140,8 +134,8 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
 
       scannerRef.current = new Html5QrcodeScanner(
         "qr-reader",
-        { 
-          fps: 10, 
+        {
+          fps: 10,
           qrbox: { width: 250, height: 250 },
           aspectRatio: 1.0
         },
@@ -171,7 +165,7 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
             }
 
             toast.loading("Memproses absensi...", { id: "absensi" });
-            
+
             const res = await fetch("/api/absensi/scan", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -228,14 +222,14 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
             <X className="w-6 h-6" />
           </button>
         </div>
-        
+
         <div className="p-4">
           {!location && (
             <div className="bg-yellow-50 text-yellow-700 p-3 rounded-lg text-sm mb-4 border border-yellow-200">
               Mendeteksi lokasi Anda... Izinkan akses lokasi pada browser untuk dapat absen.
             </div>
           )}
-          
+
           <style dangerouslySetInnerHTML={{__html: `
             #qr-reader {
               border: none !important;
@@ -276,13 +270,13 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
               display: inline-block !important;
             }
           `}} />
-          
+
           <div id="qr-reader" className="w-full"></div>
-          
+
           {scanError && (
             <div className="mt-4 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm flex flex-col items-center text-center animate-in slide-in-from-bottom-2">
               <p className="font-medium mb-3">{scanError}</p>
-              <button 
+              <button
                 onClick={() => {
                   setScanError(null);
                   if (scannerRef.current) scannerRef.current.resume();

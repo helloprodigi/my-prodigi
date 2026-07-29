@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { LayoutGrid, Trophy, Sparkles, BookOpen, Bell, User, LogOut, Menu, X, ChevronRight, ChevronLeft, FileText, ShieldUser, CalendarClock, Calendar, ClipboardCheck } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const talentNavItems = [
   { icon: LayoutGrid, href: "/dashboard", label: "Dashboard", disabled: false },
@@ -52,15 +52,19 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
   const pathname = usePathname();
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
   const [userData, setUserData] = useState<{name: string, role: string, photoUrl?: string} | null>(null);
-  const [userRole, setUserRole] = useState<string>(() => {
-    if (typeof document !== "undefined") {
-      const saved = getCookie("activeRole") || localStorage.getItem("activeRole");
-      if (saved) return saved === "aslab" ? "asisten_lab" : saved;
-    }
-    return "talent";
-  });
+  const [userRole, setUserRole] = useState<string>("talent");
   const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      const saved = getCookie("activeRole") || localStorage.getItem("activeRole");
+      if (saved) {
+        setUserRole(saved === "aslab" ? "asisten_lab" : saved);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -177,6 +181,19 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
     const interval = setInterval(fetchUnread, 15000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!isProfileOpen) return;
+
+    function handleClickOutside(e: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isProfileOpen]);
 
   const handleLogout = () => {
     try {
@@ -295,7 +312,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
         </nav>
 
         {/* User Profile */}
-        <div className="mt-auto pt-6 px-4 relative flex flex-col items-center">
+        <div ref={profileRef} className="mt-auto pt-6 px-4 relative flex flex-col items-center">
           <div className="w-full border-t border-gray-800 mb-6" />
           
           <button 

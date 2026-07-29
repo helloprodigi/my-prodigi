@@ -105,8 +105,8 @@ export function ProkerDetailModal({
           </button>
         </div>
 
-        <div className="shrink-0 px-6">
-          <div className="relative overflow-hidden rounded-2xl px-8 py-6" style={{ backgroundColor: division.color }}>
+        <div className="shrink-0 px-4 sm:px-6">
+          <div className="relative overflow-hidden rounded-2xl px-5 sm:px-8 py-6" style={{ backgroundColor: division.color }}>
             <div className="absolute bottom-0 right-0 pointer-events-none w-20 h-14 sm:w-28 sm:h-20 md:w-36 md:h-24 select-none flex items-end justify-end opacity-90 [filter:brightness(0)_invert(1)]">
               <Image
                 src="/assets/matchmaking/cropped-yellowcircle.svg"
@@ -123,7 +123,7 @@ export function ProkerDetailModal({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-5">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 space-y-5">
           {isLoading ? (
             <p className="text-sm text-gray-400">Memuat...</p>
           ) : items.length === 0 ? (
@@ -164,7 +164,7 @@ export function ProkerDetailModal({
           )}
         </div>
 
-        <div className="shrink-0 flex items-center justify-end gap-3 px-8 py-5 border-t border-gray-100">
+        <div className="shrink-0 flex flex-wrap items-center justify-end gap-3 px-4 sm:px-8 py-5 border-t border-gray-100">
           <button
             onClick={handleClose}
             disabled={isSaving}

@@ -91,7 +91,7 @@ export function BuatLaporanForm({ allowedDivisionNames }: { allowedDivisionNames
 
   return (
     <div className="min-h-screen bg-[#FBFBFB] relative overflow-hidden">
-      <div className="w-full max-w-3xl p-8 relative z-10">
+      <div className="w-full max-w-3xl p-4 sm:p-6 lg:p-8 relative z-10">
         <h1 className="text-[22px] sm:text-3xl md:text-4xl font-bold text-[#0A1024] mb-2">Laporan Program Kerja</h1>
         <div className="flex items-center gap-2 text-sm text-gray-400 mb-6">
           <Link href="/aslab-proker" className="hover:text-gray-600 transition-colors">Program Kerja</Link>
@@ -99,7 +99,7 @@ export function BuatLaporanForm({ allowedDivisionNames }: { allowedDivisionNames
           <span className="text-gray-600 font-medium">Buat Laporan</span>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-8 space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-5 sm:p-8 space-y-6">
           <div>
             <label className="block text-sm text-[#0A1024] mb-2">Nama Program Kerja</label>
             <div className="relative">

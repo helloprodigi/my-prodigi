@@ -80,11 +80,9 @@ export default async function CompetitionsPage({
 
     return (
       <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 md:p-10 w-full overflow-hidden">
-        <div className="mb-6 sm:mb-8 flex items-center justify-between">
+        <div className="mb-6 sm:mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-[22px] font-bold text-[#0A1024] sm:text-3xl md:text-4xl">Draft Competition</h1>
-          <div className="flex-shrink-0">
-            <CompetitionsHeader role={role} isDraftView={true} />
-          </div>
+          <CompetitionsHeader role={role} isDraftView={true} />
         </div>
 
         <div className="mb-6 flex w-full gap-4 overflow-x-auto border-b border-gray-200 pb-1 sm:mb-8 sm:gap-6">
@@ -124,12 +122,12 @@ export default async function CompetitionsPage({
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#FFF6D8]">
                     <FileText className="h-6 w-6 text-[#FFC700]" />
                   </div>
-                  <h2 className="text-lg font-bold leading-tight text-[#0A1024] sm:text-xl">{item.title}</h2>
+                  <h2 className="break-words text-lg font-bold leading-tight text-[#0A1024] sm:text-xl">{item.title}</h2>
                 </div>
                 {item.tab !== "Guidebook" && (
-                  <p className="mb-4 text-sm text-gray-500">Dibuat Oleh : {item.organizer}</p>
+                  <p className="mb-4 break-words text-sm text-gray-500">Dibuat Oleh : {item.organizer}</p>
                 )}
-                <p className="mb-5 flex-1 text-sm leading-relaxed text-gray-500">
+                <p className="mb-5 flex-1 break-words text-sm leading-relaxed text-gray-500">
                   {item.description || "Panduan lengkap mengenai kompetisi, alur pendaftaran, teknis pelaksanaan, serta penilaian"}
                 </p>
                 <div className="mb-6 flex flex-wrap gap-2">
@@ -189,11 +187,9 @@ export default async function CompetitionsPage({
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 md:p-10 w-full overflow-hidden">
-      <div className="mb-6 flex items-center justify-between sm:mb-8">
+      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-[22px] font-bold text-[#0A1024] sm:text-3xl md:text-4xl">Competitions</h1>
-        <div className="flex-shrink-0">
-          <CompetitionsHeader role={role} isDraftView={false} />
-        </div>
+        <CompetitionsHeader role={role} isDraftView={false} />
       </div>
 
       <div className="mb-6 flex w-full gap-4 overflow-x-auto border-b border-gray-200 pb-1 sm:mb-8 sm:gap-6">
@@ -235,7 +231,7 @@ export default async function CompetitionsPage({
                   {role === "admin" && <AdminCompetitionActions competition={comp} />}
                 </div>
                 <h3 className="mb-2 line-clamp-2 text-[15px] font-bold leading-tight text-[#0A1024] sm:text-lg">{comp.title}</h3>
-                <p className="mb-4 flex-1 text-[13px] leading-relaxed text-gray-500 sm:text-sm">Diselenggarakan oleh : {comp.organizer}</p>
+                <p className="mb-4 flex-1 break-words text-[13px] leading-relaxed text-gray-500 sm:text-sm">Diselenggarakan oleh : {comp.organizer}</p>
                 <div className="mb-4 flex flex-wrap gap-1.5 sm:gap-2">
                   {comp.skills && comp.skills.map((skill: string) => (
                     <span key={skill} className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium sm:text-xs ${getTagColors(skill)}`}>

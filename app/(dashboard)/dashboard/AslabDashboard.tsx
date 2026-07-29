@@ -135,7 +135,7 @@ export default function AslabDashboard() {
   }, [currentDate, viewMode]);
 
   return (
-    <div className="min-h-screen bg-[#FBFBFB] relative overflow-hidden flex flex-col p-8">
+    <div className="min-h-screen bg-[#FBFBFB] relative overflow-hidden flex flex-col p-4 sm:p-6 lg:p-8">
       <div className="w-full z-10">
         {/* Header */}
         <div className="flex items-center justify-between pb-6 w-full">
@@ -180,8 +180,9 @@ export default function AslabDashboard() {
         {/* Kalender & Legenda */}
         <section className="flex flex-col lg:flex-row gap-6">
           {/* Calendar Area */}
-          <div className="flex-1 bg-white rounded-xl p-6">
-            <div className="flex justify-between items-center mb-6">
+          <div className="flex-1 min-w-0 bg-white rounded-xl p-4 sm:p-6 overflow-x-auto">
+            <div className="min-w-[700px]">
+            <div className="flex justify-between items-center gap-4 mb-6">
               <div className="flex items-center gap-4">
                 <h2 className="text-xl font-bold text-[#0A1024]">
                   {formattedDate}
@@ -320,6 +321,7 @@ export default function AslabDashboard() {
                   );
                 })}
               </div>
+            </div>
             </div>
           </div>
 

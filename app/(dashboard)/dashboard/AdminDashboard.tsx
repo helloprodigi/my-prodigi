@@ -60,7 +60,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FBFBFB] relative overflow-hidden flex flex-col p-8">
+    <div className="min-h-screen bg-[#FBFBFB] relative overflow-hidden flex flex-col p-4 sm:p-6 lg:p-8">
       <div className="w-full z-10">
         <div className="flex items-center justify-between pb-6 w-full">
           <h1 className="text-[22px] sm:text-3xl md:text-4xl font-bold text-[#0A1024]">Dashboard</h1>

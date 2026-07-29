@@ -19,7 +19,7 @@ export default function CompetitionsHeader({ role, isDraftView = false }: Compet
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-end gap-3">
+      <div className="flex flex-wrap items-center gap-3 sm:justify-end">
         {isAdmin && !isDraftView && (
           <Link
             href="/competitions?view=draft&tab=Guidebook"

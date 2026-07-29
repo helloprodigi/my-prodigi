@@ -61,7 +61,7 @@ export default async function AslabProkerPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#FBFBFB] p-8">
+    <div className="min-h-screen bg-[#FBFBFB] p-4 sm:p-6 lg:p-8">
       <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <h1 className="text-[22px] sm:text-3xl md:text-4xl font-bold text-[#0A1024]">Program Kerja</h1>
         {canCreateAnything && (

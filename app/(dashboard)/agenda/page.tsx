@@ -93,7 +93,7 @@ export default function AgendaAdminPage() {
     <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Kelola Agenda</h1>
+          <h1 className="text-[22px] font-bold text-[#0A1024] sm:text-3xl md:text-4xl">Kelola Agenda</h1>
           <p className="text-gray-500">Atur agenda kegiatan per divisi dan pantau kehadiran.</p>
         </div>
       </div>

@@ -88,11 +88,11 @@ export default async function MyDivisiPage() {
   const canManageAccess = isPicOf(me.jabatan, group);
 
   return (
-    <div className="min-h-screen bg-[#FBFBFB] p-8">
+    <div className="min-h-screen bg-[#FBFBFB] p-4 sm:p-6 lg:p-8">
       <h1 className="text-[22px] sm:text-3xl md:text-4xl font-bold text-[#0A1024] mb-8">MyDivisi</h1>
 
       <div
-        className="relative overflow-hidden rounded-2xl px-8 py-10 h-40 flex flex-col justify-center mb-8"
+        className="relative overflow-hidden rounded-2xl px-5 sm:px-8 py-10 h-40 flex flex-col justify-center mb-8"
         style={{ backgroundColor: banner.color }}
       >
         <div className="absolute bottom-0 right-0 pointer-events-none w-24 h-16 sm:w-40 sm:h-28 md:w-56 md:h-40 select-none flex items-end justify-end opacity-100 [filter:brightness(0)_invert(1)]">
