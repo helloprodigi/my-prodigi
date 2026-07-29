@@ -238,6 +238,10 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
             #qr-reader__scan_region {
               border-radius: 16px;
               overflow: hidden;
+              text-align: center !important;
+            }
+            #qr-reader__scan_region img {
+              margin: 24px auto !important;
             }
             #qr-reader video {
               object-fit: cover !important;
@@ -262,12 +266,76 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
             #qr-reader__dashboard_section_csr button:hover {
               background: #1a2b5e !important;
             }
-            #qr-reader__dashboard_section_swaplink {
+            #html5-qrcode-anchor-scan-type-change {
               text-decoration: none !important;
-              color: #0B132B !important;
-              font-weight: 500 !important;
-              margin-top: 12px !important;
+              color: #FFC700 !important;
+              font-weight: 600 !important;
+              margin-top: 20px !important;
               display: inline-block !important;
+            }
+            div:has(> label #html5-qrcode-button-file-selection) {
+              position: relative !important;
+              min-height: 180px !important;
+              border: 2px dashed #D1D5DB !important;
+              border-radius: 16px !important;
+              background: rgba(244, 244, 245, 0.5) !important;
+              padding: 32px 16px 44px !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              box-sizing: border-box !important;
+              transition: background-color 0.2s ease, border-color 0.2s ease !important;
+            }
+            div:has(> label #html5-qrcode-button-file-selection):hover {
+              background: #F4F4F5 !important;
+            }
+            label:has(#html5-qrcode-button-file-selection) {
+              position: absolute !important;
+              inset: 0 !important;
+              margin: 0 !important;
+              padding: 24px 16px !important;
+              display: flex !important;
+              flex-direction: column !important;
+              align-items: center !important;
+              justify-content: center !important;
+              cursor: pointer !important;
+              box-sizing: border-box !important;
+            }
+            label:has(#html5-qrcode-button-file-selection)::before {
+              content: "";
+              display: block;
+              width: 56px;
+              height: 56px;
+              margin-bottom: 12px;
+              flex-shrink: 0;
+              border-radius: 9999px;
+              background-color: #FFF9E6;
+              background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFC700' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='17 8 12 3 7 8'/%3E%3Cline x1='12' y1='3' x2='12' y2='15'/%3E%3C/svg%3E");
+              background-repeat: no-repeat;
+              background-position: center;
+              background-size: 26px 26px;
+            }
+            #html5-qrcode-button-file-selection {
+              background: transparent !important;
+              border: none !important;
+              padding: 0 !important;
+              color: #0A1024 !important;
+              font-weight: 600 !important;
+              font-size: 14px !important;
+              cursor: pointer !important;
+              text-align: center !important;
+              pointer-events: none !important;
+            }
+            label:has(#html5-qrcode-button-file-selection) + div {
+              position: absolute !important;
+              left: 0 !important;
+              right: 0 !important;
+              bottom: 16px !important;
+              margin: 0 !important;
+              color: #9CA3AF !important;
+              font-size: 12px !important;
+              font-weight: 400 !important;
+              text-align: center !important;
+              pointer-events: none !important;
             }
           `}} />
 
