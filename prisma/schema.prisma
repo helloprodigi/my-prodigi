@@ -92,6 +92,7 @@ model User {
   teamsAsLeader       Team[]         @relation("UserLedTeams")
   teamMemberships     TeamMember[]   @relation("UserTeamMemberships")
   notifications       Notification[]
+  pushSubscriptions   PushSubscription[]
   programKerjaCreated ProgramKerja[] @relation("ProgramKerjaCreatedBy")
   laporanCreated      Laporan[]      @relation("LaporanCreatedBy")
   
@@ -180,6 +181,17 @@ model Notification {
   createdAt   DateTime @default(now())
 
   user        User     @relation(fields: [userId], references: [id])
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ProgramKerja {

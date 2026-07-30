@@ -7,6 +7,7 @@ import { assignNextCandidate, assignAllCandidates } from "@/lib/matchmaking";
 import { sendTeamInviteEmail } from "@/lib/team-invite-email";
 import { ResendLimitError } from "@/lib/resend";
 import { unwrapRelation } from "@/lib/supabase-relations";
+import { sendPushToUser } from "@/lib/push";
 import type { DashboardTeamCard, DashboardTeamDetail } from "@/types/team";
 
 type TeamRow = {
@@ -549,6 +550,12 @@ export async function requestJoinAction(teamId: string) {
         createdAt: now,
       });
       if (notifError) console.error("[Notification] requestJoin insert error:", notifError.message);
+
+      await sendPushToUser(team.leaderId, {
+        title: `${requesterName} ingin bergabung ke timmu`,
+        body: `${requesterName} mengajukan permintaan bergabung ke tim "${teamName}" untuk kompetisi ${competitionTitle}.`,
+        url: "/notifications",
+      });
     } catch (notifErr) {
       console.error("[Notification] requestJoin unexpected error:", notifErr);
     }
@@ -690,6 +697,12 @@ export async function inviteMemberAction(teamId: string, memberId: string) {
         description: `Kamu diundang untuk bergabung dengan tim "${teamName}". Buka tautan berikut untuk melihat detail: /team-invite/${memberId}?token=${inviteToken}`,
         isRead: false,
         createdAt: now,
+      });
+
+      await sendPushToUser(memberData.userId, {
+        title: "Undangan Bergabung Tim",
+        body: `Kamu diundang untuk bergabung dengan tim "${teamName}".`,
+        url: `/team-invite/${memberId}?token=${inviteToken}`,
       });
     }
 
@@ -1040,6 +1053,12 @@ export async function approveJoinRequestAction(teamId: string, memberId: string)
       createdAt: now,
     });
 
+    await sendPushToUser(member.userId, {
+      title: "Permintaan Gabung Disetujui!",
+      body: `Selamat! Kamu resmi bergabung ke tim "${teamName}" untuk kompetisi ${competitionTitle}.`,
+      url: "/notifications",
+    });
+
     // Notify other approved members
     const { data: otherApproved } = await adminDb
       .from("TeamMember")
@@ -1060,6 +1079,16 @@ export async function approveJoinRequestAction(teamId: string, memberId: string)
           isRead: false,
           createdAt: now,
         }))
+      );
+
+      await Promise.allSettled(
+        otherApproved.map((m: any) =>
+          sendPushToUser(m.userId, {
+            title: `${memberName} bergabung ke tim`,
+            body: `Tim "${teamName}" kini beranggotakan ${nonLeaderApproved}/${totalCount} orang untuk kompetisi ${competitionTitle}.`,
+            url: "/notifications",
+          })
+        )
       );
     }
 
@@ -1125,6 +1154,12 @@ export async function rejectJoinRequestAction(teamId: string, memberId: string) 
         createdAt: now,
       });
       if (notifError) console.error("[Notification] rejectJoin insert error:", notifError.message);
+
+      await sendPushToUser(member.userId, {
+        title: "Permintaan Gabung Ditolak",
+        body: `Permintaan bergabungmu ke tim "${team.name ?? "Tim"}" untuk kompetisi ${rejectCompTitle} ditolak oleh ketua tim.`,
+        url: "/notifications",
+      });
     } catch (notifErr) {
       console.error("[Notification] rejectJoin unexpected error:", notifErr);
     }

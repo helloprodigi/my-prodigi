@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { sendPushToUser } from "@/lib/push";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -84,6 +85,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         }));
         
         await adminDb.from("Notification").insert(notifications);
+
+        await Promise.allSettled(
+          users.map((u: any) =>
+            sendPushToUser(u.id, {
+              title: "Kompetisi baru telah dipublikasikan.",
+              body: `${title || "Sebuah kompetisi"} baru saja dipublikasikan dan sudah dapat dilihat pada halaman kompetisi.`,
+              url: "/competitions",
+            })
+          )
+        );
       }
     }
 

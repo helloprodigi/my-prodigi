@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { GlobalScannerFAB } from "./GlobalScannerFAB";
+import { PushNotificationManager } from "./PushNotificationManager";
 
 export function DashboardLayoutWrapper({ children }: { children: React.ReactNode }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -24,6 +25,7 @@ export function DashboardLayoutWrapper({ children }: { children: React.ReactNode
         {children}
       </main>
       <GlobalScannerFAB />
+      <PushNotificationManager />
     </div>
   );
 }

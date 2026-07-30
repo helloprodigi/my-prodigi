@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { assignNextCandidate } from "@/lib/matchmaking";
+import { sendPushToUser } from "@/lib/push";
 
 export async function POST(request: Request) {
   try {
@@ -105,6 +106,12 @@ export async function POST(request: Request) {
         createdAt: now,
       });
 
+      await sendPushToUser(team.leaderId, {
+        title: `${memberName} bergabung ke tim kamu`,
+        body: `Jumlah anggota tim saat ini menjadi ${currentCount}/${totalCount} anggota untuk kompetisi ${competitionTitle}.`,
+        url: "/notifications",
+      });
+
       // Notify other approved members (not the leader, not the one who just joined)
       const { data: otherMembers } = await adminDb
         .from("TeamMember")
@@ -125,6 +132,16 @@ export async function POST(request: Request) {
             isRead: false,
             createdAt: now,
           }))
+        );
+
+        await Promise.allSettled(
+          otherMembers.map((m: any) =>
+            sendPushToUser(m.userId, {
+              title: `${memberName} bergabung ke tim`,
+              body: `Tim "${teamName}" kini beranggotakan ${currentCount}/${totalCount} orang untuk kompetisi ${competitionTitle}.`,
+              url: "/notifications",
+            })
+          )
         );
       }
 
@@ -150,6 +167,12 @@ export async function POST(request: Request) {
       description: `${memberName} menolak undangan untuk bergabung ke tim "${teamName}" pada kompetisi ${competitionTitle}. Sistem akan melanjutkan proses pencarian kandidat baru secara otomatis berdasarkan role dan skill yang dibutuhkan tim.`,
       isRead: false,
       createdAt: now,
+    });
+
+    await sendPushToUser(team.leaderId, {
+      title: `${memberName} menolak undangan timmu`,
+      body: `${memberName} menolak undangan untuk bergabung ke tim "${teamName}" pada kompetisi ${competitionTitle}.`,
+      url: "/notifications",
     });
 
     await assignNextCandidate(adminDb, {
