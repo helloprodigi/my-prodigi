@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { QrCode, X } from "lucide-react";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 import { toast } from "react-hot-toast";
 import { createClient } from "@/utils/supabase/client";
 
@@ -86,7 +86,7 @@ export function GlobalScannerFAB() {
     }
   }, [showScannerModal]);
 
-  if (userRole !== "asisten_lab" && userRole !== "admin") {
+  if (userRole !== "asisten_lab") {
     return null;
   }
 
@@ -119,12 +119,12 @@ export function GlobalScannerFAB() {
 
 function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void, location: {lat: number, lng: number} | null, onSuccess: () => void }) {
   const [scanError, setScanError] = useState<string | null>(null);
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
   const isScanningRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       if (!isMounted) return;
 
       const element = document.getElementById("qr-reader");
@@ -132,17 +132,16 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
         element.innerHTML = "";
       }
 
-      scannerRef.current = new Html5QrcodeScanner(
-        "qr-reader",
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0
-        },
-        /* verbose= */ false
-      );
+      scannerRef.current = new Html5Qrcode("qr-reader");
 
-      scannerRef.current.render(
+      try {
+        await scannerRef.current.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0
+          },
         async (decodedText) => {
           if (isScanningRef.current) return;
           isScanningRef.current = true;
@@ -181,13 +180,16 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
             if (!res.ok) {
               if (data.errorCode === "LATE_DATANG" || data.errorCode === "LATE_PULANG" || data.errorCode === "MISSED_DATANG") {
                 setScanError(data.message);
-                if (scannerRef.current) scannerRef.current.pause(true);
+                if (scannerRef.current && scannerRef.current.isScanning) {
+                  scannerRef.current.pause(true);
+                }
               } else {
                 toast.error(data.message || data.error || "Gagal absen", { id: "absensi" });
               }
             } else {
               toast.success(data.message || "Absensi berhasil!", { id: "absensi" });
-              if (scannerRef.current) {
+              if (scannerRef.current && scannerRef.current.isScanning) {
+                await scannerRef.current.stop();
                 scannerRef.current.clear();
               }
               onSuccess();
@@ -199,16 +201,27 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
             setTimeout(() => { isScanningRef.current = false; }, 3000);
           }
         },
-        (error) => {}
-      );
-    }, 50);
+          (error) => {
+            // Ignore normal scan errors (e.g. no QR code found)
+          }
+        );
+      } catch (err) {
+        console.error("Gagal membuka kamera:", err);
+        if (isMounted) toast.error("Gagal membuka kamera. Pastikan izin kamera telah diberikan.");
+      }
+    }, 200);
 
     return () => {
       isMounted = false;
       clearTimeout(timer);
       if (scannerRef.current) {
-        scannerRef.current.clear().catch(console.error);
-        scannerRef.current = null;
+        if (scannerRef.current.isScanning) {
+          scannerRef.current.stop().then(() => {
+            scannerRef.current?.clear();
+          }).catch(console.error);
+        } else {
+          scannerRef.current.clear();
+        }
       }
     };
   }, [location, onSuccess]);
