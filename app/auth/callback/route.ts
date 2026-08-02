@@ -2,25 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-
-function isLikelyFirstGoogleOAuthSignIn(user: any): boolean {
-  if (!user) return false;
-
-  const provider = user.app_metadata?.provider;
-  if (provider !== "google") return false;
-
-  const createdAt = user.created_at;
-  const lastSignInAt = user.last_sign_in_at;
-
-  if (!createdAt || !lastSignInAt) return false;
-
-  const createdAtMs = Date.parse(createdAt);
-  const lastSignInAtMs = Date.parse(lastSignInAt);
-
-  if (Number.isNaN(createdAtMs) || Number.isNaN(lastSignInAtMs)) return false;
-
-  return Math.abs(lastSignInAtMs - createdAtMs) < 15_000;
-}
+import { isLikelyFirstGoogleOAuthSignIn } from "@/lib/google-first-signin";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);

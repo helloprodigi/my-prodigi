@@ -1,8 +1,9 @@
 "use client";
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { setRememberMe } from "@/utils/supabase/remember-me";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -10,19 +11,9 @@ export default function LoginPage() {
   const [show, setShow] = useState(false);
   const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const supabase = createClient();
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const oauthError = params.get("error");
-
-    if (oauthError === "google_not_registered") {
-      setError("Akun Google ini belum terdaftar. Silakan register dulu.");
-    }
-  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,32 +28,6 @@ export default function LoginPage() {
       setError(err.message || String(err));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const signInWithGoogle = async () => {
-    setGoogleLoading(true);
-    setError(null);
-
-    try {
-      setRememberMe(remember);
-      await supabase.auth.signOut({ scope: "local" });
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${appUrl}/auth/callback?next=/&intent=login`,
-          queryParams: {
-            prompt: "select_account",
-          },
-        },
-      });
-
-      if (error) throw error;
-    } catch (err: any) {
-      setError(err.message || String(err));
-      setGoogleLoading(false);
     }
   };
 
@@ -198,21 +163,13 @@ export default function LoginPage() {
 
               {/* Tombol Google OAuth */}
               <div className="w-full">
-                <button
-                  type="button"
-                  className="w-full rounded-md flex items-center justify-center gap-2 text-gray-600 font-medium text-[11px] transition-all hover:bg-gray-50 active:scale-[0.99] disabled:opacity-60"
-                  onClick={() => void signInWithGoogle()}
-                  disabled={googleLoading || loading}
-                  style={{ height: '46px', backgroundColor: '#ffffff', border: '1px solid #D9D9D9' }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 533.5 544.3" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M533.5 278.4c0-17.4-1.5-34.1-4.3-50.4H272v95.4h147.3c-6.3 34.1-25.4 62.9-54.3 82.1v68h87.6c51.3-47.2 81.9-117.1 81.9-195.1z" fill="#4285F4"/>
-                    <path d="M272 544.3c73.7 0 135.6-24.4 180.8-66.3l-87.6-68c-24.4 16.4-55.6 26-93.2 26-71.6 0-132.3-48.4-154.1-113.3H29.9v71.1C75.4 489.8 168.6 544.3 272 544.3z" fill="#34A853"/>
-                    <path d="M117.9 332.7c-10.7-32.1-10.7-66.8 0-98.9V162.7H29.9c-39 77.6-39 169.7 0 247.3l88-77.3z" fill="#FBBC05"/>
-                    <path d="M272 109.1c39.9 0 76 13.7 104.2 40.5l78-78C409.1 24.6 347.2 0 272 0 168.6 0 75.4 54.5 29.9 138.7l88 71.1C139.7 157.5 200.4 109.1 272 109.1z" fill="#EA4335"/>
-                  </svg>
-                  {googleLoading ? "Connecting..." : "Sign In With Google"}
-                </button>
+                <GoogleSignInButton
+                  intent="login"
+                  label="Sign In With Google"
+                  loadingLabel="Connecting..."
+                  remember={remember}
+                  onError={setError}
+                />
               </div>
             </form>
 
