@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect, useState, useTransition } from "react";
+import React, { useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { Search } from "lucide-react";
 import { completeTeamAction, getMyTeamsAction, getAllTeamsAction, requestJoinAction } from "./actions";
 import type { DashboardTeamCard } from "@/types/team";
 
@@ -40,6 +41,26 @@ export default function TalentDashboard() {
   const [teams, setTeams] = useState<DashboardTeamCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const [search, setSearch] = useState("");
+  const [selectedSkill, setSelectedSkill] = useState("");
+
+  const skillOptions = useMemo(() => {
+    const skills = new Set<string>();
+    teams.forEach((team) => team.requiredSkills.forEach((skill) => skills.add(skill)));
+    return Array.from(skills).sort((a, b) => a.localeCompare(b));
+  }, [teams]);
+
+  const filteredTeams = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return teams.filter((team) => {
+      const matchesSearch =
+        !query ||
+        team.teamName.toLowerCase().includes(query) ||
+        team.competitionTitle.toLowerCase().includes(query);
+      const matchesSkill = !selectedSkill || team.requiredSkills.includes(selectedSkill);
+      return matchesSearch && matchesSkill;
+    });
+  }, [teams, search, selectedSkill]);
 
   const fetchMyTeams = async () => {
     try {
@@ -110,17 +131,42 @@ export default function TalentDashboard() {
 
   return (
     <div className="min-h-screen bg-[#FBFBFB] relative overflow-hidden flex flex-col justify-between">
-      <div className="w-full z-10 max-w-[1400px] pl-6 pr-4">
+      <div className="w-full z-10">
         {/* Header */}
-        <div className="flex items-center justify-between pt-8 pb-6 w-full">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pt-8 pb-6 w-full pl-6 pr-4">
           <h1 className="text-[22px] sm:text-3xl md:text-4xl font-bold text-[#0A1024]">Dashboard</h1>
-          <Link href="/matchmaking">
-            <button className="bg-[#FFC700] text-[#0A1024] font-bold px-9 py-3 rounded-[8px] text-sm hover:brightness-95 transition-all shadow-sm">
-              Buat Tim
-            </button>
-          </Link>
+
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cari nama tim atau lomba..."
+                className="w-full sm:w-64 text-xs text-[#0A1024] placeholder-gray-400 rounded-[6px] border border-gray-200 bg-white pl-8 pr-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#FFC700]"
+              />
+            </div>
+            <select
+              value={selectedSkill}
+              onChange={(e) => setSelectedSkill(e.target.value)}
+              className="text-xs text-[#0A1024] rounded-[6px] border border-gray-200 bg-white px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-[#FFC700] sm:max-w-[200px]"
+            >
+              <option value="">Semua Jenis Lomba</option>
+              {skillOptions.map((skill) => (
+                <option key={skill} value={skill}>{skill}</option>
+              ))}
+            </select>
+
+            <Link href="/matchmaking">
+              <button className="w-full sm:w-auto bg-[#FFC700] text-[#0A1024] font-bold px-9 py-3 rounded-[8px] text-sm hover:brightness-95 transition-all shadow-sm">
+                Buat Tim
+              </button>
+            </Link>
+          </div>
         </div>
 
+        <div className="max-w-[1400px] pl-6 pr-4">
         {/* Tabs */}
         <div className="flex justify-between items-center border-b border-gray-200 mb-6 w-full">
           <div className="flex gap-6">
@@ -154,9 +200,13 @@ export default function TalentDashboard() {
               ? "Belum ada tim yang diikuti atau dibuat. Silakan klik tombol 'Buat Tim' atau cari tim di tab sebelah."
               : "Belum ada tim aktif terdaftar di sistem."}
           </div>
+        ) : filteredTeams.length === 0 ? (
+          <div className="text-sm font-medium text-gray-500 italic py-10">
+            Tidak ada tim yang cocok dengan pencarian atau filter lomba.
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pb-24">
-            {teams.map((team) => (
+            {filteredTeams.map((team) => (
               <div
                 key={team.id}
                 className="bg-white rounded-[8px] border border-[#F0F0F0] p-4 shadow-sm flex flex-col justify-between w-full"
@@ -299,6 +349,7 @@ export default function TalentDashboard() {
             ))}
           </div>
         )}
+        </div>
       </div>
 
       <div className="absolute bottom-0 right-0 pointer-events-none w-[180px] h-[140px] md:w-[240px] md:h-[180px] z-0 select-none flex items-end justify-end">

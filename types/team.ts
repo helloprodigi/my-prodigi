@@ -24,7 +24,9 @@ export interface DashboardTeamMember {
 export interface DashboardTeamCard {
   id: string;
   teamName: string;
+  competitionId: string | null;
   competitionTitle: string;
+  requiredSkills: string[];
   createdDate: string;
   createdAt: string;
   category: string;

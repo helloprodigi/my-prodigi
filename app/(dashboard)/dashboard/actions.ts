@@ -20,6 +20,7 @@ type TeamRow = {
   status: string;
   requiredSkills?: string[];
   leader?: any;
+  competitionId: string | null;
   competition: { title: string; organizer: string } | { title: string; organizer: string }[] | null;
 };
 
@@ -78,12 +79,12 @@ export async function getDashboardTeamsAction(): Promise<{
     );
 
     const teamSelectWithStatus = `
-      id, name, memberCount, category, createdAt, leaderId, status, requiredSkills,
+      id, name, memberCount, category, createdAt, leaderId, status, requiredSkills, competitionId,
       leader:User!Team_leaderId_fkey(name, photoUrl),
       competition:Competition(title, organizer)
     `;
     const teamSelectBase = `
-      id, name, memberCount, category, createdAt, leaderId, requiredSkills,
+      id, name, memberCount, category, createdAt, leaderId, requiredSkills, competitionId,
       leader:User!Team_leaderId_fkey(name, photoUrl),
       competition:Competition(title, organizer)
     `;
@@ -118,7 +119,7 @@ export async function getDashboardTeamsAction(): Promise<{
       .select(`
         status,
         team:Team(
-          id, name, memberCount, category, createdAt, leaderId, requiredSkills, status,
+          id, name, memberCount, category, createdAt, leaderId, requiredSkills, status, competitionId,
           leader:User!Team_leaderId_fkey(name, photoUrl),
           competition:Competition(title, organizer)
         )
@@ -221,7 +222,9 @@ export async function getDashboardTeamsAction(): Promise<{
       cards.push({
         id: teamId,
         teamName: team.name,
+        competitionId: team.competitionId,
         competitionTitle: competition?.title ?? "-",
+        requiredSkills: team.requiredSkills ?? [],
         createdDate: formatDate(team.createdAt),
         createdAt: team.createdAt,
         category: team.category,
@@ -745,11 +748,11 @@ export async function getMyTeamsAction(): Promise<{
     );
 
     const teamSelectWithStatus = `
-      id, name, memberCount, category, createdAt, leaderId, status, requiredSkills,
+      id, name, memberCount, category, createdAt, leaderId, status, requiredSkills, competitionId,
       competition:Competition(title, organizer)
     `;
     const teamSelectBase = `
-      id, name, memberCount, category, createdAt, leaderId, requiredSkills,
+      id, name, memberCount, category, createdAt, leaderId, requiredSkills, competitionId,
       competition:Competition(title, organizer)
     `;
 
@@ -781,7 +784,7 @@ export async function getMyTeamsAction(): Promise<{
         `
         status, inviteToken,
         team:Team(
-          id, name, memberCount, category, createdAt, leaderId, status,
+          id, name, memberCount, category, createdAt, leaderId, status, competitionId, requiredSkills,
           competition:Competition(title, organizer)
         )
       `,
@@ -838,7 +841,9 @@ export async function getMyTeamsAction(): Promise<{
       cards.push({
         id: teamId,
         teamName: team.name,
+        competitionId: team.competitionId,
         competitionTitle: competition?.title ?? "-",
+        requiredSkills: team.requiredSkills ?? [],
         createdDate: formatDate(team.createdAt),
         createdAt: team.createdAt,
         category: team.category,
@@ -892,7 +897,7 @@ export async function getAllTeamsAction(): Promise<{
     );
 
     const teamSelectWithStatus = `
-      id, name, memberCount, category, createdAt, leaderId, status, requiredSkills,
+      id, name, memberCount, category, createdAt, leaderId, status, requiredSkills, competitionId,
       competition:Competition(title, organizer)
     `;
 
@@ -945,7 +950,9 @@ export async function getAllTeamsAction(): Promise<{
       cards.push({
         id: teamId,
         teamName: team.name,
+        competitionId: team.competitionId,
         competitionTitle: competition?.title ?? "-",
+        requiredSkills: team.requiredSkills ?? [],
         createdDate: formatDate(team.createdAt),
         createdAt: team.createdAt,
         category: team.category,

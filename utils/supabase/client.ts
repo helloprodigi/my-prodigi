@@ -1,4 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { authCookieOptions } from "./cookie-options";
+import { isRememberMeEnabled, downgradeAuthCookiesToSessionOnly } from "./remember-me";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -11,13 +13,34 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 // cross-tab coordination, so skip the browser lock entirely.
 const noOpLock = async <R>(_name: string, _acquireTimeout: number, fn: () => Promise<R>): Promise<R> => fn();
 
-export const createClient = () =>
-  createBrowserClient(
+// createBrowserClient caches a singleton internally, so this listener must
+// only be attached once even though createClient() is called from many
+// components.
+let rememberMeListenerAttached = false;
+
+export const createClient = () => {
+  const client = createBrowserClient(
     supabaseUrl!,
     supabaseKey!,
     {
       auth: {
         lock: noOpLock,
       },
+      cookieOptions: authCookieOptions,
     },
   );
+
+  if (typeof window !== "undefined" && !rememberMeListenerAttached) {
+    rememberMeListenerAttached = true;
+    client.auth.onAuthStateChange((event) => {
+      if (
+        !isRememberMeEnabled() &&
+        (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION")
+      ) {
+        downgradeAuthCookiesToSessionOnly();
+      }
+    });
+  }
+
+  return client;
+};

@@ -2,11 +2,13 @@
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { setRememberMe } from "@/utils/supabase/remember-me";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +29,7 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
+      setRememberMe(remember);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       window.location.href = "/";
@@ -42,6 +45,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
+      setRememberMe(remember);
       await supabase.auth.signOut({ scope: "local" });
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
 
@@ -165,6 +169,19 @@ export default function LoginPage() {
                     )}
                   </button>
                 </div>
+              </div>
+
+              {/* Remember Me */}
+              <div className="w-full mb-4 flex items-center">
+                <label className="flex items-center gap-2 text-[11px] text-[#6E7980] font-semibold cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-gray-300 accent-[#FFC917] text-[#FFC917] focus:ring-[#FFC917] focus:ring-offset-0"
+                  />
+                  Ingat saya
+                </label>
               </div>
 
               {/* Tombol Masuk */}

@@ -107,8 +107,11 @@ export default function VerifyOtpPage() {
               </div>
               <div className="w-full max-w-[310px] h-[1px] bg-gray-100 my-3" />
               <h2 className="text-base font-bold text-gray-900 tracking-tight mt-1">Verifikasi Email</h2>
-              <p className="text-[11px] text-[#6E7980] text-center max-w-[280px] mt-2 leading-relaxed">
-                Masukkan kode verifikasi yang telah dikirim ke email Anda
+              <p className="text-[11px] text-[#6E7980] text-center max-w-[300px] mt-2 leading-relaxed">
+                Masukkan kode verifikasi yang telah kami kirim ke alamat email Anda. Pengguna dengan akun{" "}
+                <span className="font-semibold">@student.telkomuniversity.ac.id</span> dapat melihat email melalui Outlook.
+                <br /><br />
+                Jika email belum terlihat, periksa folder <span className="font-semibold">Inbox</span> terlebih dahulu, lalu cek <span className="font-semibold">Spam</span> atau <span className="font-semibold">Junk</span>.
               </p>
             </div>
 

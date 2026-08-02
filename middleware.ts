@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { authCookieOptions } from './utils/supabase/cookie-options'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -27,6 +28,7 @@ export async function middleware(request: NextRequest) {
           )
         },
       },
+      cookieOptions: authCookieOptions,
     }
   )
 
