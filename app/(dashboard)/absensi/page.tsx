@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Users, Search, RefreshCw, Calendar, Clock, Download, Check, X, CheckCircle2 } from "lucide-react";
+import { Plus, Users, Search, RefreshCw, Calendar, Clock, Download, Check, X, CheckCircle2, Loader2 } from "lucide-react";
 import QRCode from "react-qr-code";
+import { downloadQRCode } from "@/lib/downloadQr";
 
 interface Aslab {
   nim: string;
@@ -25,6 +26,7 @@ interface Agenda {
 
 export default function AbsensiAdminPage() {
   const [activeTab, setActiveTab] = useState<"buat" | "riwayat">("buat");
+  const [isLoading, setIsLoading] = useState(false);
   
   // Buat Agenda State
   const [namaShift, setNamaShift] = useState("");
@@ -81,6 +83,8 @@ export default function AbsensiAdminPage() {
   };
 
   const handleBuatAgenda = async () => {
+    if (isLoading) return;
+
     if (!namaShift || !waktuMulai || !waktuSelesai || !divisi || selectedAslabs.length === 0) {
       setErrorMessage("Harap lengkapi semua field dan pilih minimal 1 aslab.");
       return;
@@ -91,6 +95,7 @@ export default function AbsensiAdminPage() {
       return;
     }
 
+    setIsLoading(true);
     try {
       const res = await fetch("/api/absensi/agenda", {
         method: "POST",
@@ -109,10 +114,14 @@ export default function AbsensiAdminPage() {
         setCreatedAgenda(data.agenda);
         setSuccessMessage("Agenda berhasil dibuat!");
       } else {
-        setErrorMessage("Gagal membuat agenda");
+        const errData = await res.json().catch(() => ({}));
+        setErrorMessage(errData.error || errData.message || "Gagal membuat agenda");
       }
     } catch (error) {
       console.error(error);
+      setErrorMessage("Terjadi kesalahan koneksi saat membuat agenda.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -264,10 +273,23 @@ export default function AbsensiAdminPage() {
               <div className="pt-4 border-t border-gray-200">
                 <button 
                   onClick={handleBuatAgenda}
-                  className="w-full font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  disabled={isLoading}
+                  className={`w-full font-medium py-3 rounded-lg transition-all flex items-center justify-center gap-2 ${
+                    isLoading ? 'opacity-70 cursor-not-allowed shadow-none' : 'hover:opacity-90 active:scale-[0.99] shadow-sm'
+                  }`}
                   style={{ backgroundColor: '#FFC917', color: '#000000' }}
                 >
-                  <Plus className="w-5 h-5" /> Buat QR Code Absensi
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Membuat QR Code...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-5 h-5" />
+                      <span>Buat QR Code Absensi</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -304,6 +326,7 @@ export default function AbsensiAdminPage() {
                   
                   <div className="bg-white p-4 border border-gray-200 shadow-sm rounded-xl inline-block">
                     <QRCode 
+                      id="absensi-created-qr-code-svg"
                       value={`${window.location.origin}/scan-absensi?token=${showQr === "datang" ? createdAgenda.kodeQrDatang : createdAgenda.kodeQrPulang}&type=${showQr}`}
                       size={200}
                     />
@@ -315,7 +338,13 @@ export default function AbsensiAdminPage() {
                     <p className="text-sm text-red-600 mt-2 font-medium">Tipe: {showQr === "datang" ? "Absen Datang" : "Absen Pulang"}</p>
                   </div>
                   
-                  <button className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2">
+                  <button 
+                    onClick={() => {
+                      const formattedName = `QR_Absensi_${createdAgenda.nama}_${showQr === "datang" ? "Datang" : "Pulang"}`;
+                      downloadQRCode("absensi-created-qr-code-svg", formattedName);
+                    }}
+                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                  >
                     <Download className="w-4 h-4" /> Download QR
                   </button>
                 </div>
@@ -369,8 +398,11 @@ export default function AbsensiAdminPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                          Lihat Detail
+                        <button 
+                          onClick={() => window.open(`/api/absensi/agenda/${agenda.id}/download`, '_blank')}
+                          className="px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          Unduh Daftar Hadir
                         </button>
                       </td>
                     </tr>

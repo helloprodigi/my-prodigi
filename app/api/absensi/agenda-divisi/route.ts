@@ -46,6 +46,24 @@ export async function POST(req: Request) {
 
     const combinedDivisi = posisi ? `${divisi} - ${posisi}` : divisi;
 
+    // Deduplication check: prevent rapid duplicate submissions within 15 seconds
+    const recentDuplicate = await prisma.absensiAgenda.findFirst({
+      where: {
+        nama,
+        divisi: combinedDivisi,
+        waktuMulai: new Date(waktuMulai),
+        waktuSelesai: new Date(waktuSelesai),
+        createdById: user.id,
+        createdAt: {
+          gte: new Date(Date.now() - 15000)
+        }
+      }
+    });
+
+    if (recentDuplicate) {
+      return NextResponse.json({ success: true, agenda: recentDuplicate });
+    }
+
     const assignedUsersData = targetUsers.map(u => ({
       userId: u.id,
       nama: u.name || "Asisten Lab",

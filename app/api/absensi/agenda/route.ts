@@ -29,6 +29,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    // Deduplication check: prevent rapid duplicate submissions within 15 seconds
+    const recentDuplicate = await prisma.absensiAgenda.findFirst({
+      where: {
+        nama,
+        divisi,
+        waktuMulai: new Date(waktuMulai),
+        waktuSelesai: new Date(waktuSelesai),
+        createdById: user.id,
+        createdAt: {
+          gte: new Date(Date.now() - 15000)
+        }
+      }
+    });
+
+    if (recentDuplicate) {
+      return NextResponse.json({ success: true, agenda: recentDuplicate });
+    }
+
     const kodeQrDatang = crypto.randomUUID();
     const kodeQrPulang = crypto.randomUUID();
 

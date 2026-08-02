@@ -28,7 +28,8 @@
     "react-qr-code": "^2.2.0",
     "react-select": "^5.10.2",
     "resend": "^6.12.3",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

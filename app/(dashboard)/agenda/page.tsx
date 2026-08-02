@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Users, Search, RefreshCw, Calendar, Clock, Download, Check, X, CheckCircle2 } from "lucide-react";
+import { Plus, Users, Search, RefreshCw, Calendar, Clock, Download, Check, X, CheckCircle2, Loader2 } from "lucide-react";
 import QRCode from "react-qr-code";
+import { downloadQRCode } from "@/lib/downloadQr";
 
 const posisiOptions: Record<string, string[]> = {
   "EXTERNAL": ["Event Organizer", "Media", "Partnership"],
@@ -24,6 +25,7 @@ interface Agenda {
 
 export default function AgendaAdminPage() {
   const [activeTab, setActiveTab] = useState<"buat" | "riwayat">("buat");
+  const [isLoading, setIsLoading] = useState(false);
   
   // Buat Agenda State
   const [namaShift, setNamaShift] = useState("");
@@ -53,6 +55,8 @@ export default function AgendaAdminPage() {
   }, [activeTab]);
 
   const handleBuatAgenda = async () => {
+    if (isLoading) return;
+
     if (!namaShift || !waktuMulai || !waktuSelesai || !divisi) {
       setErrorMessage("Harap lengkapi semua field yang wajib diisi.");
       return;
@@ -63,6 +67,7 @@ export default function AgendaAdminPage() {
       return;
     }
 
+    setIsLoading(true);
     try {
       const res = await fetch("/api/absensi/agenda-divisi", {
         method: "POST",
@@ -82,10 +87,14 @@ export default function AgendaAdminPage() {
         setCreatedAgenda(data.agenda);
         setSuccessMessage("Agenda berhasil dibuat!");
       } else {
-        setErrorMessage("Gagal membuat agenda");
+        const errData = await res.json().catch(() => ({}));
+        setErrorMessage(errData.error || errData.message || "Gagal membuat agenda");
       }
     } catch (error) {
       console.error(error);
+      setErrorMessage("Terjadi kesalahan koneksi saat membuat agenda.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -218,10 +227,23 @@ export default function AgendaAdminPage() {
               <div className="pt-4 border-t border-gray-200">
                 <button 
                   onClick={handleBuatAgenda}
-                  className="w-full font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  disabled={isLoading}
+                  className={`w-full font-medium py-3 rounded-lg transition-all flex items-center justify-center gap-2 ${
+                    isLoading ? 'opacity-70 cursor-not-allowed shadow-none' : 'hover:opacity-90 active:scale-[0.99] shadow-sm'
+                  }`}
                   style={{ backgroundColor: '#FFC917', color: '#000000' }}
                 >
-                  <Plus className="w-5 h-5" /> Buat QR Code Absensi
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Membuat QR Code...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-5 h-5" />
+                      <span>Buat QR Code Absensi</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -258,6 +280,7 @@ export default function AgendaAdminPage() {
                   
                   <div className="bg-white p-4 border border-gray-200 shadow-sm rounded-xl inline-block">
                     <QRCode 
+                      id="agenda-qr-code-svg"
                       value={`${window.location.origin}/scan-absensi?token=${showQr === "datang" ? createdAgenda.kodeQrDatang : createdAgenda.kodeQrPulang}&type=${showQr}`}
                       size={200}
                     />
@@ -269,7 +292,13 @@ export default function AgendaAdminPage() {
                     <p className="text-sm text-red-600 mt-2 font-medium">Tipe: {showQr === "datang" ? "Absen Datang" : "Absen Pulang"}</p>
                   </div>
                   
-                  <button className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2">
+                  <button 
+                    onClick={() => {
+                      const formattedName = `QR_Agenda_${createdAgenda.nama}_${showQr === "datang" ? "Datang" : "Pulang"}`;
+                      downloadQRCode("agenda-qr-code-svg", formattedName);
+                    }}
+                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                  >
                     <Download className="w-4 h-4" /> Download QR
                   </button>
                 </div>

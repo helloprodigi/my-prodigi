@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Clock, CheckCircle2, XCircle, X, ChevronLeft, ChevronRight, AlertCircle, QrCode } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, X, ChevronLeft, ChevronRight, AlertCircle, QrCode, Download } from "lucide-react";
 import QRCode from "react-qr-code";
+import { downloadQRCode } from "@/lib/downloadQr";
 import toast from "react-hot-toast";
 
 interface Aslab {
@@ -335,6 +336,7 @@ export default function MyShiftPage() {
                 
                 <div className="bg-white border border-gray-200 p-4 rounded-[2rem] mb-6 shadow-sm">
                   <QRCode 
+                    id="myshift-qr-code-svg"
                     value={`${window.location.origin}/scan-absensi?token=${(qrType === "pulang" || qrType === "none") ? activeAgenda.kodeQrPulang : activeAgenda.kodeQrDatang}&type=${qrType === "pulang" ? "pulang" : "datang"}`}
                     size={220}
                     level="Q"
@@ -348,8 +350,14 @@ export default function MyShiftPage() {
                   </span>
                 </div>
 
-                <button className="w-full bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-medium py-3 rounded-xl transition-colors">
-                  Download PNG
+                <button 
+                  onClick={() => {
+                    const formattedName = `QR_${activeAgenda.nama}_${qrType === "pulang" ? "Pulang" : "Datang"}`;
+                    downloadQRCode("myshift-qr-code-svg", formattedName);
+                  }}
+                  className="w-full bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <Download className="w-5 h-5" /> Download PNG
                 </button>
               </>
             )}
