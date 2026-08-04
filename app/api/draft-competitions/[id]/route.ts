@@ -31,7 +31,7 @@ export async function DELETE(
     const adminDb = createSupabaseClient(supabaseUrl, serviceRoleKey);
 
     const { data: publicUser } = await adminDb.from("User").select("role").eq("id", user.id).single();
-    if (publicUser?.role !== "admin" && publicUser?.role !== "asisten_lab") {
+    if (publicUser?.role !== "admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

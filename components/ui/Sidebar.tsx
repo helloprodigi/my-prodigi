@@ -10,6 +10,7 @@ import { useState, useEffect, useRef } from "react";
 const talentNavItems = [
   { icon: LayoutGrid, href: "/dashboard", label: "Dashboard", disabled: false },
   { icon: Trophy, href: "/competitions", label: "Competition", disabled: false },
+  { icon: FileText, href: "/competitions?view=draft", label: "Draft Competition", disabled: false },
   { icon: Sparkles, href: "/matchmaking", label: "Matchmaking", disabled: false },
   { icon: BookOpen, href: "/faq", label: "Tutorial & FAQ", disabled: false },
   { icon: Bell, href: "/notifications", label: "Notifikasi", disabled: false },
