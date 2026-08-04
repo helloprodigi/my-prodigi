@@ -147,12 +147,6 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
           isScanningRef.current = true;
 
           try {
-            if (!location) {
-              toast.error("Lokasi Anda belum terdeteksi. Izinkan akses lokasi.");
-              isScanningRef.current = false;
-              return;
-            }
-
             const url = new URL(decodedText);
             const token = url.searchParams.get("token");
             const type = url.searchParams.get("type");
@@ -171,8 +165,8 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
               body: JSON.stringify({
                 token,
                 type,
-                lat: location.lat,
-                lng: location.lng
+                lat: location?.lat ?? null,
+                lng: location?.lng ?? null
               })
             });
 
@@ -238,8 +232,8 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
 
         <div className="p-4">
           {!location && (
-            <div className="bg-yellow-50 text-yellow-700 p-3 rounded-lg text-sm mb-4 border border-yellow-200">
-              Mendeteksi lokasi Anda... Izinkan akses lokasi pada browser untuk dapat absen.
+            <div className="bg-blue-50 text-blue-700 p-3 rounded-lg text-xs mb-4 border border-blue-200 flex items-center gap-2">
+              <span>📍 Mendeteksi lokasi... (Izin lokasi diperlukan khusus untuk absensi MyShift di TULT)</span>
             </div>
           )}
 

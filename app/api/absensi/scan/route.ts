@@ -47,27 +47,46 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { token, lat, lng, type } = body; // type is 'datang' or 'pulang'
 
-    if (!token || lat === undefined || lng === undefined || !type) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (!token || !type) {
+      return NextResponse.json({ error: "Missing required fields: token and type are required" }, { status: 400 });
     }
 
-    // Verify distance
-    const distance = getDistanceFromLatLonInM(lat, lng, TULT_LAT, TULT_LNG);
-    if (distance > MAX_RADIUS_METERS) {
-      return NextResponse.json({
-        error: "Location out of bounds",
-        message: `Anda berada di luar jangkauan TULT (${Math.round(distance)}m > ${MAX_RADIUS_METERS}m)`
-      }, { status: 400 });
-    }
-
-    // Find Agenda by token
+    // Find Agenda by token first
     const isDatang = type === "datang";
     const agenda = await prisma.absensiAgenda.findFirst({
-      where: isDatang ? { kodeQrDatang: token } : { kodeQrPulang: token }
+      where: isDatang ? { kodeQrDatang: token } : { kodeQrPulang: token },
+      include: {
+        createdBy: {
+          select: { role: true }
+        }
+      }
     });
 
     if (!agenda) {
       return NextResponse.json({ error: "Invalid or expired QR token" }, { status: 404 });
+    }
+
+    // Determine if this is an Agenda (kegiatan divisi / event) or a standard MyShift
+    // Agenda: bisa absen dimana saja (tidak perlu berada di TULT)
+    // MyShift: wajib berada di area TULT (radius <= 50m)
+    const isAgenda = Boolean(agenda.deskripsi) || agenda.createdBy?.role !== "admin";
+
+    if (!isAgenda) {
+      // MyShift requires location check in TULT area
+      if (typeof lat !== "number" || typeof lng !== "number") {
+        return NextResponse.json({
+          error: "Location required",
+          message: "Absensi MyShift mewajibkan akses lokasi di area TULT. Harap aktifkan izin lokasi pada browser/perangkat Anda."
+        }, { status: 400 });
+      }
+
+      const distance = getDistanceFromLatLonInM(lat, lng, TULT_LAT, TULT_LNG);
+      if (distance > MAX_RADIUS_METERS) {
+        return NextResponse.json({
+          error: "Location out of bounds",
+          message: `Anda berada di luar jangkauan TULT (${Math.round(distance)}m > ${MAX_RADIUS_METERS}m). Absensi MyShift hanya dapat dilakukan di TULT.`
+        }, { status: 400 });
+      }
     }
 
     // Check if user is assigned to this agenda

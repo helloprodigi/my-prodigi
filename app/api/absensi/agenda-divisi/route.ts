@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     const newAgenda = await prisma.absensiAgenda.create({
       data: {
         nama,
-        deskripsi,
+        deskripsi: deskripsi || "Agenda Kegiatan Divisi",
         divisi: combinedDivisi,
         waktuMulai: new Date(waktuMulai),
         waktuSelesai: new Date(waktuSelesai),

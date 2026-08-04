@@ -21,8 +21,8 @@ function ScanAbsensiContent() {
     }
 
     if (!navigator.geolocation) {
-      setStatus("error");
-      setMessage("Geolokasi tidak didukung oleh browser Anda.");
+      // Fallback submit without coordinates (valid for Agenda)
+      submitAbsensi(null, null);
       return;
     }
 
@@ -33,20 +33,16 @@ function ScanAbsensiContent() {
         submitAbsensi(latitude, longitude);
       },
       (error) => {
-        setStatus("error");
-        if (error.code === error.PERMISSION_DENIED) {
-          setMessage("Akses lokasi ditolak. Harap izinkan akses lokasi untuk melakukan absensi.");
-        } else {
-          setMessage("Gagal mendapatkan lokasi Anda.");
-        }
+        // Fallback submit without coordinates (valid for Agenda, if MyShift backend will return specific error)
+        submitAbsensi(null, null);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
   }, [token, type]);
 
-  const submitAbsensi = async (lat: number, lng: number) => {
+  const submitAbsensi = async (lat: number | null, lng: number | null) => {
     setStatus("loading");
-    setMessage("Memverifikasi lokasi dan mencatat absensi...");
+    setMessage("Memproses absensi...");
 
     try {
       const res = await fetch("/api/absensi/scan", {
