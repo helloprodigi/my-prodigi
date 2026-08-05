@@ -66,7 +66,7 @@ export default async function CompetitionsPage({
     role = await getEffectiveRole(publicUser?.role);
   }
 
-  const isDraftView = role === "asisten_lab" || (role === "admin" && viewParam === "draft");
+  const isDraftView = role === "asisten_lab" || viewParam === "draft";
 
   if (isDraftView) {
     const draftTabs: DraftCompetitionTab[] = ["Guidebook", "Proposal", "Pitch Deck"];
@@ -88,7 +88,7 @@ export default async function CompetitionsPage({
         <div className="mb-6 flex w-full gap-4 overflow-x-auto border-b border-gray-200 pb-1 sm:mb-8 sm:gap-6">
           {draftTabs.map((tab) => {
             const isActive = requestedTab === tab;
-            const tabHref = role === "admin" ? `/competitions?view=draft&tab=${tab}` : `/competitions?tab=${tab}`;
+            const tabHref = role === "asisten_lab" ? `/competitions?tab=${tab}` : `/competitions?view=draft&tab=${tab}`;
             return (
               <Link
                 key={tab}
@@ -113,7 +113,7 @@ export default async function CompetitionsPage({
                   <p className="text-[11px] font-semibold text-[#FFC700]">
                     {item.category || "Belmawa"}
                   </p>
-                  {(role === "admin" || role === "asisten_lab") && (
+                  {role === "admin" && (
                     <AdminDraftActions draftId={item.id} draftTitle={item.title} />
                   )}
                 </div>
