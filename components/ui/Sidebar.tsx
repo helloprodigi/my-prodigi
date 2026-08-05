@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LayoutGrid, Trophy, Sparkles, BookOpen, Bell, User, LogOut, Menu, X, ChevronRight, ChevronLeft, FileText, ShieldUser, CalendarClock, Calendar } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
@@ -50,6 +50,7 @@ const getCookie = (name: string) => {
 
 export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDesktopOpen }: SidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -263,7 +264,12 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
         {/* Navigation */}
         <nav className="flex-1 flex flex-col gap-2 w-full px-4">
           {navItems.map((item) => {
-            const isActive = !item.disabled && pathname.startsWith(item.href);
+            const isDraftLink = item.href.endsWith("?view=draft");
+            const basePath = item.href.split("?")[0];
+            const isActive =
+              !item.disabled &&
+              pathname.startsWith(basePath) &&
+              (isDraftLink ? searchParams.get("view") === "draft" : searchParams.get("view") !== "draft");
 
             if (item.disabled) {
               return (
