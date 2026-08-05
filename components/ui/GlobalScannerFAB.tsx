@@ -1,18 +1,40 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { QrCode, X } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { QrCode, X, Camera, RefreshCw, AlertCircle } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
 import { toast } from "react-hot-toast";
 import { createClient } from "@/utils/supabase/client";
+import { usePathname } from "next/navigation";
+
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+  return null;
+}
+
+function getStoredRole(): string {
+  if (typeof window === "undefined") return "talent";
+  const saved = localStorage.getItem("activeRole") || getCookie("activeRole") || "talent";
+  const normalized = saved.toLowerCase() === "aslab" ? "asisten_lab" : saved.toLowerCase();
+  return normalized;
+}
 
 export function GlobalScannerFAB() {
+  const pathname = usePathname();
   const [userRole, setUserRole] = useState<string>("talent");
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
 
-  useEffect(() => {
-    async function loadRole() {
+  const syncRole = useCallback(async () => {
+    // 1. Instant check from localStorage & cookie (0ms lag)
+    const clientSavedRole = getStoredRole();
+    setUserRole(clientSavedRole);
+
+    // 2. Validate with Supabase User DB role
+    try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -33,41 +55,62 @@ export function GlobalScannerFAB() {
         const rawRealRole = (dbRole || "talent").toLowerCase();
         const realRole = rawRealRole === "aslab" ? "asisten_lab" : rawRealRole;
 
-        const getCookie = (name: string) => {
-          if (typeof document === "undefined") return null;
-          const value = `; ${document.cookie}`;
-          const parts = value.split(`; ${name}=`);
-          if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
-          return null;
-        };
-
-        const savedRole = (typeof window !== "undefined" ? localStorage.getItem("activeRole") : null) || getCookie("activeRole");
-        const normalizedSavedRole = savedRole === "aslab" ? "asisten_lab" : savedRole;
-
         const availableRoles = realRole === "admin"
           ? ["talent", "asisten_lab", "admin"]
           : realRole === "asisten_lab"
             ? ["talent", "asisten_lab"]
             : ["talent"];
 
-        const effectiveRole = (normalizedSavedRole && availableRoles.includes(normalizedSavedRole))
-          ? normalizedSavedRole
+        const savedRole = getStoredRole();
+        const effectiveRole = (savedRole && availableRoles.includes(savedRole))
+          ? savedRole
           : realRole;
 
         setUserRole(effectiveRole);
       }
+    } catch (err) {
+      console.warn("Error syncing role:", err);
     }
-    loadRole();
+  }, []);
 
-    function handleStorageChange(e: StorageEvent) {
-      if (e.key === "activeRole" && e.newValue) {
-        const normalizedRole = e.newValue === "aslab" ? "asisten_lab" : e.newValue;
+  // Sync role on mount and on route change
+  useEffect(() => {
+    syncRole();
+  }, [pathname, syncRole]);
+
+  // Listen to profile updates & role switches
+  useEffect(() => {
+    function handleProfileUpdated(e: Event) {
+      const { role } = (e as CustomEvent<{ photoUrl?: string; role?: string }>).detail ?? {};
+      if (role !== undefined) {
+        const normalizedRole = role.toLowerCase() === "aslab" ? "asisten_lab" : role.toLowerCase();
         setUserRole(normalizedRole);
+      } else {
+        syncRole();
       }
     }
+
+    function handleStorageChange(e: StorageEvent) {
+      if (e.key === "activeRole") {
+        if (e.newValue) {
+          const normalizedRole = e.newValue.toLowerCase() === "aslab" ? "asisten_lab" : e.newValue.toLowerCase();
+          setUserRole(normalizedRole);
+        } else {
+          syncRole();
+        }
+      }
+    }
+
+    window.addEventListener("myprodigi:profile-updated", handleProfileUpdated);
+    window.addEventListener("myprodigi:role-changed", handleProfileUpdated);
     window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+
+    return () => {
+      window.removeEventListener("myprodigi:profile-updated", handleProfileUpdated);
+      window.removeEventListener("myprodigi:role-changed", handleProfileUpdated);
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, [syncRole]);
 
   useEffect(() => {
     if (showScannerModal && "geolocation" in navigator) {
@@ -81,11 +124,13 @@ export function GlobalScannerFAB() {
         (error) => {
           console.error("Error getting location:", error);
           toast.error("Gagal mendapatkan lokasi. Absensi memerlukan akses lokasi.");
-        }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     }
   }, [showScannerModal]);
 
+  // Only render FAB for asisten_lab role
   if (userRole !== "asisten_lab") {
     return null;
   }
@@ -96,9 +141,10 @@ export function GlobalScannerFAB() {
         <div className="relative">
           <button
             onClick={() => setShowScannerModal(true)}
-            className="w-16 h-16 bg-[#0B132B] hover:bg-[#1a2b5e] text-white rounded-2xl flex items-center justify-center shadow-2xl transition-transform hover:scale-105"
+            aria-label="Scan Absensi"
+            className="w-16 h-16 bg-[#0B132B] hover:bg-[#1a2b5e] text-white rounded-2xl flex items-center justify-center shadow-2xl transition-transform hover:scale-105 active:scale-95 cursor-pointer"
           >
-            <QrCode className="w-8 h-8" />
+            <QrCode className="w-8 h-8 text-[#FFC727]" />
           </button>
         </div>
       </div>
@@ -119,89 +165,159 @@ export function GlobalScannerFAB() {
 
 function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void, location: {lat: number, lng: number} | null, onSuccess: () => void }) {
   const [scanError, setScanError] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isScanningRef = useRef(false);
 
-  useEffect(() => {
-    let isMounted = true;
-    const timer = setTimeout(async () => {
-      if (!isMounted) return;
+  const startScanner = useCallback(async () => {
+    setIsInitializing(true);
+    setCameraError(null);
+    setScanError(null);
 
-      const element = document.getElementById("qr-reader");
-      if (element) {
-        element.innerHTML = "";
+    const element = document.getElementById("qr-reader");
+    if (element) {
+      element.innerHTML = "";
+    }
+
+    if (scannerRef.current) {
+      try {
+        if (scannerRef.current.isScanning) {
+          await scannerRef.current.stop();
+        }
+        scannerRef.current.clear();
+      } catch (e) {
+        console.warn("Cleanup previous scanner instance error:", e);
       }
+    }
 
-      scannerRef.current = new Html5Qrcode("qr-reader");
+    const scanner = new Html5Qrcode("qr-reader");
+    scannerRef.current = scanner;
+
+    const qrConfig = {
+      fps: 10,
+      qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+        const qrboxSize = Math.floor(minEdge * 0.75);
+        return { width: Math.max(qrboxSize, 200), height: Math.max(qrboxSize, 200) };
+      },
+      aspectRatio: 1.0
+    };
+
+    const handleDecodedText = async (decodedText: string) => {
+      if (isScanningRef.current) return;
+      isScanningRef.current = true;
 
       try {
-        await scannerRef.current.start(
-          { facingMode: "environment" },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0
-          },
-        async (decodedText) => {
-          if (isScanningRef.current) return;
-          isScanningRef.current = true;
+        const url = new URL(decodedText);
+        const token = url.searchParams.get("token");
+        const type = url.searchParams.get("type");
 
-          try {
-            const url = new URL(decodedText);
-            const token = url.searchParams.get("token");
-            const type = url.searchParams.get("type");
+        if (!token || !type) {
+          toast.error("Format QR Code tidak valid.");
+          isScanningRef.current = false;
+          return;
+        }
 
-            if (!token || !type) {
-              toast.error("Format QR Code tidak valid.");
-              isScanningRef.current = false;
-              return;
+        toast.loading("Memproses absensi...", { id: "absensi" });
+
+        const res = await fetch("/api/absensi/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token,
+            type,
+            lat: location?.lat ?? null,
+            lng: location?.lng ?? null
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          if (data.errorCode === "LATE_DATANG" || data.errorCode === "LATE_PULANG" || data.errorCode === "MISSED_DATANG") {
+            setScanError(data.message);
+            if (scannerRef.current && scannerRef.current.isScanning) {
+              scannerRef.current.pause(true);
             }
-
-            toast.loading("Memproses absensi...", { id: "absensi" });
-
-            const res = await fetch("/api/absensi/scan", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                token,
-                type,
-                lat: location?.lat ?? null,
-                lng: location?.lng ?? null
-              })
-            });
-
-            const data = await res.json();
-            if (!res.ok) {
-              if (data.errorCode === "LATE_DATANG" || data.errorCode === "LATE_PULANG" || data.errorCode === "MISSED_DATANG") {
-                setScanError(data.message);
-                if (scannerRef.current && scannerRef.current.isScanning) {
-                  scannerRef.current.pause(true);
-                }
-              } else {
-                toast.error(data.message || data.error || "Gagal absen", { id: "absensi" });
-              }
-            } else {
-              toast.success(data.message || "Absensi berhasil!", { id: "absensi" });
-              if (scannerRef.current && scannerRef.current.isScanning) {
-                await scannerRef.current.stop();
-                scannerRef.current.clear();
-              }
-              onSuccess();
-            }
-          } catch (err) {
-            console.error(err);
-            toast.error("Gagal membaca QR", { id: "absensi" });
-          } finally {
-            setTimeout(() => { isScanningRef.current = false; }, 3000);
+          } else {
+            toast.error(data.message || data.error || "Gagal absen", { id: "absensi" });
           }
-        },
-          (error) => {
-            // Ignore normal scan errors (e.g. no QR code found)
+        } else {
+          toast.success(data.message || "Absensi berhasil!", { id: "absensi" });
+          if (scannerRef.current && scannerRef.current.isScanning) {
+            await scannerRef.current.stop();
+            scannerRef.current.clear();
           }
-        );
+          onSuccess();
+        }
       } catch (err) {
-        console.error("Gagal membuka kamera:", err);
-        if (isMounted) toast.error("Gagal membuka kamera. Pastikan izin kamera telah diberikan.");
+        console.error(err);
+        toast.error("Gagal membaca QR", { id: "absensi" });
+      } finally {
+        setTimeout(() => { isScanningRef.current = false; }, 3000);
+      }
+    };
+
+    try {
+      // 1. Try to detect camera devices first (best for mobile devices)
+      let cameras: Array<{ id: string; label: string }> = [];
+      try {
+        cameras = await Html5Qrcode.getCameras();
+      } catch (e) {
+        console.warn("getCameras error (falling back to facingMode):", e);
+      }
+
+      if (cameras && cameras.length > 0) {
+        const backCamera = cameras.find(c => 
+          c.label.toLowerCase().includes("back") ||
+          c.label.toLowerCase().includes("belakang") ||
+          c.label.toLowerCase().includes("rear") ||
+          c.label.toLowerCase().includes("environment")
+        );
+        const selectedId = backCamera ? backCamera.id : cameras[cameras.length - 1].id;
+
+        await scanner.start(
+          selectedId,
+          qrConfig,
+          handleDecodedText,
+          () => {}
+        );
+      } else {
+        // Fallback to environment facingMode
+        await scanner.start(
+          { facingMode: "environment" },
+          qrConfig,
+          handleDecodedText,
+          () => {}
+        );
+      }
+      setIsInitializing(false);
+    } catch (primaryErr: any) {
+      console.warn("Primary camera start failed, trying fallback facingMode 'user':", primaryErr);
+      try {
+        // Fallback to user facingMode or default
+        await scanner.start(
+          { facingMode: "user" },
+          qrConfig,
+          handleDecodedText,
+          () => {}
+        );
+        setIsInitializing(false);
+      } catch (secondaryErr: any) {
+        console.error("Camera start failed completely:", secondaryErr);
+        setIsInitializing(false);
+        setCameraError(
+          "Tidak dapat membuka kamera. Pastikan izin kamera telah diizinkan pada browser Anda."
+        );
+      }
+    }
+  }, [location, onSuccess]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const timer = setTimeout(() => {
+      if (isMounted) {
+        startScanner();
       }
     }, 200);
 
@@ -218,13 +334,16 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
         }
       }
     };
-  }, [location, onSuccess]);
+  }, [startScanner]);
 
   return (
     <div className="fixed inset-0 bg-black/80 z-[60] flex flex-col items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden relative">
         <div className="p-4 bg-[#0B132B] flex justify-between items-center text-white">
-          <h3 className="font-semibold text-lg">Scan QR Absensi</h3>
+          <h3 className="font-semibold text-lg flex items-center gap-2">
+            <Camera className="w-5 h-5 text-[#FFC727]" />
+            Scan QR Absensi
+          </h3>
           <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-full transition-colors">
             <X className="w-6 h-6" />
           </button>
@@ -346,7 +465,25 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
             }
           `}} />
 
-          <div id="qr-reader" className="w-full"></div>
+          {cameraError ? (
+            <div className="py-8 px-4 text-center flex flex-col items-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-red-500">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <div className="space-y-1 max-w-xs">
+                <p className="font-semibold text-gray-800 text-sm">Gagal Mengakses Kamera</p>
+                <p className="text-xs text-gray-500">{cameraError}</p>
+              </div>
+              <button
+                onClick={startScanner}
+                className="px-5 py-2.5 bg-[#0B132B] hover:bg-[#1a2b5e] text-white rounded-xl font-medium text-xs flex items-center gap-2 transition-all"
+              >
+                <RefreshCw className="w-4 h-4" /> Coba Lagi
+              </button>
+            </div>
+          ) : (
+            <div id="qr-reader" className="w-full"></div>
+          )}
 
           {scanError && (
             <div className="mt-4 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm flex flex-col items-center text-center animate-in slide-in-from-bottom-2">

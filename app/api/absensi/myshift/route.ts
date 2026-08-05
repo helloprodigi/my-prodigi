@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/utils/supabase/server";
 
+const WIB_OFFSET_MS = 7 * 60 * 60 * 1000; // WIB is UTC+7
+
 export async function GET(req: Request) {
   try {
     const cookieStore = await cookies();
@@ -54,11 +56,69 @@ export async function GET(req: Request) {
       targetDate = new Date(dateParam);
     }
     
-    // Set to start and end of the target day
-    const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Calculate calendar date in WIB (UTC+7)
+    const wibTargetTime = new Date(targetDate.getTime() + WIB_OFFSET_MS);
+    const wibYear = wibTargetTime.getUTCFullYear();
+    const wibMonth = wibTargetTime.getUTCMonth(); // 0-11
+    const wibDay = wibTargetTime.getUTCDate(); // 1-31
+    const wibDayOfWeek = wibTargetTime.getUTCDay(); // 0=Minggu, 1=Senin, ..., 6=Sabtu
+
+    // Start & End of target day in UTC
+    const startOfDay = new Date(Date.UTC(wibYear, wibMonth, wibDay, 0, 0, 0, 0) - WIB_OFFSET_MS);
+    const endOfDay = new Date(Date.UTC(wibYear, wibMonth, wibDay, 23, 59, 59, 999) - WIB_OFFSET_MS);
+
+    // AUTO-GENERATE: Check if there are recurring templates in MyShiftSchedule for this dayOfWeek
+    const recurringTemplates = await prisma.myShiftSchedule.findMany({
+      where: { dayOfWeek: wibDayOfWeek },
+      include: {
+        assignedAslabs: true
+      },
+      orderBy: { waktuMulai: "asc" }
+    });
+
+    if (recurringTemplates.length > 0) {
+      for (const template of recurringTemplates) {
+        const [startH, startM] = template.waktuMulai.split(":").map(Number);
+        const [endH, endM] = template.waktuSelesai.split(":").map(Number);
+
+        const sessionStart = new Date(Date.UTC(wibYear, wibMonth, wibDay, startH, startM, 0, 0) - WIB_OFFSET_MS);
+        const sessionEnd = new Date(Date.UTC(wibYear, wibMonth, wibDay, endH, endM, 0, 0) - WIB_OFFSET_MS);
+
+        // Check if an agenda already exists for this exact time and session name
+        const existingAgenda = await prisma.absensiAgenda.findFirst({
+          where: {
+            waktuMulai: sessionStart,
+            waktuSelesai: sessionEnd,
+            nama: template.namaSesi || "Shift"
+          }
+        });
+
+        if (!existingAgenda) {
+          const kodeQrDatang = crypto.randomUUID();
+          const kodeQrPulang = crypto.randomUUID();
+
+          await prisma.absensiAgenda.create({
+            data: {
+              nama: template.namaSesi || "Shift",
+              deskripsi: null, // Null indicates a standard MyShift (requires TULT location check)
+              divisi: "Asisten Lab",
+              waktuMulai: sessionStart,
+              waktuSelesai: sessionEnd,
+              kodeQrDatang,
+              kodeQrPulang,
+              createdById: template.createdById || user.id,
+              assignedUsers: {
+                create: template.assignedAslabs.map(aslab => ({
+                  nama: aslab.nama,
+                  nim: aslab.nim,
+                  userId: aslab.userId
+                }))
+              }
+            }
+          });
+        }
+      }
+    }
 
     // Find all agendas for target date
     const myAgendas = await prisma.absensiAgenda.findMany({
@@ -82,7 +142,7 @@ export async function GET(req: Request) {
         assignedUsers: {
           include: {
             user: {
-              select: { divisi: true, photoUrl: true }
+              select: { divisi: true, jabatan: true, photoUrl: true }
             }
           }
         },
@@ -118,6 +178,7 @@ export async function GET(req: Request) {
           nama: assignment.nama,
           nim: assignment.nim,
           divisi: assignment.user?.divisi || agenda.divisi || "Asisten Lab",
+          jabatan: assignment.user?.jabatan || assignment.user?.divisi || agenda.divisi || "Asisten Lab",
           photoUrl: assignment.user?.photoUrl || null,
           status: record ? record.status : "BELUM ABSEN",
           waktuDatang: record?.waktuDatang || null,

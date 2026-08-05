@@ -99,6 +99,8 @@ model User {
   absensiAgendaCreated AbsensiAgenda[] @relation("AbsensiAgendaCreatedBy")
   shiftAssignments     ShiftAssignment[] @relation("UserShiftAssignments")
   absensiRecords       AbsensiRecord[]   @relation("UserAbsensiRecords")
+  myShiftSchedulesCreated MyShiftSchedule[] @relation("MyShiftScheduleCreatedBy")
+  myShiftScheduleAssignments MyShiftScheduleAssignment[] @relation("UserMyShiftScheduleAssignments")
 }
 
 model Competition {
@@ -268,4 +270,36 @@ model AbsensiRecord {
   updatedAt      DateTime      @updatedAt
 
   @@unique([agendaId, userId])
+}
+
+model MyShiftSchedule {
+  id           String   @id @default(uuid())
+  hari         String   // "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"
+  dayOfWeek    Int      // 1: Senin, 2: Selasa, 3: Rabu, 4: Kamis, 5: Jumat, 6: Sabtu, 0 / 7: Minggu
+  namaSesi     String?  // e.g., "Shift 1", "Shift Pagi"
+  waktuMulai   String   // "HH:mm" 24-jam, e.g., "08:00"
+  waktuSelesai String   // "HH:mm" 24-jam, e.g., "12:00"
+  createdById  String?
+  createdBy    User?    @relation("MyShiftScheduleCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignedAslabs MyShiftScheduleAssignment[]
+
+  @@index([dayOfWeek])
+}
+
+model MyShiftScheduleAssignment {
+  id         String          @id @default(uuid())
+  scheduleId String
+  schedule   MyShiftSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?           @relation("UserMyShiftScheduleAssignments", fields: [userId], references: [id])
+  nama       String
+  nim        String
+  jabatan    String?
+  divisi     String?
+
+  @@unique([scheduleId, nim])
+  @@index([scheduleId])
 }
