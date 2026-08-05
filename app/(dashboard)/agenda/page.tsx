@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Users, Search, RefreshCw, Calendar, Clock, Download, Check, X, CheckCircle2, Loader2 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { downloadQRCode } from "@/lib/downloadQr";
+import WaktuPelaksanaanPicker from "@/components/ui/WaktuPelaksanaanPicker";
 
 const posisiOptions: Record<string, string[]> = {
   "EXTERNAL": ["Event Organizer", "Media", "Partnership"],
@@ -154,40 +155,18 @@ export default function AgendaAdminPage() {
                   ></textarea>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Waktu Mulai</label>
-                    <input 
-                      type="datetime-local" 
-                      value={waktuMulai}
-                      onChange={(e) => {
-                        const newMulai = e.target.value;
-                        setWaktuMulai(newMulai);
-                        if (waktuSelesai && newMulai && new Date(waktuSelesai) <= new Date(newMulai)) {
-                          setWaktuSelesai("");
-                          setErrorMessage("Waktu Selesai di-reset karena harus setelah Waktu Mulai");
-                        }
-                      }}
-                      className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Waktu Selesai</label>
-                    <input 
-                      type="datetime-local" 
-                      value={waktuSelesai}
-                      min={waktuMulai}
-                      onChange={(e) => {
-                        const newSelesai = e.target.value;
-                        if (waktuMulai && newSelesai && new Date(newSelesai) <= new Date(waktuMulai)) {
-                          setErrorMessage("Waktu Selesai harus setelah Waktu Mulai");
-                          return;
-                        }
-                        setWaktuSelesai(newSelesai);
-                      }}
-                      className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Waktu Pelaksanaan</label>
+                  <WaktuPelaksanaanPicker
+                    waktuMulai={waktuMulai}
+                    waktuSelesai={waktuSelesai}
+                    onChange={(mulai, selesai) => {
+                      setWaktuMulai(mulai);
+                      setWaktuSelesai(selesai);
+                      setErrorMessage(null);
+                    }}
+                    placeholder="Pilih waktu pelaksanaan"
+                  />
                 </div>
 
                 <div>

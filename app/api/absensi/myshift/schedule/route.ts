@@ -190,6 +190,88 @@ export async function POST(req: Request) {
       }
     });
 
+    // 3. Immediately sync today's absensi agendas if today matches any of the schedules
+    try {
+      const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+      const nowWib = new Date(Date.now() + WIB_OFFSET_MS);
+      const todayWibDayOfWeek = nowWib.getUTCDay();
+      const wibYear = nowWib.getUTCFullYear();
+      const wibMonth = nowWib.getUTCMonth();
+      const wibDay = nowWib.getUTCDate();
+
+      const todayTemplates = await prisma.myShiftSchedule.findMany({
+        where: { dayOfWeek: todayWibDayOfWeek },
+        include: { assignedAslabs: true }
+      });
+
+      for (const template of todayTemplates) {
+        const [startH, startM] = template.waktuMulai.split(":").map(Number);
+        const [endH, endM] = template.waktuSelesai.split(":").map(Number);
+
+        const sessionStart = new Date(Date.UTC(wibYear, wibMonth, wibDay, startH, startM, 0, 0) - WIB_OFFSET_MS);
+        const sessionEnd = new Date(Date.UTC(wibYear, wibMonth, wibDay, endH, endM, 0, 0) - WIB_OFFSET_MS);
+
+        let existingAgenda = await prisma.absensiAgenda.findFirst({
+          where: {
+            waktuMulai: sessionStart,
+            waktuSelesai: sessionEnd,
+            nama: template.namaSesi || "Shift"
+          },
+          include: { assignedUsers: true }
+        });
+
+        if (!existingAgenda) {
+          await prisma.absensiAgenda.create({
+            data: {
+              nama: template.namaSesi || "Shift",
+              deskripsi: null,
+              divisi: "Asisten Lab",
+              waktuMulai: sessionStart,
+              waktuSelesai: sessionEnd,
+              kodeQrDatang: crypto.randomUUID(),
+              kodeQrPulang: crypto.randomUUID(),
+              createdById: user.id,
+              assignedUsers: {
+                create: template.assignedAslabs.map(aslab => ({
+                  nama: aslab.nama,
+                  nim: aslab.nim,
+                  userId: aslab.userId
+                }))
+              }
+            }
+          });
+        } else {
+          if (!existingAgenda.kodeQrDatang || !existingAgenda.kodeQrPulang) {
+            await prisma.absensiAgenda.update({
+              where: { id: existingAgenda.id },
+              data: {
+                kodeQrDatang: existingAgenda.kodeQrDatang || crypto.randomUUID(),
+                kodeQrPulang: existingAgenda.kodeQrPulang || crypto.randomUUID()
+              }
+            });
+          }
+          for (const aslab of template.assignedAslabs) {
+            const alreadyAssigned = existingAgenda.assignedUsers.some(
+              au => (au.nim && aslab.nim && au.nim.trim() === aslab.nim.trim()) || 
+                    (au.userId && aslab.userId && au.userId === aslab.userId)
+            );
+            if (!alreadyAssigned) {
+              await prisma.shiftAssignment.create({
+                data: {
+                  agendaId: existingAgenda.id,
+                  nama: aslab.nama,
+                  nim: aslab.nim,
+                  userId: aslab.userId
+                }
+              }).catch(() => {});
+            }
+          }
+        }
+      }
+    } catch (syncErr) {
+      console.error("Error syncing today's shift agenda after schedule save:", syncErr);
+    }
+
     return NextResponse.json({ success: true, message: "Jadwal shift berhasil diperbarui!" });
   } catch (error) {
     console.error("Error saving MyShift schedule:", error);

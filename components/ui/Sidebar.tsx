@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, Trophy, Sparkles, BookOpen, Bell, User, LogOut, Menu, X, ChevronRight, ChevronLeft, FileText, ShieldUser, CalendarClock, Calendar, ClipboardCheck } from "lucide-react";
+import { LayoutGrid, Trophy, Sparkles, BookOpen, Bell, User, LogOut, Menu, X, ChevronRight, ChevronLeft, FileText, ShieldUser, CalendarClock, Calendar } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import { useState, useEffect, useRef } from "react";
@@ -31,7 +31,6 @@ const adminNavItems = [
   { icon: Trophy, href: "/competitions", label: "Competition", disabled: false },
   { icon: CalendarClock, href: "/myshift", label: "MyShift", disabled: false },
   { icon: Calendar, href: "/agenda", label: "Kelola Agenda", disabled: false },
-  { icon: ClipboardCheck, href: "/absensi", label: "Kelola Absensi", disabled: false },
 ];
 
 interface SidebarProps {

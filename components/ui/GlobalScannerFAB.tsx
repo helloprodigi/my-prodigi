@@ -15,61 +15,67 @@ function getCookie(name: string): string | null {
   return null;
 }
 
-function getStoredRole(): string {
-  if (typeof window === "undefined") return "talent";
-  const saved = localStorage.getItem("activeRole") || getCookie("activeRole") || "talent";
+function getStoredRole(): string | null {
+  if (typeof window === "undefined") return null;
+  const saved = localStorage.getItem("activeRole") || getCookie("activeRole");
+  if (!saved) return null;
   const normalized = saved.toLowerCase() === "aslab" ? "asisten_lab" : saved.toLowerCase();
   return normalized;
 }
 
 export function GlobalScannerFAB() {
   const pathname = usePathname();
-  const [userRole, setUserRole] = useState<string>("talent");
+  const [userRole, setUserRole] = useState<string | null>(() => getStoredRole());
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
 
   const syncRole = useCallback(async () => {
-    // 1. Instant check from localStorage & cookie (0ms lag)
+    // 1. Optimistic check from localStorage / cookie if available
     const clientSavedRole = getStoredRole();
-    setUserRole(clientSavedRole);
+    if (clientSavedRole) {
+      setUserRole(clientSavedRole);
+    }
 
-    // 2. Validate with Supabase User DB role
+    // 2. Authoritative check via /api/profile (Prisma database source of truth)
+    try {
+      const res = await fetch("/api/profile");
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.role) {
+          const normalized = data.role.toLowerCase() === "aslab" ? "asisten_lab" : data.role.toLowerCase();
+          setUserRole(normalized);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("GlobalScannerFAB fetch /api/profile error:", e);
+    }
+
+    // 3. Fallback check via Supabase Auth metadata if API fails
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        let dbRole = user.user_metadata?.role;
-        try {
-          const { data: dbUser } = await supabase
-            .from("User")
-            .select("role")
-            .eq("id", user.id)
-            .single();
-          if (dbUser?.role) {
-            dbRole = dbUser.role;
-          }
-        } catch (e) {
-          console.warn("GlobalScannerFAB loadUser role fetch error:", e);
-        }
+        const dbRole = (user.user_metadata?.role || "talent").toLowerCase();
+        const normalizedRealRole = dbRole === "aslab" ? "asisten_lab" : dbRole;
 
-        const rawRealRole = (dbRole || "talent").toLowerCase();
-        const realRole = rawRealRole === "aslab" ? "asisten_lab" : rawRealRole;
-
-        const availableRoles = realRole === "admin"
+        const availableRoles = normalizedRealRole === "admin"
           ? ["talent", "asisten_lab", "admin"]
-          : realRole === "asisten_lab"
+          : normalizedRealRole === "asisten_lab"
             ? ["talent", "asisten_lab"]
             : ["talent"];
 
         const savedRole = getStoredRole();
         const effectiveRole = (savedRole && availableRoles.includes(savedRole))
           ? savedRole
-          : realRole;
+          : normalizedRealRole;
 
         setUserRole(effectiveRole);
+      } else {
+        setUserRole("talent");
       }
     } catch (err) {
-      console.warn("Error syncing role:", err);
+      console.warn("Error syncing role via Supabase:", err);
     }
   }, []);
 
@@ -78,7 +84,7 @@ export function GlobalScannerFAB() {
     syncRole();
   }, [pathname, syncRole]);
 
-  // Listen to profile updates & role switches
+  // Listen to profile updates, role switches, and auth state changes
   useEffect(() => {
     function handleProfileUpdated(e: Event) {
       const { role } = (e as CustomEvent<{ photoUrl?: string; role?: string }>).detail ?? {};
@@ -105,10 +111,20 @@ export function GlobalScannerFAB() {
     window.addEventListener("myprodigi:role-changed", handleProfileUpdated);
     window.addEventListener("storage", handleStorageChange);
 
+    const supabase = createClient();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === "SIGNED_OUT") {
+        setUserRole("talent");
+      } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        await syncRole();
+      }
+    });
+
     return () => {
       window.removeEventListener("myprodigi:profile-updated", handleProfileUpdated);
       window.removeEventListener("myprodigi:role-changed", handleProfileUpdated);
       window.removeEventListener("storage", handleStorageChange);
+      subscription.unsubscribe();
     };
   }, [syncRole]);
 
@@ -130,8 +146,9 @@ export function GlobalScannerFAB() {
     }
   }, [showScannerModal]);
 
-  // Only render FAB for asisten_lab role
-  if (userRole !== "asisten_lab") {
+  // Only render FAB for asisten_lab / aslab role
+  const isAslab = userRole === "asisten_lab" || userRole === "aslab";
+  if (!isAslab) {
     return null;
   }
 

@@ -22,6 +22,8 @@ import {
 import QRCode from "react-qr-code";
 import { downloadQRCode } from "@/lib/downloadQr";
 import toast from "react-hot-toast";
+import ShiftTimePicker from "@/components/ui/ShiftTimePicker";
+import WaktuPelaksanaanPicker from "@/components/ui/WaktuPelaksanaanPicker";
 
 const ALL_DAYS = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 const DAYS_MAPPING: { [key: string]: number } = {
@@ -240,49 +242,83 @@ export default function MyShiftPage() {
   };
 
   const handleAddSession = (dayIndex: number) => {
-    setScheduleDays(prev => {
-      const copy = [...prev];
-      const targetDay = copy[dayIndex];
-      const nextShiftNumber = targetDay.sessions.length + 1;
-      targetDay.sessions.push({
-        namaSesi: `Shift ${nextShiftNumber}`,
-        waktuMulai: "13:00",
-        waktuSelesai: "17:00",
-        assignedAslabs: []
-      });
-      return copy;
-    });
+    setScheduleDays(prev => 
+      prev.map((day, dIdx) => {
+        if (dIdx !== dayIndex) return day;
+        const nextShiftNumber = (day.sessions?.length || 0) + 1;
+        return {
+          ...day,
+          sessions: [
+            ...(day.sessions || []),
+            {
+              namaSesi: `Shift ${nextShiftNumber}`,
+              waktuMulai: "13:00",
+              waktuSelesai: "17:00",
+              assignedAslabs: []
+            }
+          ]
+        };
+      })
+    );
   };
 
   const handleRemoveSession = (dayIndex: number, sessionIndex: number) => {
-    setScheduleDays(prev => {
-      const copy = [...prev];
-      copy[dayIndex].sessions = copy[dayIndex].sessions.filter((_, sIdx) => sIdx !== sessionIndex);
-      return copy;
-    });
+    setScheduleDays(prev => 
+      prev.map((day, dIdx) => {
+        if (dIdx !== dayIndex) return day;
+        return {
+          ...day,
+          sessions: day.sessions.filter((_, sIdx) => sIdx !== sessionIndex)
+        };
+      })
+    );
   };
 
   const handleSessionFieldChange = (dayIndex: number, sessionIndex: number, field: "namaSesi" | "waktuMulai" | "waktuSelesai", value: string) => {
-    setScheduleDays(prev => {
-      const copy = [...prev];
-      copy[dayIndex].sessions[sessionIndex][field] = value;
-      return copy;
-    });
+    setScheduleDays(prev => 
+      prev.map((day, dIdx) => {
+        if (dIdx !== dayIndex) return day;
+        return {
+          ...day,
+          sessions: day.sessions.map((sess, sIdx) => {
+            if (sIdx !== sessionIndex) return sess;
+            return { ...sess, [field]: value };
+          })
+        };
+      })
+    );
+  };
+
+  const isSameAslab = (a: any, b: any) => {
+    if (!a || !b) return false;
+    if (a.id && b.id && a.id === b.id) return true;
+    if (a.userId && b.userId && a.userId === b.userId) return true;
+    if (a.nim && b.nim && String(a.nim).trim().toLowerCase() === String(b.nim).trim().toLowerCase()) return true;
+    if (a.nama && b.nama && String(a.nama).trim().toLowerCase() === String(b.nama).trim().toLowerCase()) return true;
+    return false;
   };
 
   const handleToggleAslabForSession = (dayIndex: number, sessionIndex: number, aslab: RegisteredAslab) => {
-    setScheduleDays(prev => {
-      const copy = [...prev];
-      const session = copy[dayIndex].sessions[sessionIndex];
-      const exists = session.assignedAslabs.some(a => a.nim === aslab.nim);
-
-      if (exists) {
-        session.assignedAslabs = session.assignedAslabs.filter(a => a.nim !== aslab.nim);
-      } else {
-        session.assignedAslabs.push(aslab);
-      }
-      return copy;
-    });
+    setScheduleDays(prev => 
+      prev.map((day, dIdx) => {
+        if (dIdx !== dayIndex) return day;
+        return {
+          ...day,
+          sessions: day.sessions.map((sess, sIdx) => {
+            if (sIdx !== sessionIndex) return sess;
+            const currentList = Array.isArray(sess.assignedAslabs) ? sess.assignedAslabs : [];
+            const exists = currentList.some(a => isSameAslab(a, aslab));
+            const updatedList = exists
+              ? currentList.filter(a => !isSameAslab(a, aslab))
+              : [...currentList, aslab];
+            return {
+              ...sess,
+              assignedAslabs: updatedList
+            };
+          })
+        };
+      })
+    );
   };
 
   const handleSaveSchedule = async () => {
@@ -346,45 +382,6 @@ export default function MyShiftPage() {
       return;
     }
 
-    const now = new Date().getTime();
-    let latestError = null;
-    let latestInfo = null;
-    let hasValidAgenda = false;
-
-    for (const agenda of agendas) {
-      const mulai = new Date(agenda.waktuMulai).getTime();
-      const selesai = new Date(agenda.waktuSelesai).getTime();
-      const endDatang = mulai + 30 * 60 * 1000;
-      const endPulang = selesai + 30 * 60 * 1000;
-
-      if (!agenda.waktuDatang) {
-        if (now > endDatang) {
-          latestError = "Kamu telah melewati batas waktu absensi datang dan saat ini berstatus alpa. Silakan laporkan kepada petugas apabila terjadi kekeliruan.";
-        } else {
-          hasValidAgenda = true;
-        }
-      } else if (!agenda.waktuPulang) {
-        if (now < selesai) {
-          latestInfo = "Terima Kasih, Kamu sudah absen datang. QR pulang akan muncul ketika di jam pulang.";
-        } else if (now > endPulang) {
-          latestError = "Batas waktu absensi pulang telah berakhir. QR absensi sudah tidak dapat digunakan. Jika terjadi kesalahan, silakan hubungi petugas untuk melakukan pengecekan.";
-        } else {
-          hasValidAgenda = true;
-        }
-      }
-    }
-
-    if (!hasValidAgenda) {
-      if (latestError) {
-        setPageError(latestError);
-      } else if (latestInfo) {
-        setPageInfo(latestInfo);
-      } else {
-        setPageInfo("Semua jadwal absensi kamu hari ini telah selesai. Terima kasih!");
-      }
-      return;
-    }
-
     if (agendas.length === 1) {
       setActiveAgenda(agendas[0]);
       setShowQRModal(true);
@@ -426,7 +423,11 @@ export default function MyShiftPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-[22px] font-bold text-[#0A1024] sm:text-3xl md:text-4xl">MyShift</h1>
-            <p className="text-gray-500 text-sm mt-1">Kelola dan pantau jadwal shift piket harian asisten lab</p>
+            <p className="text-gray-500 text-sm mt-1">
+              {userRole === "admin"
+                ? "Kelola dan pantau seluruh jadwal shift piket asisten lab"
+                : "Pantau jadwal shift piket dan absensi kamu"}
+            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
@@ -487,10 +488,18 @@ export default function MyShiftPage() {
             {agendas.length === 0 ? (
               <div className="text-center py-20 text-gray-400 flex flex-col items-center">
                 <Clock className="w-12 h-12 mb-4 text-gray-300" />
-                <p className="font-medium text-gray-600">Tidak ada jadwal shift pada hari ini.</p>
-                {userRole === "admin" && (
+                <p className="font-medium text-gray-600">
+                  {userRole === "admin"
+                    ? "Tidak ada jadwal shift pada hari ini."
+                    : "Kamu tidak memiliki jadwal shift pada hari ini."}
+                </p>
+                {userRole === "admin" ? (
                   <p className="text-xs text-gray-400 mt-2">
                     Klik tombol <span className="font-semibold text-gray-700">"Atur Jadwal Shift"</span> di atas untuk menambahkan template jadwal piket mingguan.
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-400 mt-2">
+                    Jadwal shift akan otomatis muncul di sini apabila kamu ditugaskan oleh Admin.
                   </p>
                 )}
               </div>
@@ -676,43 +685,31 @@ export default function MyShiftPage() {
                                     />
                                   </div>
 
-                                  {/* Waktu Mulai & Waktu Selesai (24 Jam) */}
-                                  <div className="flex items-center gap-3">
-                                    <div>
-                                      <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">
-                                        Mulai (24 Jam)
-                                      </label>
-                                      <input 
-                                        type="time"
-                                        step="60"
-                                        value={session.waktuMulai}
-                                        onChange={(e) => handleSessionFieldChange(dayIndex, sessionIndex, "waktuMulai", e.target.value)}
-                                        className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-semibold text-[#0B132B] focus:outline-none focus:ring-2 focus:ring-[#FFC727]"
-                                      />
-                                    </div>
-                                    <span className="text-gray-400 font-bold mt-5">-</span>
-                                    <div>
-                                      <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">
-                                        Selesai (24 Jam)
-                                      </label>
-                                      <input 
-                                        type="time"
-                                        step="60"
-                                        value={session.waktuSelesai}
-                                        onChange={(e) => handleSessionFieldChange(dayIndex, sessionIndex, "waktuSelesai", e.target.value)}
-                                        className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-semibold text-[#0B132B] focus:outline-none focus:ring-2 focus:ring-[#FFC727]"
-                                      />
-                                    </div>
+                                  {/* Waktu Pelaksanaan Shift */}
+                                  <div className="w-full sm:w-64">
+                                    <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">
+                                      Waktu Pelaksanaan
+                                    </label>
+                                    <ShiftTimePicker
+                                      dayName={dayItem.hari}
+                                      waktuMulai={session.waktuMulai}
+                                      waktuSelesai={session.waktuSelesai}
+                                      onChange={(mulai, selesai) => {
+                                        handleSessionFieldChange(dayIndex, sessionIndex, "waktuMulai", mulai);
+                                        handleSessionFieldChange(dayIndex, sessionIndex, "waktuSelesai", selesai);
+                                      }}
+                                    />
                                   </div>
 
                                   {/* Remove Session Button */}
-                                  <div className="sm:self-end">
+                                  <div className="sm:self-end pb-1">
                                     <button
+                                      type="button"
                                       onClick={() => handleRemoveSession(dayIndex, sessionIndex)}
-                                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
                                       title="Hapus Sesi"
                                     >
-                                      <Trash2 className="w-4 h-4" />
+                                      <Trash2 className="w-5 h-5" />
                                     </button>
                                   </div>
                                 </div>
@@ -720,33 +717,38 @@ export default function MyShiftPage() {
                                 {/* Aslab Selector */}
                                 <div className="space-y-2 pt-2 border-t border-gray-100">
                                   <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block">
-                                    Asisten Lab Yang Bertugas ({session.assignedAslabs.length} Orang Terpilih)
+                                    Asisten Lab Yang Bertugas ({(session.assignedAslabs || []).length} Orang Terpilih)
                                   </label>
 
                                   {/* Selected Aslabs Tags */}
-                                  <div className="flex flex-wrap gap-2">
-                                    {session.assignedAslabs.map(aslab => (
-                                      <span 
-                                        key={aslab.nim}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-semibold text-[#0B132B] shadow-sm"
-                                      >
-                                        <span>{aslab.nama}</span>
-                                        <span className="text-[10px] text-gray-400">({aslab.posisi || aslab.divisi})</span>
-                                        <button 
-                                          type="button"
-                                          onClick={() => handleToggleAslabForSession(dayIndex, sessionIndex, aslab)}
-                                          className="text-gray-400 hover:text-red-500 ml-1"
+                                  <div className="flex flex-wrap gap-2 min-h-[28px] items-center">
+                                    {session.assignedAslabs && session.assignedAslabs.length > 0 ? (
+                                      session.assignedAslabs.map((aslab, aslabIdx) => (
+                                        <span 
+                                          key={aslab.nim || aslab.id || aslabIdx}
+                                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-yellow-50 border border-yellow-200 rounded-full text-xs font-semibold text-[#0B132B] shadow-sm animate-in fade-in zoom-in-95 duration-150"
                                         >
-                                          <X className="w-3.5 h-3.5" />
-                                        </button>
-                                      </span>
-                                    ))}
+                                          <span>{aslab.nama}</span>
+                                          <span className="text-[10px] text-gray-500">({aslab.posisi || aslab.jabatan || aslab.divisi})</span>
+                                          <button 
+                                            type="button"
+                                            onClick={() => handleToggleAslabForSession(dayIndex, sessionIndex, aslab)}
+                                            className="text-gray-400 hover:text-red-500 ml-1 p-0.5 rounded-full hover:bg-white transition-colors cursor-pointer"
+                                            title="Hapus aslab dari sesi ini"
+                                          >
+                                            <X className="w-3.5 h-3.5" />
+                                          </button>
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <span className="text-xs text-gray-400 italic">Belum ada asisten lab yang dipilih</span>
+                                    )}
                                   </div>
 
                                   {/* Dropdown Input */}
                                   <div className="relative">
                                     <div className="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-[#FFC727]">
-                                      <Search className="w-4 h-4 text-gray-400 mr-2" />
+                                      <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
                                       <input 
                                         type="text"
                                         placeholder="Cari & pilih nama / NIM / divisi aslab..."
@@ -763,7 +765,7 @@ export default function MyShiftPage() {
                                         <button 
                                           type="button" 
                                           onClick={() => setAslabDropdownOpen(prev => ({ ...prev, [dropdownKey]: false }))}
-                                          className="text-xs text-gray-400 hover:text-gray-600 ml-2"
+                                          className="text-xs text-gray-400 hover:text-gray-600 ml-2 shrink-0 cursor-pointer"
                                         >
                                           Tutup
                                         </button>
@@ -778,15 +780,16 @@ export default function MyShiftPage() {
                                             Tidak ada aslab yang cocok.
                                           </div>
                                         ) : (
-                                          filteredAslabs.map(aslab => {
-                                            const isSelected = session.assignedAslabs.some(a => a.nim === aslab.nim);
+                                          filteredAslabs.map((aslab, aslabIdx) => {
+                                            const isSelected = (session.assignedAslabs || []).some(a => isSameAslab(a, aslab));
                                             return (
                                               <button
-                                                key={aslab.nim}
+                                                key={aslab.nim || aslab.id || aslabIdx}
                                                 type="button"
+                                                onMouseDown={(e) => e.preventDefault()}
                                                 onClick={() => handleToggleAslabForSession(dayIndex, sessionIndex, aslab)}
-                                                className={`w-full flex items-center justify-between p-2.5 rounded-lg text-left text-xs transition-colors ${
-                                                  isSelected ? "bg-yellow-50 text-[#0B132B] font-semibold" : "hover:bg-gray-50 text-gray-700"
+                                                className={`w-full flex items-center justify-between p-2.5 rounded-lg text-left text-xs transition-colors cursor-pointer ${
+                                                  isSelected ? "bg-yellow-50 text-[#0B132B] font-semibold border border-yellow-200" : "hover:bg-gray-50 text-gray-700"
                                                 }`}
                                               >
                                                 <div className="flex flex-col">
@@ -795,9 +798,13 @@ export default function MyShiftPage() {
                                                     {aslab.nim} • {aslab.posisi || aslab.jabatan || aslab.divisi} ({aslab.divisi})
                                                   </span>
                                                 </div>
-                                                {isSelected && (
-                                                  <div className="w-5 h-5 rounded-full bg-[#FFC727] flex items-center justify-center text-[#0B132B]">
-                                                    <Check className="w-3.5 h-3.5" />
+                                                {isSelected ? (
+                                                  <div className="w-5 h-5 rounded-full bg-[#FFC727] flex items-center justify-center text-[#0B132B] shrink-0 shadow-sm">
+                                                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                                  </div>
+                                                ) : (
+                                                  <div className="w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 shrink-0 hover:border-gray-400">
+                                                    <Plus className="w-3 h-3" />
                                                   </div>
                                                 )}
                                               </button>
@@ -870,86 +877,55 @@ export default function MyShiftPage() {
               <X className="w-6 h-6" />
             </button>
             
-            <h2 className="text-2xl font-bold text-[#0B132B] mb-2">
-              {qrType === "datang" ? "QR Datang" : qrType === "pulang" ? "QR Pulang" : "QR Belum Tersedia"}
+            <h2 className="text-2xl font-bold text-[#0B132B] mb-1">
+              {qrType === "pulang" ? "QR Pulang" : "QR Datang"}
             </h2>
+            <p className="text-xs text-gray-500 mb-3 font-medium">
+              {activeAgenda.nama} ({formatTime(activeAgenda.waktuMulai)} - {formatTime(activeAgenda.waktuSelesai)} WIB)
+            </p>
             
-            {qrType === "none" && (
-              <div className="bg-yellow-50 text-yellow-700 p-3 rounded-lg text-sm mb-4 border border-yellow-200">
-                <AlertCircle className="w-5 h-5 inline mr-2" />
-                Di luar jam absen (awal 20 menit / akhir 10 menit). QR ini ditampilkan untuk keperluan testing.
-              </div>
-            )}
-            
-            {activeAgenda.waktuDatang && qrType !== "pulang" ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center animate-in fade-in duration-300">
-                <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-5">
-                  <CheckCircle2 className="w-12 h-12 text-green-500" />
-                </div>
-                <h3 className="text-xl font-bold text-[#0B132B] mb-3">Hebat!</h3>
-                <p className="text-gray-600 font-medium text-sm leading-relaxed px-4">
-                  Kamu sudah absen datang. QR pulang akan muncul ketika di jam pulang.
-                </p>
-              </div>
-            ) : activeAgenda.waktuPulang ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center animate-in fade-in duration-300">
-                <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-5">
-                  <CheckCircle2 className="w-12 h-12 text-green-500" />
-                </div>
-                <h3 className="text-xl font-bold text-[#0B132B] mb-3">Selesai!</h3>
-                <p className="text-gray-600 font-medium text-sm leading-relaxed px-4">
-                  Kamu sudah menyelesaikan semua absensi untuk shift ini.
-                </p>
-              </div>
-            ) : !activeAgenda.waktuDatang && new Date().getTime() > new Date(activeAgenda.waktuMulai).getTime() + 30 * 60 * 1000 ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center animate-in fade-in duration-300">
-                <img src="/assets/absen/pop-up/ups.png" alt="Warning" className="w-24 h-24 mb-4 object-contain drop-shadow-md" />
-                <h3 className="text-xl font-bold text-[#0B132B] mb-2">Waduhh!!</h3>
-                <p className="text-gray-600 font-medium text-sm leading-relaxed px-2">
-                  Kamu telah melewati batas waktu absensi datang dan saat ini berstatus alpa. Silakan laporkan kepada petugas apabila terjadi kekeliruan.
-                </p>
-              </div>
-            ) : !activeAgenda.waktuPulang && new Date().getTime() > new Date(activeAgenda.waktuSelesai).getTime() + 30 * 60 * 1000 ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center animate-in fade-in duration-300">
-                <img src="/assets/absen/pop-up/ups.png" alt="Warning" className="w-24 h-24 mb-4 object-contain drop-shadow-md" />
-                <h3 className="text-xl font-bold text-[#0B132B] mb-2">Waduhh!!</h3>
-                <p className="text-gray-600 font-medium text-sm leading-relaxed px-2">
-                  Batas waktu absensi pulang telah berakhir. QR absensi sudah tidak dapat digunakan. Jika terjadi kesalahan, silakan hubungi petugas untuk melakukan pengecekan.
-                </p>
+            {qrType === "none" ? (
+              <div className="bg-amber-50 text-amber-700 p-2.5 rounded-xl text-xs mb-3 border border-amber-200 w-full text-left flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>Di luar jam absen (awal 20 mnt / akhir 10 mnt). QR tetap dapat digunakan & di-scan.</span>
               </div>
             ) : (
-              <>
-                <p className="text-sm text-gray-600 mb-6">
-                  Silakan scan QR ini untuk melakukan absensi. Pastikan melakukan absensi dua kali: saat datang dan saat selesai bertugas.
-                </p>
-                
-                <div className="bg-white border border-gray-200 p-4 rounded-[2rem] mb-6 shadow-sm">
-                  <QRCode 
-                    id="myshift-qr-code-svg"
-                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/scan-absensi?token=${(qrType === "pulang" || qrType === "none") ? activeAgenda.kodeQrPulang : activeAgenda.kodeQrDatang}&type=${qrType === "pulang" ? "pulang" : "datang"}`}
-                    size={220}
-                    level="Q"
-                    fgColor="#0B132B"
-                  />
-                </div>
-                
-                <div className="bg-gray-100 rounded-full px-6 py-2 mb-6">
-                  <span className="text-sm text-gray-600 font-medium">
-                    {qrType === "none" ? "Status: Testing Mode" : `Refresh Dalam ${timeRemaining}`}
-                  </span>
-                </div>
-
-                <button 
-                  onClick={() => {
-                    const formattedName = `QR_${activeAgenda.nama}_${qrType === "pulang" ? "Pulang" : "Datang"}`;
-                    downloadQRCode("myshift-qr-code-svg", formattedName);
-                  }}
-                  className="w-full bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-                >
-                  <Download className="w-5 h-5" /> Download PNG
-                </button>
-              </>
+              <div className="bg-blue-50 text-blue-700 p-2 rounded-xl text-xs mb-3 border border-blue-200 w-full text-center font-medium">
+                Absensi <strong>{qrType === "pulang" ? "Pulang" : "Datang"}</strong> sedang aktif
+              </div>
             )}
+
+            {activeAgenda.waktuDatang && (
+              <div className="bg-green-50 text-green-700 p-2 rounded-xl text-xs mb-3 border border-green-200 w-full text-center font-medium">
+                ✅ Kamu sudah tercatat absen datang
+              </div>
+            )}
+            
+            <div className="bg-white border border-gray-200 p-4 rounded-[2rem] mb-4 shadow-sm">
+              <QRCode 
+                id="myshift-qr-code-svg"
+                value={`${typeof window !== 'undefined' ? window.location.origin : ''}/scan-absensi?token=${(qrType === "pulang" ? activeAgenda.kodeQrPulang : activeAgenda.kodeQrDatang) || activeAgenda.kodeQrDatang || activeAgenda.kodeQrPulang}&type=${qrType === "pulang" ? "pulang" : "datang"}`}
+                size={220}
+                level="Q"
+                fgColor="#0B132B"
+              />
+            </div>
+            
+            <div className="bg-gray-100 rounded-full px-5 py-1.5 mb-4">
+              <span className="text-xs text-gray-600 font-medium">
+                {qrType === "none" ? "Status: Mode Terbuka" : `Refresh Dalam ${timeRemaining}`}
+              </span>
+            </div>
+
+            <button 
+              onClick={() => {
+                const formattedName = `QR_${activeAgenda.nama}_${qrType === "pulang" ? "Pulang" : "Datang"}`;
+                downloadQRCode("myshift-qr-code-svg", formattedName);
+              }}
+              className="w-full bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm"
+            >
+              <Download className="w-4 h-4" /> Download PNG
+            </button>
           </div>
         </div>
       )}
