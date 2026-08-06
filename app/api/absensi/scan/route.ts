@@ -67,16 +67,16 @@ export async function POST(req: Request) {
     }
 
     // Determine if this is an Agenda (kegiatan divisi / event) or a standard MyShift
-    // Agenda: bisa absen dimana saja (tidak perlu berada di TULT)
-    // MyShift: wajib berada di area TULT (radius <= 50m)
+    // Agenda: bisa absen dimana saja (tidak perlu berada di LAB DTC)
+    // MyShift: wajib berada di area LAB DTC (radius <= 50m)
     const isAgenda = Boolean(agenda.deskripsi) || agenda.createdBy?.role !== "admin";
 
     if (!isAgenda) {
-      // MyShift requires location check in TULT area
+      // MyShift requires location check in LAB DTC area
       if (typeof lat !== "number" || typeof lng !== "number") {
         return NextResponse.json({
           error: "Location required",
-          message: "Absensi MyShift mewajibkan akses lokasi di area TULT. Harap aktifkan izin lokasi pada browser/perangkat Anda."
+          message: "Absensi MyShift mewajibkan akses lokasi di area LAB DTC. Harap aktifkan izin lokasi pada browser/perangkat Anda."
         }, { status: 400 });
       }
 
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
       if (distance > MAX_RADIUS_METERS) {
         return NextResponse.json({
           error: "Location out of bounds",
-          message: `Anda berada di luar jangkauan TULT (${Math.round(distance)}m > ${MAX_RADIUS_METERS}m). Absensi MyShift hanya dapat dilakukan di TULT.`
+          message: `Anda sedang tidak berada di area LAB DTC (${Math.round(distance)}m > ${MAX_RADIUS_METERS}m). Absensi MyShift hanya dapat dilakukan di area LAB DTC.`
         }, { status: 400 });
       }
     }

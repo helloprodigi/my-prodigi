@@ -134,6 +134,29 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: `Minimal pilih 1 Asisten Lab untuk setiap sesi pada hari ${day.hari}.` }, { status: 400 });
         }
       }
+
+      // Check overlapping sessions within the same day
+      for (let i = 0; i < day.sessions.length; i++) {
+        const s1 = day.sessions[i];
+        const [s1H, s1M] = s1.waktuMulai.split(":").map(Number);
+        const [e1H, e1M] = s1.waktuSelesai.split(":").map(Number);
+        const start1 = s1H * 60 + s1M;
+        const end1 = e1H * 60 + e1M;
+
+        for (let j = i + 1; j < day.sessions.length; j++) {
+          const s2 = day.sessions[j];
+          const [s2H, s2M] = s2.waktuMulai.split(":").map(Number);
+          const [e2H, e2M] = s2.waktuSelesai.split(":").map(Number);
+          const start2 = s2H * 60 + s2M;
+          const end2 = e2H * 60 + e2M;
+
+          if (Math.max(start1, start2) < Math.min(end1, end2)) {
+            return NextResponse.json({
+              error: `Waktu shift bertabrakan pada hari ${day.hari}: "${s1.namaSesi || 'Sesi ' + (i + 1)}" (${s1.waktuMulai}–${s1.waktuSelesai}) dan "${s2.namaSesi || 'Sesi ' + (j + 1)}" (${s2.waktuMulai}–${s2.waktuSelesai}). Jadwal tidak boleh tumpang tindih.`
+            }, { status: 400 });
+          }
+        }
+      }
     }
 
     // Perform atomic update inside transaction

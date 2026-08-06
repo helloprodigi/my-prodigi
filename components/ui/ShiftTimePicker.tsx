@@ -13,6 +13,11 @@ interface ShiftTimePickerProps {
   className?: string;
 }
 
+// Generate 24 hours (00 - 23)
+const HOURS_24 = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0"));
+// Generate minutes (00 - 59)
+const MINUTES_60 = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, "0"));
+
 export default function ShiftTimePicker({
   dayName,
   waktuMulai,
@@ -22,31 +27,57 @@ export default function ShiftTimePicker({
   className = ""
 }: ShiftTimePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [tempStart, setTempStart] = useState(waktuMulai || "08:00");
-  const [tempEnd, setTempEnd] = useState(waktuSelesai || "11:30");
+  
+  // Parse initial hours and minutes
+  const parseTime = (timeStr: string, defaultH: string, defaultM: string) => {
+    if (!timeStr || !timeStr.includes(":")) return { h: defaultH, m: defaultM };
+    const [h, m] = timeStr.split(":");
+    return {
+      h: (h || defaultH).padStart(2, "0"),
+      m: (m || defaultM).padStart(2, "0")
+    };
+  };
+
+  const initialStart = parseTime(waktuMulai, "08", "00");
+  const initialEnd = parseTime(waktuSelesai, "11", "30");
+
+  const [startHour, setStartHour] = useState(initialStart.h);
+  const [startMinute, setStartMinute] = useState(initialStart.m);
+  const [endHour, setEndHour] = useState(initialEnd.h);
+  const [endMinute, setEndMinute] = useState(initialEnd.m);
   const [error, setError] = useState<string | null>(null);
 
   const displayValue = formatShiftTimeDisplay(waktuMulai, waktuSelesai);
 
   const handleOpen = () => {
-    setTempStart(waktuMulai || "08:00");
-    setTempEnd(waktuSelesai || "11:30");
+    const s = parseTime(waktuMulai, "08", "00");
+    const e = parseTime(waktuSelesai, "11", "30");
+    setStartHour(s.h);
+    setStartMinute(s.m);
+    setEndHour(e.h);
+    setEndMinute(e.m);
     setError(null);
     setIsOpen(true);
   };
 
   const handleSave = () => {
-    if (!tempStart || !tempEnd) {
-      setError("Harap tentukan jam mulai dan selesai.");
+    const startStr = `${startHour.padStart(2, "0")}:${startMinute.padStart(2, "0")}`;
+    const endStr = `${endHour.padStart(2, "0")}:${endMinute.padStart(2, "0")}`;
+
+    const startMinutes = parseInt(startHour, 10) * 60 + parseInt(startMinute, 10);
+    const endMinutes = parseInt(endHour, 10) * 60 + parseInt(endMinute, 10);
+
+    if (endMinutes <= startMinutes) {
+      setError(`Jam selesai (${endStr}) harus lebih lambat dari jam mulai (${startStr}).`);
       return;
     }
-    if (tempEnd <= tempStart) {
-      setError("Jam selesai harus lebih lambat dari jam mulai.");
-      return;
-    }
-    onChange(tempStart, tempEnd);
+
+    onChange(startStr, endStr);
     setIsOpen(false);
   };
+
+  const currentTempStart = `${startHour.padStart(2, "0")}:${startMinute.padStart(2, "0")}`;
+  const currentTempEnd = `${endHour.padStart(2, "0")}:${endMinute.padStart(2, "0")}`;
 
   return (
     <div className={`w-full ${className}`}>
@@ -85,7 +116,7 @@ export default function ShiftTimePicker({
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 text-base">Atur Jam Sesi Shift {dayName ? `(${dayName})` : ""}</h3>
-                  <p className="text-xs text-gray-500">Format 24 Jam (WIB)</p>
+                  <p className="text-xs text-gray-500">Format 24 Jam (00:00 – 23:59 WIB)</p>
                 </div>
               </div>
 
@@ -107,86 +138,116 @@ export default function ShiftTimePicker({
                 </div>
               )}
 
+              {/* 24-Hour Time Selectors (No AM/PM) */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                    Jam Mulai
+                
+                {/* Jam Mulai */}
+                <div className="bg-[#F8F9FB] p-3.5 rounded-2xl border border-gray-200">
+                  <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-2 text-center">
+                    Jam Mulai (24 Jam)
                   </label>
-                  <input
-                    type="time"
-                    step="60"
-                    value={tempStart}
-                    onChange={(e) => {
-                      setTempStart(e.target.value);
-                      setError(null);
-                    }}
-                    className="w-full bg-[#F8F9FB] border border-gray-200 rounded-xl px-4 py-3 text-sm text-[#0B132B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#FFC727] focus:bg-white transition-all text-center"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                    Jam Selesai
-                  </label>
-                  <input
-                    type="time"
-                    step="60"
-                    value={tempEnd}
-                    onChange={(e) => {
-                      setTempEnd(e.target.value);
-                      setError(null);
-                    }}
-                    className="w-full bg-[#F8F9FB] border border-gray-200 rounded-xl px-4 py-3 text-sm text-[#0B132B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#FFC727] focus:bg-white transition-all text-center"
-                  />
-                </div>
-              </div>
-
-              {/* Quick Presets */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                  Preset Sesi Shift
-                </label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {[
-                    { label: "Shift Pagi (08.00–11.30)", start: "08:00", end: "11:30" },
-                    { label: "Shift Siang (13.00–16.30)", start: "13:00", end: "16:30" },
-                    { label: "Shift Sore (16.30–18.30)", start: "16:30", end: "18:30" },
-                    { label: "Shift Malam (19.00–21.00)", start: "19:00", end: "21:00" },
-                  ].map((preset, idx) => {
-                    const isSelected = tempStart === preset.start && tempEnd === preset.end;
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          setTempStart(preset.start);
-                          setTempEnd(preset.end);
+                  <div className="flex items-center justify-center gap-1.5">
+                    {/* Hour Select */}
+                    <div className="flex flex-col items-center">
+                      <select
+                        value={startHour}
+                        onChange={(e) => {
+                          setStartHour(e.target.value);
                           setError(null);
                         }}
-                        className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-semibold transition-all duration-150 text-left border shadow-sm ${
-                          isSelected
-                            ? "bg-yellow-100/80 border-yellow-400 text-[#0B132B] ring-2 ring-[#FFC727]/40"
-                            : "bg-[#F4F5F8] hover:bg-yellow-50/70 border-gray-300 text-[#0B132B] hover:border-yellow-300"
-                        }`}
+                        className="bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-lg font-bold text-[#0B132B] text-center focus:outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer shadow-sm"
                       >
-                        {preset.label}
-                      </button>
-                    );
-                  })}
+                        {HOURS_24.map((h) => (
+                          <option key={h} value={h}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-gray-400 font-medium mt-1">Jam</span>
+                    </div>
+
+                    <span className="text-xl font-bold text-gray-400 pb-4">:</span>
+
+                    {/* Minute Select */}
+                    <div className="flex flex-col items-center">
+                      <select
+                        value={startMinute}
+                        onChange={(e) => {
+                          setStartMinute(e.target.value);
+                          setError(null);
+                        }}
+                        className="bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-lg font-bold text-[#0B132B] text-center focus:outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer shadow-sm"
+                      >
+                        {MINUTES_60.map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-gray-400 font-medium mt-1">Menit</span>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Jam Selesai */}
+                <div className="bg-[#F8F9FB] p-3.5 rounded-2xl border border-gray-200">
+                  <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-2 text-center">
+                    Jam Selesai (24 Jam)
+                  </label>
+                  <div className="flex items-center justify-center gap-1.5">
+                    {/* Hour Select */}
+                    <div className="flex flex-col items-center">
+                      <select
+                        value={endHour}
+                        onChange={(e) => {
+                          setEndHour(e.target.value);
+                          setError(null);
+                        }}
+                        className="bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-lg font-bold text-[#0B132B] text-center focus:outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer shadow-sm"
+                      >
+                        {HOURS_24.map((h) => (
+                          <option key={h} value={h}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-gray-400 font-medium mt-1">Jam</span>
+                    </div>
+
+                    <span className="text-xl font-bold text-gray-400 pb-4">:</span>
+
+                    {/* Minute Select */}
+                    <div className="flex flex-col items-center">
+                      <select
+                        value={endMinute}
+                        onChange={(e) => {
+                          setEndMinute(e.target.value);
+                          setError(null);
+                        }}
+                        className="bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-lg font-bold text-[#0B132B] text-center focus:outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer shadow-sm"
+                      >
+                        {MINUTES_60.map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-gray-400 font-medium mt-1">Menit</span>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
               {/* Live Preview */}
-              {tempStart && tempEnd && (
-                <div className="bg-yellow-50/60 border border-yellow-200/80 rounded-2xl p-3.5">
-                  <span className="text-[10px] font-bold text-yellow-800 uppercase tracking-wider block mb-1">
-                    Tampilan Waktu:
-                  </span>
-                  <p className="text-sm font-semibold text-[#0B132B]">
-                    {formatShiftTimeDisplay(tempStart, tempEnd, dayName)}
-                  </p>
-                </div>
-              )}
+              <div className="bg-yellow-50/70 border border-yellow-200/90 rounded-2xl p-4 text-center">
+                <span className="text-[10px] font-bold text-yellow-900 uppercase tracking-wider block mb-1">
+                  Format Tampilan Waktu:
+                </span>
+                <p className="text-base font-bold text-[#0B132B]">
+                  {formatShiftTimeDisplay(currentTempStart, currentTempEnd, dayName)}
+                </p>
+              </div>
             </div>
 
             {/* Footer */}

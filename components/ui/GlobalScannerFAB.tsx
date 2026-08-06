@@ -369,7 +369,7 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
         <div className="p-4">
           {!location && (
             <div className="bg-blue-50 text-blue-700 p-3 rounded-lg text-xs mb-4 border border-blue-200 flex items-center gap-2">
-              <span>📍 Mendeteksi lokasi... (Izin lokasi diperlukan khusus untuk absensi MyShift di TULT)</span>
+              <span>📍 Mendeteksi lokasi... (Izin lokasi diperlukan khusus untuk absensi MyShift di area LAB DTC)</span>
             </div>
           )}
 

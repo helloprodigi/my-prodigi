@@ -20,6 +20,11 @@ const MONTHS_ID = [
   "Juli", "Agustus", "September", "Oktober", "November", "Desember"
 ];
 
+// Generate 24 hours (00 - 23)
+const HOURS_24 = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0"));
+// Generate minutes (00 - 59)
+const MINUTES_60 = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, "0"));
+
 export function formatWaktuPelaksanaanDisplay(waktuMulaiStr?: string, waktuSelesaiStr?: string): string | null {
   if (!waktuMulaiStr || !waktuSelesaiStr) return null;
 
@@ -72,8 +77,10 @@ export default function WaktuPelaksanaanPicker({
 
   // Local state for modal/popover editing
   const [tempDate, setTempDate] = useState("");
-  const [tempStartTime, setTempStartTime] = useState("08:00");
-  const [tempEndTime, setTempEndTime] = useState("11:30");
+  const [startHour, setStartHour] = useState("08");
+  const [startMinute, setStartMinute] = useState("00");
+  const [endHour, setEndHour] = useState("11");
+  const [endMinute, setEndMinute] = useState("30");
   const [modalError, setModalError] = useState<string | null>(null);
 
   // Initialize temp state when opening or when props change
@@ -89,7 +96,8 @@ export default function WaktuPelaksanaanPicker({
 
           const hh = String(d.getHours()).padStart(2, "0");
           const min = String(d.getMinutes()).padStart(2, "0");
-          setTempStartTime(`${hh}:${min}`);
+          setStartHour(hh);
+          setStartMinute(min);
         }
       } catch {}
     } else {
@@ -107,7 +115,8 @@ export default function WaktuPelaksanaanPicker({
         if (!isNaN(d.getTime())) {
           const hh = String(d.getHours()).padStart(2, "0");
           const min = String(d.getMinutes()).padStart(2, "0");
-          setTempEndTime(`${hh}:${min}`);
+          setEndHour(hh);
+          setEndMinute(min);
         }
       } catch {}
     }
@@ -125,29 +134,28 @@ export default function WaktuPelaksanaanPicker({
       setModalError("Harap pilih tanggal pelaksanaan.");
       return;
     }
-    if (!tempStartTime || !tempEndTime) {
-      setModalError("Harap pilih waktu mulai dan selesai.");
+
+    const startMinutes = parseInt(startHour, 10) * 60 + parseInt(startMinute, 10);
+    const endMinutes = parseInt(endHour, 10) * 60 + parseInt(endMinute, 10);
+
+    if (endMinutes <= startMinutes) {
+      setModalError(`Jam selesai (${endHour}:${endMinute}) harus lebih lambat dari jam mulai (${startHour}:${startMinute}).`);
       return;
     }
 
-    const startIso = `${tempDate}T${tempStartTime}`;
-    const endIso = `${tempDate}T${tempEndTime}`;
-
-    const startDate = new Date(startIso);
-    const endDate = new Date(endIso);
-
-    if (endDate <= startDate) {
-      setModalError("Waktu selesai harus lebih lambat dari waktu mulai.");
-      return;
-    }
+    const startIso = `${tempDate}T${startHour.padStart(2, "0")}:${startMinute.padStart(2, "0")}`;
+    const endIso = `${tempDate}T${endHour.padStart(2, "0")}:${endMinute.padStart(2, "0")}`;
 
     onChange(startIso, endIso);
     setIsOpen(false);
   };
 
   // Preview string in modal
-  const previewString = tempDate && tempStartTime && tempEndTime
-    ? formatWaktuPelaksanaanDisplay(`${tempDate}T${tempStartTime}`, `${tempDate}T${tempEndTime}`)
+  const previewString = tempDate && startHour && endHour
+    ? formatWaktuPelaksanaanDisplay(
+        `${tempDate}T${startHour.padStart(2, "0")}:${startMinute.padStart(2, "0")}`,
+        `${tempDate}T${endHour.padStart(2, "0")}:${endMinute.padStart(2, "0")}`
+      )
     : null;
 
   return (
@@ -158,7 +166,7 @@ export default function WaktuPelaksanaanPicker({
         </label>
       )}
 
-      {/* Main Trigger Card matching the design in user screenshot */}
+      {/* Main Trigger Card matching design */}
       <div
         onClick={handleOpen}
         className={`w-full bg-[#F8F9FB] hover:bg-[#F1F3F7] active:bg-[#EAECEF] border ${
@@ -197,7 +205,7 @@ export default function WaktuPelaksanaanPicker({
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 text-lg">Pilih Waktu Pelaksanaan</h3>
-                  <p className="text-xs text-gray-500">Tentukan tanggal dan rentang jam pelaksanaan</p>
+                  <p className="text-xs text-gray-500">Tentukan tanggal dan rentang jam pelaksanaan (24 Jam WIB)</p>
                 </div>
               </div>
 
@@ -237,85 +245,110 @@ export default function WaktuPelaksanaanPicker({
                 </div>
               </div>
 
-              {/* Time Inputs (24-Hour) */}
+              {/* 24-Hour Time Selectors (No AM/PM) */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                
+                {/* Jam Mulai */}
+                <div className="bg-[#F8F9FB] p-3.5 rounded-2xl border border-gray-200">
+                  <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-2 text-center">
                     Jam Mulai (24 Jam)
                   </label>
-                  <div className="relative">
-                    <input
-                      type="time"
-                      value={tempStartTime}
-                      onChange={(e) => {
-                        setTempStartTime(e.target.value);
-                        setModalError(null);
-                      }}
-                      className="w-full bg-[#F8F9FB] border border-gray-200 rounded-xl px-4 py-3 text-sm text-[#0B132B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#FFC727] focus:bg-white transition-all text-center"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                    Jam Selesai (24 Jam)
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="time"
-                      value={tempEndTime}
-                      onChange={(e) => {
-                        setTempEndTime(e.target.value);
-                        setModalError(null);
-                      }}
-                      className="w-full bg-[#F8F9FB] border border-gray-200 rounded-xl px-4 py-3 text-sm text-[#0B132B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#FFC727] focus:bg-white transition-all text-center"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Time Presets */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                  Preset Jam Populer
-                </label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {[
-                    { label: "Pagi (08:00 - 11:30)", start: "08:00", end: "11:30" },
-                    { label: "Siang (13:00 - 16:30)", start: "13:00", end: "16:30" },
-                    { label: "Sore (16:30 - 18:30)", start: "16:30", end: "18:30" },
-                    { label: "Malam (19:00 - 21:00)", start: "19:00", end: "21:00" },
-                  ].map((preset, idx) => {
-                    const isSelected = tempStartTime === preset.start && tempEndTime === preset.end;
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          setTempStartTime(preset.start);
-                          setTempEndTime(preset.end);
+                  <div className="flex items-center justify-center gap-1.5">
+                    <div className="flex flex-col items-center">
+                      <select
+                        value={startHour}
+                        onChange={(e) => {
+                          setStartHour(e.target.value);
                           setModalError(null);
                         }}
-                        className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-semibold transition-all duration-150 text-left border shadow-sm ${
-                          isSelected
-                            ? "bg-yellow-100/80 border-yellow-400 text-[#0B132B] ring-2 ring-[#FFC727]/40"
-                            : "bg-[#F4F5F8] hover:bg-yellow-50/70 border-gray-300 text-[#0B132B] hover:border-yellow-300"
-                        }`}
+                        className="bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-lg font-bold text-[#0B132B] text-center focus:outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer shadow-sm"
                       >
-                        {preset.label}
-                      </button>
-                    );
-                  })}
+                        {HOURS_24.map((h) => (
+                          <option key={h} value={h}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-gray-400 font-medium mt-1">Jam</span>
+                    </div>
+
+                    <span className="text-xl font-bold text-gray-400 pb-4">:</span>
+
+                    <div className="flex flex-col items-center">
+                      <select
+                        value={startMinute}
+                        onChange={(e) => {
+                          setStartMinute(e.target.value);
+                          setModalError(null);
+                        }}
+                        className="bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-lg font-bold text-[#0B132B] text-center focus:outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer shadow-sm"
+                      >
+                        {MINUTES_60.map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-gray-400 font-medium mt-1">Menit</span>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Jam Selesai */}
+                <div className="bg-[#F8F9FB] p-3.5 rounded-2xl border border-gray-200">
+                  <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-2 text-center">
+                    Jam Selesai (24 Jam)
+                  </label>
+                  <div className="flex items-center justify-center gap-1.5">
+                    <div className="flex flex-col items-center">
+                      <select
+                        value={endHour}
+                        onChange={(e) => {
+                          setEndHour(e.target.value);
+                          setModalError(null);
+                        }}
+                        className="bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-lg font-bold text-[#0B132B] text-center focus:outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer shadow-sm"
+                      >
+                        {HOURS_24.map((h) => (
+                          <option key={h} value={h}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-gray-400 font-medium mt-1">Jam</span>
+                    </div>
+
+                    <span className="text-xl font-bold text-gray-400 pb-4">:</span>
+
+                    <div className="flex flex-col items-center">
+                      <select
+                        value={endMinute}
+                        onChange={(e) => {
+                          setEndMinute(e.target.value);
+                          setModalError(null);
+                        }}
+                        className="bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-lg font-bold text-[#0B132B] text-center focus:outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer shadow-sm"
+                      >
+                        {MINUTES_60.map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-gray-400 font-medium mt-1">Menit</span>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
               {/* Live Preview Box */}
               {previewString && (
-                <div className="bg-yellow-50/60 border border-yellow-200/80 rounded-2xl p-4">
-                  <span className="text-[11px] font-bold text-yellow-800 uppercase tracking-wider block mb-1">
+                <div className="bg-yellow-50/70 border border-yellow-200/90 rounded-2xl p-4 text-center">
+                  <span className="text-[11px] font-bold text-yellow-900 uppercase tracking-wider block mb-1">
                     Hasil Format Tampilan:
                   </span>
-                  <p className="text-sm font-semibold text-[#0B132B]">
+                  <p className="text-base font-bold text-[#0B132B]">
                     {previewString}
                   </p>
                 </div>

@@ -166,12 +166,16 @@ export async function GET(req: Request) {
       }
     }
 
-    // Find all agendas for target date
+    // Find all MyShift agendas for target date (exclude division agendas / non-admin events)
     const allAgendas = await prisma.absensiAgenda.findMany({
       where: {
         waktuMulai: {
           gte: startOfDay,
           lte: endOfDay
+        },
+        deskripsi: null,
+        createdBy: {
+          role: "admin"
         }
       },
       include: {
