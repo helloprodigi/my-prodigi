@@ -25,7 +25,7 @@ function getStoredRole(): string | null {
 
 export function GlobalScannerFAB() {
   const pathname = usePathname();
-  const [userRole, setUserRole] = useState<string | null>(() => getStoredRole());
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
 

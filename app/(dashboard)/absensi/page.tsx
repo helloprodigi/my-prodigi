@@ -10,8 +10,9 @@ import {
   Download, 
   Check, 
   X, 
-  CheckCircle2, 
+  CheckCircle2,
   Loader2,
+  RefreshCw,
   QrCode,
   Building2,
   FileSpreadsheet,
@@ -160,11 +161,10 @@ export default function AbsensiAdminPage() {
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-6 w-full max-w-7xl mx-auto">
+    <div className="p-6 md:p-10 w-full space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-[22px] font-bold text-[#0A1024] sm:text-3xl md:text-4xl">Kelola Absensi</h1>
-          <p className="text-gray-500 mt-1 text-sm">Atur jadwal shift/agenda dan pantau kehadiran Asisten Lab.</p>
         </div>
       </div>
 
@@ -190,26 +190,26 @@ export default function AbsensiAdminPage() {
       {activeTab === "buat" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-6 md:p-8 space-y-6">
-              <h2 className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-3 flex items-center gap-2">
+            <div className="bg-white border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-2xl p-6 space-y-6">
+              <h2 className="text-lg font-bold text-[#0B132B] border-b border-gray-100 pb-3 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-[#FFC727]" />
                 Detail Jadwal Shift / Agenda
               </h2>
-              
+
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Nama Jadwal Shift</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-sm text-[#0B132B] mb-2">Nama Jadwal Shift</label>
+                  <input
+                    type="text"
                     value={namaShift}
                     onChange={(e) => setNamaShift(e.target.value)}
                     placeholder="Contoh: Piket Reguler Divisi..."
-                    className="w-full bg-[#F8F9FB] border border-gray-200 rounded-xl px-4 py-3 text-sm text-[#0B132B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#FFC727] focus:bg-white transition-all"
+                    className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0B132B] outline-none focus:ring-2 focus:ring-[#FFC727] transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Waktu Pelaksanaan (24 Jam)</label>
+                  <label className="block text-sm text-[#0B132B] mb-2">Waktu Pelaksanaan (24 Jam)</label>
                   <WaktuPelaksanaanPicker
                     waktuMulai={waktuMulai}
                     waktuSelesai={waktuSelesai}
@@ -223,11 +223,11 @@ export default function AbsensiAdminPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Pilih Divisi</label>
-                  <select 
+                  <label className="block text-sm text-[#0B132B] mb-2">Pilih Divisi</label>
+                  <select
                     value={divisi}
                     onChange={(e) => setDivisi(e.target.value)}
-                    className="w-full bg-[#F8F9FB] border border-gray-200 rounded-xl px-4 py-3 text-sm text-[#0B132B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#FFC727] focus:bg-white transition-all appearance-none cursor-pointer"
+                    className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0B132B] outline-none focus:ring-2 focus:ring-[#FFC727] transition-all appearance-none cursor-pointer"
                   >
                     <option value="">Semua Divisi</option>
                     <option value="INTI">INTI</option>
@@ -238,19 +238,19 @@ export default function AbsensiAdminPage() {
 
                 <div>
                   <div className="flex justify-between items-end mb-2">
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">Pilih Asisten Lab (Assign)</label>
-                    <button onClick={handleSelectAll} className="text-xs font-bold text-red-600 hover:text-red-700">
+                    <label className="block text-sm text-[#0B132B]">Pilih Asisten Lab (Assign)</label>
+                    <button onClick={handleSelectAll} className="text-xs font-semibold text-red-600 hover:text-red-700">
                       Pilih Semua
                     </button>
                   </div>
                   <div className="relative mb-3">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={searchAslab}
                       onChange={(e) => setSearchAslab(e.target.value)}
                       placeholder="Cari nama asisten lab..."
-                      className="w-full bg-[#F8F9FB] border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#FFC727] focus:bg-white transition-all"
+                      className="w-full bg-[#F5F5F5] rounded-lg pl-10 pr-4 py-2.5 text-sm text-[#0B132B] outline-none focus:ring-2 focus:ring-[#FFC727] transition-all"
                     />
                   </div>
                   <div className="border border-gray-200 rounded-2xl overflow-hidden bg-gray-50/60 h-64 overflow-y-auto">
@@ -286,22 +286,21 @@ export default function AbsensiAdminPage() {
               </div>
 
               <div className="pt-4 border-t border-gray-100">
-                <button 
+                <button
                   onClick={handleBuatAgenda}
                   disabled={isLoading}
-                  className={`w-full font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm ${
-                    isLoading ? 'opacity-70 cursor-not-allowed shadow-none' : 'hover:opacity-95 active:scale-[0.99] shadow-md'
+                  className={`w-full font-bold py-3.5 rounded-lg transition-all flex items-center justify-center gap-2 text-sm bg-[#FFC700] text-[#0A1024] hover:bg-[#e6b400] ${
+                    isLoading ? 'opacity-70 cursor-not-allowed shadow-none' : 'active:scale-[0.99] shadow-md'
                   }`}
-                  style={{ backgroundColor: '#0B132B', color: '#FFFFFF' }}
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin text-[#FFC727]" />
+                      <Loader2 className="w-5 h-5 animate-spin text-[#0A1024]" />
                       <span>Membuat QR Code...</span>
                     </>
                   ) : (
                     <>
-                      <Plus className="w-5 h-5 text-[#FFC727]" />
+                      <Plus className="w-5 h-5 text-[#0A1024]" />
                       <span>Buat QR Code Absensi</span>
                     </>
                   )}
@@ -312,8 +311,8 @@ export default function AbsensiAdminPage() {
 
           {/* QR Result Panel */}
           <div className="lg:col-span-1">
-            <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-6 sticky top-6 text-center space-y-4">
-              <h2 className="text-base font-bold text-gray-900 flex items-center justify-center gap-2">
+            <div className="bg-white border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-2xl p-6 sticky top-6 text-center space-y-4">
+              <h2 className="text-base font-bold text-[#0B132B] flex items-center justify-center gap-2">
                 <QrCode className="w-5 h-5 text-[#FFC727]" />
                 QR Code Absensi
               </h2>
@@ -357,7 +356,7 @@ export default function AbsensiAdminPage() {
                   </div>
                   
                   <div className="text-left bg-gray-50 p-3.5 rounded-2xl border border-gray-100 text-xs space-y-1">
-                    <h3 className="font-bold text-gray-900">{createdAgenda.nama}</h3>
+                    <h3 className="font-bold text-[#0B132B]">{createdAgenda.nama}</h3>
                     <p className="text-gray-500 font-medium">
                       {new Date(createdAgenda.waktuMulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}, {new Date(createdAgenda.waktuMulai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
                     </p>
@@ -389,7 +388,7 @@ export default function AbsensiAdminPage() {
 
       {/* Tab: Riwayat */}
       {activeTab === "riwayat" && (
-        <div className="bg-white border border-gray-200 shadow-sm rounded-3xl overflow-hidden">
+        <div className="bg-white border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-2xl overflow-hidden">
           <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold text-[#0B132B]">Riwayat Agenda & QR Absensi</h2>
@@ -398,9 +397,9 @@ export default function AbsensiAdminPage() {
             <button
               onClick={fetchRiwayat}
               disabled={isLoadingRiwayat}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+              className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
             >
-              <Loader2 className={`w-3.5 h-3.5 ${isLoadingRiwayat ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoadingRiwayat ? 'animate-spin' : ''}`} />
               Segarkan
             </button>
           </div>
@@ -554,9 +553,9 @@ export default function AbsensiAdminPage() {
                 const formattedName = `QR_Absensi_${selectedAgendaForQr.nama}_${modalQrType === "datang" ? "Datang" : "Pulang"}`;
                 downloadQRCode("modal-absensi-qr-code-svg", formattedName);
               }}
-              className="w-full bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm shadow-md"
+              className="w-full bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-md"
             >
-              <Download className="w-4 h-4 text-[#FFC727]" /> 
+              <Download className="w-4 h-4 text-[#FFC727]" />
               Download PNG ({modalQrType === "datang" ? "QR Datang" : "QR Pulang"})
             </button>
           </div>
@@ -616,7 +615,7 @@ export default function AbsensiAdminPage() {
             
             <button 
               onClick={() => setSuccessMessage(null)}
-              className="mt-6 w-full bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-bold py-3.5 rounded-2xl transition-colors text-sm"
+              className="mt-6 w-full bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-bold py-3.5 rounded-xl transition-colors text-sm"
             >
               Oke, Mengerti
             </button>

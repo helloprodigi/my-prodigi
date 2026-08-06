@@ -554,28 +554,22 @@ export default function MyShiftPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-[22px] font-bold text-[#0A1024] sm:text-3xl md:text-4xl">MyShift</h1>
-            <p className="text-gray-500 text-sm mt-1">
-              {userRole === "admin"
-                ? "Kelola dan pantau seluruh jadwal shift piket asisten lab"
-                : "Pantau jadwal shift piket dan absensi kamu"}
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
             {userRole === "admin" && (
-              <button 
+              <button
                 onClick={handleOpenScheduleModal}
-                className="flex-1 sm:flex-none bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-semibold px-5 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 text-sm border border-[#0B132B]"
+                className="flex-1 sm:flex-none bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-semibold px-5 py-2.5 rounded-lg transition-all shadow-sm flex items-center justify-center gap-2 text-sm border border-[#0B132B]"
               >
                 <CalendarPlus className="w-4 h-4 text-[#FFC727]" />
                 Atur Jadwal Shift
               </button>
             )}
-            <button 
+            <button
               onClick={handleOpenQRGenerator}
-              className="flex-1 sm:flex-none bg-[#FFC727] hover:bg-[#e5b323] text-[#0B132B] font-bold px-6 py-2.5 rounded-xl transition-colors shadow-sm text-sm flex items-center justify-center gap-2"
+              className="flex-1 sm:flex-none bg-[#FFC727] hover:bg-[#e5b323] text-[#0B132B] font-bold px-6 py-2.5 rounded-lg transition-colors shadow-sm text-sm"
             >
-              <Clock className="w-4 h-4 text-[#0B132B]" />
               Lihat QR Absensi
             </button>
           </div>
