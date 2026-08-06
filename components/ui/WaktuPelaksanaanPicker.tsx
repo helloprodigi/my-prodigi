@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Calendar, Clock, X, Check, AlertCircle } from "lucide-react";
+import { Calendar, X, AlertCircle } from "lucide-react";
 
 interface WaktuPelaksanaanPickerProps {
   waktuMulai: string; // ISO format or 'YYYY-MM-DDTHH:mm'
@@ -161,7 +161,7 @@ export default function WaktuPelaksanaanPicker({
   return (
     <div className={`w-full ${className}`}>
       {label && (
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
+        <label className="block text-sm text-[#0B132B] mb-2">
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
@@ -169,24 +169,24 @@ export default function WaktuPelaksanaanPicker({
       {/* Main Trigger Card matching design */}
       <div
         onClick={handleOpen}
-        className={`w-full bg-[#F8F9FB] hover:bg-[#F1F3F7] active:bg-[#EAECEF] border ${
-          error ? "border-red-400 bg-red-50/20" : "border-gray-200/90 hover:border-gray-300"
-        } rounded-2xl px-5 py-4 flex items-center justify-between cursor-pointer transition-all duration-150 shadow-sm group select-none`}
+        className={`w-full bg-[#F5F5F5] hover:bg-[#EFEFEF] rounded-lg px-4 py-3 flex items-center justify-between cursor-pointer transition-all duration-150 group select-none ${
+          error ? "ring-2 ring-red-400" : ""
+        }`}
       >
         <div className="flex-1 pr-4">
           {displayValue ? (
-            <span className="text-[#0B132B] font-medium text-base sm:text-lg block tracking-tight">
+            <span className="text-[#0B132B] text-sm block">
               {displayValue}
             </span>
           ) : (
-            <span className="text-gray-400 font-normal text-base sm:text-lg block">
+            <span className="text-gray-400 text-sm block">
               {placeholder}
             </span>
           )}
         </div>
 
         <div className="text-gray-500 group-hover:text-gray-700 transition-colors flex-shrink-0">
-          <Calendar className="w-6 h-6 stroke-[1.75]" />
+          <Calendar className="w-5 h-5 stroke-[1.75]" />
         </div>
       </div>
 
@@ -195,19 +195,11 @@ export default function WaktuPelaksanaanPicker({
       {/* Interactive Picker Modal */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100 flex flex-col">
-            
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+
             {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/60">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center text-[#0B132B] border border-yellow-200">
-                  <Calendar className="w-5 h-5 text-[#0B132B]" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-lg">Pilih Waktu Pelaksanaan</h3>
-                  <p className="text-xs text-gray-500">Tentukan tanggal dan rentang jam pelaksanaan (24 Jam WIB)</p>
-                </div>
-              </div>
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-bold text-[#0B132B] text-base">Pilih Waktu Pelaksanaan</h3>
 
               <button
                 type="button"
@@ -229,29 +221,27 @@ export default function WaktuPelaksanaanPicker({
 
               {/* Date Input */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                <label className="block text-sm text-[#0B132B] mb-2">
                   Tanggal Pelaksanaan
                 </label>
-                <div className="relative">
-                  <input
-                    type="date"
-                    value={tempDate}
-                    onChange={(e) => {
-                      setTempDate(e.target.value);
-                      setModalError(null);
-                    }}
-                    className="w-full bg-[#F8F9FB] border border-gray-200 rounded-xl px-4 py-3 text-sm text-[#0B132B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#FFC727] focus:bg-white transition-all"
-                  />
-                </div>
+                <input
+                  type="date"
+                  value={tempDate}
+                  onChange={(e) => {
+                    setTempDate(e.target.value);
+                    setModalError(null);
+                  }}
+                  className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0B132B] outline-none focus:ring-2 focus:ring-[#FFC727] transition-all"
+                />
               </div>
 
               {/* 24-Hour Time Selectors (No AM/PM) */}
               <div className="grid grid-cols-2 gap-4">
-                
+
                 {/* Jam Mulai */}
-                <div className="bg-[#F8F9FB] p-3.5 rounded-2xl border border-gray-200">
-                  <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-2 text-center">
-                    Jam Mulai (24 Jam)
+                <div className="bg-[#F5F5F5] p-3 rounded-lg">
+                  <label className="block text-xs text-gray-500 mb-2 text-center">
+                    Jam Mulai
                   </label>
                   <div className="flex items-center justify-center gap-1.5">
                     <div className="flex flex-col items-center">
@@ -261,7 +251,7 @@ export default function WaktuPelaksanaanPicker({
                           setStartHour(e.target.value);
                           setModalError(null);
                         }}
-                        className="bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-lg font-bold text-[#0B132B] text-center focus:outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer shadow-sm"
+                        className="bg-white border border-gray-200 rounded-lg px-2.5 py-2 text-base font-semibold text-[#0B132B] text-center outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer"
                       >
                         {HOURS_24.map((h) => (
                           <option key={h} value={h}>
@@ -269,10 +259,10 @@ export default function WaktuPelaksanaanPicker({
                           </option>
                         ))}
                       </select>
-                      <span className="text-[10px] text-gray-400 font-medium mt-1">Jam</span>
+                      <span className="text-[10px] text-gray-400 mt-1">Jam</span>
                     </div>
 
-                    <span className="text-xl font-bold text-gray-400 pb-4">:</span>
+                    <span className="text-lg font-semibold text-gray-400 pb-4">:</span>
 
                     <div className="flex flex-col items-center">
                       <select
@@ -281,7 +271,7 @@ export default function WaktuPelaksanaanPicker({
                           setStartMinute(e.target.value);
                           setModalError(null);
                         }}
-                        className="bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-lg font-bold text-[#0B132B] text-center focus:outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer shadow-sm"
+                        className="bg-white border border-gray-200 rounded-lg px-2.5 py-2 text-base font-semibold text-[#0B132B] text-center outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer"
                       >
                         {MINUTES_60.map((m) => (
                           <option key={m} value={m}>
@@ -289,15 +279,15 @@ export default function WaktuPelaksanaanPicker({
                           </option>
                         ))}
                       </select>
-                      <span className="text-[10px] text-gray-400 font-medium mt-1">Menit</span>
+                      <span className="text-[10px] text-gray-400 mt-1">Menit</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Jam Selesai */}
-                <div className="bg-[#F8F9FB] p-3.5 rounded-2xl border border-gray-200">
-                  <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-2 text-center">
-                    Jam Selesai (24 Jam)
+                <div className="bg-[#F5F5F5] p-3 rounded-lg">
+                  <label className="block text-xs text-gray-500 mb-2 text-center">
+                    Jam Selesai
                   </label>
                   <div className="flex items-center justify-center gap-1.5">
                     <div className="flex flex-col items-center">
@@ -307,7 +297,7 @@ export default function WaktuPelaksanaanPicker({
                           setEndHour(e.target.value);
                           setModalError(null);
                         }}
-                        className="bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-lg font-bold text-[#0B132B] text-center focus:outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer shadow-sm"
+                        className="bg-white border border-gray-200 rounded-lg px-2.5 py-2 text-base font-semibold text-[#0B132B] text-center outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer"
                       >
                         {HOURS_24.map((h) => (
                           <option key={h} value={h}>
@@ -315,10 +305,10 @@ export default function WaktuPelaksanaanPicker({
                           </option>
                         ))}
                       </select>
-                      <span className="text-[10px] text-gray-400 font-medium mt-1">Jam</span>
+                      <span className="text-[10px] text-gray-400 mt-1">Jam</span>
                     </div>
 
-                    <span className="text-xl font-bold text-gray-400 pb-4">:</span>
+                    <span className="text-lg font-semibold text-gray-400 pb-4">:</span>
 
                     <div className="flex flex-col items-center">
                       <select
@@ -327,7 +317,7 @@ export default function WaktuPelaksanaanPicker({
                           setEndMinute(e.target.value);
                           setModalError(null);
                         }}
-                        className="bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-lg font-bold text-[#0B132B] text-center focus:outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer shadow-sm"
+                        className="bg-white border border-gray-200 rounded-lg px-2.5 py-2 text-base font-semibold text-[#0B132B] text-center outline-none focus:ring-2 focus:ring-[#FFC727] cursor-pointer"
                       >
                         {MINUTES_60.map((m) => (
                           <option key={m} value={m}>
@@ -335,7 +325,7 @@ export default function WaktuPelaksanaanPicker({
                           </option>
                         ))}
                       </select>
-                      <span className="text-[10px] text-gray-400 font-medium mt-1">Menit</span>
+                      <span className="text-[10px] text-gray-400 mt-1">Menit</span>
                     </div>
                   </div>
                 </div>
@@ -344,11 +334,11 @@ export default function WaktuPelaksanaanPicker({
 
               {/* Live Preview Box */}
               {previewString && (
-                <div className="bg-yellow-50/70 border border-yellow-200/90 rounded-2xl p-4 text-center">
-                  <span className="text-[11px] font-bold text-yellow-900 uppercase tracking-wider block mb-1">
+                <div className="bg-yellow-50/70 border border-yellow-200/90 rounded-lg p-3.5 text-center">
+                  <span className="text-[11px] font-semibold text-yellow-900 uppercase tracking-wider block mb-1">
                     Hasil Format Tampilan:
                   </span>
-                  <p className="text-base font-bold text-[#0B132B]">
+                  <p className="text-sm font-semibold text-[#0B132B]">
                     {previewString}
                   </p>
                 </div>
@@ -356,20 +346,19 @@ export default function WaktuPelaksanaanPicker({
             </div>
 
             {/* Modal Footer */}
-            <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3">
+            <div className="p-6 border-t border-gray-100 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+                className="px-5 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors"
               >
                 Batal
               </button>
               <button
                 type="button"
                 onClick={handleSave}
-                className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#0B132B] hover:bg-[#1a2b5e] text-white transition-colors shadow-sm flex items-center gap-2"
+                className="px-6 py-2.5 rounded-lg text-sm font-bold bg-[#FFC700] hover:bg-[#e6b400] text-[#0A1024] transition-colors"
               >
-                <Check className="w-4 h-4 text-[#FFC727]" />
                 Simpan Waktu
               </button>
             </div>
