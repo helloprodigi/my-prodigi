@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/utils/supabase/server";
+import { createNotification } from "@/lib/notifications";
 
 export async function POST(req: Request) {
   try {
@@ -88,6 +89,24 @@ export async function POST(req: Request) {
         }
       },
     });
+
+    await Promise.allSettled(
+      targetUsers.map((u) =>
+        createNotification(
+          u.id,
+          {
+            type: "agenda_invite",
+            title: "Agenda Baru",
+            description: `Kamu diundang ke agenda "${nama}" untuk divisi ${combinedDivisi}.`,
+          },
+          {
+            title: "Agenda Baru",
+            body: `Kamu diundang ke agenda "${nama}" untuk divisi ${combinedDivisi}.`,
+            url: "/agenda",
+          }
+        )
+      )
+    );
 
     return NextResponse.json({ success: true, agenda: newAgenda });
   } catch (error) {

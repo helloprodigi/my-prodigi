@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/myshift-reminder",
+      "schedule": "0 23 * * *"
+    }
+  ]
+}

@@ -1119,7 +1119,7 @@ export async function rejectJoinRequestAction(teamId: string, memberId: string) 
 
     const { data: team } = await adminDb
       .from("Team")
-      .select("id, name, leaderId, competition:Competition(title)")
+      .select("id, leaderId")
       .eq("id", teamId)
       .single();
 
@@ -1138,8 +1138,6 @@ export async function rejectJoinRequestAction(teamId: string, memberId: string) 
       return { success: false, error: "Permintaan gabung tidak valid atau sudah diproses." };
     }
 
-    const now = new Date().toISOString();
-
     const { error: deleteError } = await adminDb
       .from("TeamMember")
       .delete()
@@ -1147,28 +1145,6 @@ export async function rejectJoinRequestAction(teamId: string, memberId: string) 
 
     if (deleteError) {
       return { success: false, error: deleteError.message };
-    }
-
-    try {
-      const rejectCompTitle = unwrapRelation((team as any).competition as { title: string } | { title: string }[] | null)?.title ?? "Lomba";
-      const { error: notifError } = await adminDb.from("Notification").insert({
-        id: crypto.randomUUID(),
-        userId: member.userId,
-        type: "team_reject",
-        title: "Permintaan Gabung Ditolak",
-        description: `Permintaan bergabungmu ke tim "${team.name ?? "Tim"}" untuk kompetisi ${rejectCompTitle} ditolak oleh ketua tim. Kamu dapat mencari dan bergabung ke tim lain yang sesuai dengan skillmu.`,
-        isRead: false,
-        createdAt: now,
-      });
-      if (notifError) console.error("[Notification] rejectJoin insert error:", notifError.message);
-
-      await sendPushToUser(member.userId, {
-        title: "Permintaan Gabung Ditolak",
-        body: `Permintaan bergabungmu ke tim "${team.name ?? "Tim"}" untuk kompetisi ${rejectCompTitle} ditolak oleh ketua tim.`,
-        url: "/notifications",
-      });
-    } catch (notifErr) {
-      console.error("[Notification] rejectJoin unexpected error:", notifErr);
     }
 
     return { success: true };

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
 import { getCreatableDivisionNames, isKetuaOrWakilKetua } from "@/lib/permissions";
+import { createNotification } from "@/lib/notifications";
 
 function getAdminDb() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -59,7 +60,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const { data: existing } = await adminDb
     .from("ProgramKerja")
-    .select("divisi")
+    .select("divisi, nama, status, createdById")
     .eq("id", id)
     .single();
 
@@ -105,6 +106,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (status === "SELESAI" && existing.status !== "SELESAI" && existing.createdById) {
+    await createNotification(existing.createdById, {
+      type: "proker_acc",
+      title: "Program Kerja Disetujui",
+      description: `Program kerja "${existing.nama}" telah di-ACC oleh Ketua/Wakil Ketua.`,
+    }).catch((err) => console.error("[Notification] proker ACC failed:", err));
   }
 
   return NextResponse.json({ success: true });

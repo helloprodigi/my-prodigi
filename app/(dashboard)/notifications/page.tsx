@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { CheckCircle2, AlertCircle, CheckCheck, UserPlus, Trash2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, CheckCheck, UserPlus, Trash2, Clock, CalendarDays } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -16,7 +16,7 @@ interface Notification {
 }
 
 function NotifIcon({ type }: { type: string }) {
-  if (type === "member_joined" || type === "team_approve") {
+  if (type === "member_joined" || type === "team_approve" || type === "proker_acc") {
     return <CheckCircle2 className="w-5 h-5 text-[#22C55E] shrink-0 mt-0.5" />;
   }
   if (type === "team_reject" || type === "invite_declined") {
@@ -27,6 +27,12 @@ function NotifIcon({ type }: { type: string }) {
   }
   if (type === "request_join") {
     return <UserPlus className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />;
+  }
+  if (type === "agenda_invite") {
+    return <CalendarDays className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />;
+  }
+  if (type === "myshift_reminder") {
+    return <Clock className="w-5 h-5 text-[#FFC917] shrink-0 mt-0.5" />;
   }
   return <AlertCircle className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />;
 }

@@ -15,6 +15,18 @@ function urlBase64ToUint8Array(base64String: string) {
   return outputArray;
 }
 
+async function saveSubscription(subscription: PushSubscription) {
+  const serialized = JSON.parse(JSON.stringify(subscription));
+  const res = await fetch("/api/push/subscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(serialized),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to save push subscription (${res.status})`);
+  }
+}
+
 async function subscribeToPush() {
   const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   if (!vapidPublicKey) return;
@@ -25,12 +37,14 @@ async function subscribeToPush() {
     applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
   });
 
-  const serialized = JSON.parse(JSON.stringify(subscription));
-  await fetch("/api/push/subscribe", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(serialized),
-  });
+  try {
+    await saveSubscription(subscription);
+  } catch (err) {
+    // Don't leave a browser-side subscription that was never persisted
+    // server-side — it would silently block all future retries.
+    await subscription.unsubscribe().catch(() => {});
+    throw err;
+  }
 }
 
 export function PushNotificationManager() {
@@ -48,7 +62,16 @@ export function PushNotificationManager() {
       });
 
       const existingSub = await registration.pushManager.getSubscription();
-      if (cancelled || existingSub) return;
+      if (cancelled) return;
+
+      if (existingSub) {
+        // Re-sync in case a previous save silently failed to persist —
+        // this is idempotent (upsert on endpoint) so it's safe to repeat.
+        saveSubscription(existingSub).catch((err) =>
+          console.error("Failed to re-sync push subscription:", err)
+        );
+        return;
+      }
 
       if (Notification.permission === "denied") return;
       if (promptedRef.current) return;
@@ -94,7 +117,7 @@ export function PushNotificationManager() {
             </div>
           </div>
         ),
-        { duration: 10000 }
+        { duration: Infinity }
       );
     }
 

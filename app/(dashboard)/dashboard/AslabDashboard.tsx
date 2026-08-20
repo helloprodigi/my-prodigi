@@ -29,6 +29,61 @@ interface Proker {
   createdAt: string;
 }
 
+interface ProkerBar {
+  proker: Proker;
+  startCol: number;
+  span: number;
+  lane: number;
+  continuesBefore: boolean;
+  continuesAfter: boolean;
+}
+
+function startOfDay(date: Date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+// Packs each proker whose date range overlaps this week's 7 days into a
+// horizontal "lane" (greedy interval graph coloring) so overlapping ranges
+// stack instead of colliding, and returns the column/span each bar should
+// render at within the week's grid-cols-7 row.
+function computeWeekBars(weekDates: Date[], prokers: Proker[]): ProkerBar[] {
+  const weekStart = startOfDay(weekDates[0]).getTime();
+  const weekEnd = startOfDay(weekDates[6]).getTime();
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  const segments = prokers
+    .map((p) => {
+      const pStart = startOfDay(new Date(p.tanggalMulai)).getTime();
+      const pEnd = startOfDay(new Date(p.tanggalSelesai)).getTime();
+      if (Number.isNaN(pStart) || Number.isNaN(pEnd) || pEnd < weekStart || pStart > weekEnd) return null;
+
+      const clampedStart = Math.max(pStart, weekStart);
+      const clampedEnd = Math.min(pEnd, weekEnd);
+      const startCol = Math.round((clampedStart - weekStart) / DAY_MS);
+      const endCol = Math.round((clampedEnd - weekStart) / DAY_MS);
+
+      return {
+        proker: p,
+        startCol,
+        span: endCol - startCol + 1,
+        continuesBefore: pStart < weekStart,
+        continuesAfter: pEnd > weekEnd,
+      };
+    })
+    .filter((s): s is Omit<ProkerBar, "lane"> => s !== null)
+    .sort((a, b) => a.startCol - b.startCol || b.span - a.span);
+
+  const laneEndCol: number[] = [];
+  return segments.map((seg) => {
+    let lane = 0;
+    while (laneEndCol[lane] !== undefined && laneEndCol[lane] >= seg.startCol) lane++;
+    laneEndCol[lane] = seg.startCol + seg.span - 1;
+    return { ...seg, lane };
+  });
+}
+
 export default function AslabDashboard() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [prokers, setProkers] = useState<Proker[]>([]);
@@ -114,6 +169,14 @@ export default function AslabDashboard() {
       });
     }
   }, [currentDate, viewMode]);
+
+  const weeks = useMemo(() => {
+    const chunks: Date[][] = [];
+    for (let i = 0; i < calendarCells.length; i += 7) {
+      chunks.push(calendarCells.slice(i, i + 7));
+    }
+    return chunks;
+  }, [calendarCells]);
 
   const formattedDate = useMemo(() => {
     if (viewMode === "month") {
@@ -274,48 +337,55 @@ export default function AslabDashboard() {
                   </div>
                 ))}
                 
-                {calendarCells.map((cellDate, i) => {
-                  const isCurrentMonth = cellDate.getMonth() === currentDate.getMonth();
-                  const isToday = cellDate.toDateString() === new Date().toDateString();
-                  const isWeekend = cellDate.getDay() === 0 || cellDate.getDay() === 6;
-                  const dayNum = cellDate.getDate();
-                  
-                  const showAsFaded = viewMode === "month" && !isCurrentMonth;
-
-                  const dayProkers = prokers.filter(p => {
-                    const pDate = new Date(p.tanggalMulai);
-                    return pDate.toDateString() === cellDate.toDateString();
-                  });
+                {weeks.map((weekDates, weekIdx) => {
+                  const weekBars = computeWeekBars(weekDates, prokers);
 
                   return (
-                    <div
-                      key={i}
-                      className={`h-28 border-b border-r border-gray-200 p-1.5 relative ${isWeekend ? "bg-[#F8F9FA]" : "bg-white"}`}
-                    >
-                      <div className="flex justify-end mb-1">
-                        <span className={`text-xs w-6 h-6 flex items-center justify-center rounded-full font-semibold ${
-                          isToday ? "bg-[#FFC700] text-white shadow-sm" : 
-                          showAsFaded ? "text-gray-300" : "text-gray-700"
-                        }`}>
-                          {dayNum}
-                        </span>
-                      </div>
+                    <div key={weekIdx} className="col-span-7 grid grid-cols-7 relative">
+                      {weekDates.map((cellDate, dayIdx) => {
+                        const isCurrentMonth = cellDate.getMonth() === currentDate.getMonth();
+                        const isToday = cellDate.toDateString() === new Date().toDateString();
+                        const isWeekend = cellDate.getDay() === 0 || cellDate.getDay() === 6;
+                        const dayNum = cellDate.getDate();
 
-                      {/* Real Events */}
-                      <div className="space-y-1 overflow-y-auto max-h-[72px] custom-scrollbar">
-                        {dayProkers.map(p => {
-                          const division = divisions.find(d => d.name === p.divisi);
-                          return (
-                            <div 
-                              key={p.id} 
-                              className="w-full text-white text-[10px] leading-tight px-1.5 py-0.5 rounded truncate shadow-sm cursor-pointer hover:opacity-90 transition-opacity" 
-                              style={{ backgroundColor: division?.color || '#2979FF' }}
-                              title={p.nama}
-                            >
-                              {p.nama}
+                        const showAsFaded = viewMode === "month" && !isCurrentMonth;
+
+                        return (
+                          <div
+                            key={dayIdx}
+                            className={`h-28 border-b border-r border-gray-200 p-1.5 ${isWeekend ? "bg-[#F8F9FA]" : "bg-white"}`}
+                          >
+                            <div className="flex justify-end mb-1">
+                              <span className={`text-xs w-6 h-6 flex items-center justify-center rounded-full font-semibold ${
+                                isToday ? "bg-[#FFC700] text-white shadow-sm" :
+                                showAsFaded ? "text-gray-300" : "text-gray-700"
+                              }`}>
+                                {dayNum}
+                              </span>
                             </div>
-                          );
-                        })}
+                          </div>
+                        );
+                      })}
+
+                      {/* Proker bars spanning tanggalMulai - tanggalSelesai within this week */}
+                      <div className="absolute inset-x-0 top-[34px] bottom-0 overflow-hidden pointer-events-none">
+                        {weekBars.map((bar) => (
+                          <div
+                            key={`${bar.proker.id}-${weekIdx}`}
+                            className={`absolute h-[18px] flex items-center text-white text-[10px] leading-none px-1.5 truncate shadow-sm cursor-pointer hover:opacity-90 transition-opacity pointer-events-auto ${
+                              bar.continuesBefore ? "" : "rounded-l"
+                            } ${bar.continuesAfter ? "" : "rounded-r"}`}
+                            style={{
+                              left: `${(bar.startCol / 7) * 100}%`,
+                              width: `${(bar.span / 7) * 100}%`,
+                              top: bar.lane * 21,
+                              backgroundColor: divisions.find(d => d.name === bar.proker.divisi)?.color || '#2979FF',
+                            }}
+                            title={`${bar.proker.nama} (${new Date(bar.proker.tanggalMulai).toLocaleDateString('id-ID')} - ${new Date(bar.proker.tanggalSelesai).toLocaleDateString('id-ID')})`}
+                          >
+                            {bar.proker.nama}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   );
