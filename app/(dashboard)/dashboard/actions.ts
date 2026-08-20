@@ -320,7 +320,7 @@ export async function getTeamDetailAction(teamId: string): Promise<{
       .from("TeamMember")
       .select(
         `
-        id, status, slotNumber, userId, inviteToken,
+        id, status, slotNumber, userId, inviteToken, invitedAt,
         user:User!TeamMember_userId_fkey(name, skills, nomorWa, cvUrl)
       `,
       )
@@ -357,7 +357,7 @@ export async function getTeamDetailAction(teamId: string): Promise<{
         .from("TeamMember")
         .select(
           `
-          id, status, slotNumber, userId, inviteToken,
+          id, status, slotNumber, userId, inviteToken, invitedAt,
           user:User!TeamMember_userId_fkey(name, skills, nomorWa, cvUrl)
         `,
         )
@@ -429,6 +429,7 @@ export async function getTeamDetailAction(teamId: string): Promise<{
             cvUrl: memberUser?.cvUrl ?? null,
             userId: row.userId,
             inviteToken: row.inviteToken,
+            invitedAt: row.invitedAt,
           };
         }),
       },

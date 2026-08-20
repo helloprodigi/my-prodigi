@@ -31,12 +31,10 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
   const { id } = use(params);
   const router = useRouter();
   const [teamInfo, setTeamInfo] = useState<DashboardTeamDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshingMemberId, setRefreshingMemberId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const loadTeam = useCallback(async () => {
-    setIsLoading(true);
     const result = await getTeamDetailAction(id);
     if (result.success && result.data) {
       setTeamInfo(result.data);
@@ -44,7 +42,6 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
       toast.error(result.error ?? "Gagal memuat detail tim.");
       router.push("/dashboard");
     }
-    setIsLoading(false);
   }, [id, router]);
 
   useEffect(() => {
@@ -95,7 +92,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
   };
 
   const handleRefreshMember = async (memberId: string) => {
-    setIsRefreshing(true);
+    setRefreshingMemberId(memberId);
     try {
       const result = await refreshMemberAction(id, memberId);
       if (result.success) {
@@ -105,7 +102,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
         toast.error(result.error ?? "Gagal memperbarui rekomendasi anggota.");
       }
     } finally {
-      setIsRefreshing(false);
+      setRefreshingMemberId(null);
     }
   };
 
@@ -171,7 +168,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
     });
   };
 
-  if (isLoading || !teamInfo) {
+  if (!teamInfo) {
     return <LoadingSpinner />;
   }
 
@@ -273,11 +270,11 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                     <button
                       type="button"
                       onClick={() => handleRefreshMember(member.id)}
-                      disabled={isRefreshing}
+                      disabled={refreshingMemberId === member.id}
                       title="Ganti kandidat"
                       className="bg-[#FFC700] text-white p-1.5 rounded-[4px] hover:bg-[#e6b400] transition-colors inline-flex items-center justify-center shadow-sm disabled:opacity-50"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-3.5 h-3.5 ${refreshingMemberId === member.id ? "animate-spin" : ""}`}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
                       </svg>
                     </button>
@@ -319,6 +316,14 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                           Tolak
                         </button>
                       </>
+                    ) : member.invitedAt ? (
+                      <button
+                        type="button"
+                        disabled
+                        className="bg-gray-100 text-gray-400 font-bold px-5 py-2 rounded-[4px] text-[11px] cursor-not-allowed"
+                      >
+                        Invited
+                      </button>
                     ) : (
                       <button
                         type="button"
@@ -355,11 +360,11 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                         <button
                           type="button"
                           onClick={() => handleRefreshMember(member.id)}
-                          disabled={isRefreshing}
+                          disabled={refreshingMemberId === member.id}
                           title="Roll — ganti kandidat"
                           className="bg-[#FFC700] text-white p-1.5 rounded-[4px] hover:bg-[#e6b400] transition-colors inline-flex items-center justify-center shadow-sm disabled:opacity-50"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-3.5 h-3.5 ${refreshingMemberId === member.id ? "animate-spin" : ""}`}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
                           </svg>
                         </button>
@@ -431,6 +436,14 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                                 Tolak
                               </button>
                             </>
+                          ) : member.invitedAt ? (
+                            <button
+                              type="button"
+                              disabled
+                              className="bg-gray-100 text-gray-400 font-bold px-5 py-2 rounded-[4px] text-[11px] cursor-not-allowed"
+                            >
+                              Invited
+                            </button>
                           ) : (
                             <button
                               type="button"

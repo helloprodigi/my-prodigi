@@ -19,6 +19,7 @@ export interface DashboardTeamMember {
   cvUrl: string | null;
   userId: string;
   inviteToken?: string | null;
+  invitedAt?: string | null;
 }
 
 export interface DashboardTeamCard {
