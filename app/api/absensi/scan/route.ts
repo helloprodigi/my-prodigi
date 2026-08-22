@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     // Determine if this is an Agenda (kegiatan divisi / event) or a standard MyShift
     // Agenda: bisa absen dimana saja (tidak perlu berada di LAB DTC)
     // MyShift: wajib berada di area LAB DTC (radius <= 50m)
-    const isAgenda = Boolean(agenda.deskripsi) || agenda.createdBy?.role !== "admin";
+    const isAgenda = Boolean(agenda.deskripsi);
 
     if (!isAgenda) {
       // MyShift requires location check in LAB DTC area

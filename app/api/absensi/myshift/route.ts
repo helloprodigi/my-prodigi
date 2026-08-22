@@ -173,10 +173,7 @@ export async function GET(req: Request) {
           gte: startOfDay,
           lte: endOfDay
         },
-        deskripsi: null,
-        createdBy: {
-          role: "admin"
-        }
+        deskripsi: null
       },
       include: {
         assignedUsers: {
@@ -272,7 +269,7 @@ export async function GET(req: Request) {
         waktuSelesai: agenda.waktuSelesai,
         kodeQrDatang: agenda.kodeQrDatang,
         kodeQrPulang: agenda.kodeQrPulang,
-        jenis: agenda.createdBy?.role === "admin" && !agenda.deskripsi ? "MyShift" : "Agenda",
+        jenis: !agenda.deskripsi ? "MyShift" : "Agenda",
         myStatus: myRecord ? myRecord.status : "BELUM ABSEN",
         waktuDatang: myRecord?.waktuDatang || null,
         waktuPulang: myRecord?.waktuPulang || null,

@@ -187,16 +187,24 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isScanningRef = useRef(false);
 
+  const locationRef = useRef<{lat: number, lng: number} | null>(location);
+  const onSuccessRef = useRef(onSuccess);
+  
+  // Sync refs when props change so we don't need them in useCallback deps
+  useEffect(() => {
+    locationRef.current = location;
+  }, [location]);
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
   const startScanner = useCallback(async () => {
     setIsInitializing(true);
     setCameraError(null);
     setScanError(null);
 
-    const element = document.getElementById("qr-reader");
-    if (element) {
-      element.innerHTML = "";
-    }
-
+    // Don't manually clear innerHTML before stop() as it breaks html5-qrcode
     if (scannerRef.current) {
       try {
         if (scannerRef.current.isScanning) {
@@ -206,6 +214,11 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
       } catch (e) {
         console.warn("Cleanup previous scanner instance error:", e);
       }
+    }
+
+    const element = document.getElementById("qr-reader");
+    if (element) {
+      element.innerHTML = "";
     }
 
     const scanner = new Html5Qrcode("qr-reader");
@@ -244,8 +257,8 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
           body: JSON.stringify({
             token,
             type,
-            lat: location?.lat ?? null,
-            lng: location?.lng ?? null
+            lat: locationRef.current?.lat ?? null,
+            lng: locationRef.current?.lng ?? null
           })
         });
 
@@ -265,7 +278,7 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
             await scannerRef.current.stop();
             scannerRef.current.clear();
           }
-          onSuccess();
+          onSuccessRef.current();
         }
       } catch (err) {
         console.error(err);
@@ -328,7 +341,7 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
         );
       }
     }
-  }, [location, onSuccess]);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
