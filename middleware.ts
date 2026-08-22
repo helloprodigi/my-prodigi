@@ -93,7 +93,10 @@ export async function middleware(request: NextRequest) {
                            pathname.startsWith('/my-divisi') ||
                            pathname.startsWith('/myshift') ||
                            pathname.startsWith('/profile') ||
-                           pathname.startsWith('/team-invite');
+                           pathname.startsWith('/team-invite') ||
+                           pathname.startsWith('/agenda') ||
+                           pathname.startsWith('/absensi') ||
+                           pathname.startsWith('/faq');
 
   // Redirect root to /dashboard
   if (pathname === '/') {
@@ -147,21 +150,63 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(redirectUrl)
       }
       
-      // Role-based route protection (based on the currently active/viewed role)
-      if (pathname.startsWith('/absensi') && !effectiveIsAdmin) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
-      }
+      // STRICT ROUTE WHITELIST based on Effective Role
+      // Only apply whitelist to fully onboarded users navigating to other pages
+      if (isOnboarded && (!isAslab || isAslabOnboarded)) {
+        const tab = request.nextUrl.searchParams.get('tab');
+        const view = request.nextUrl.searchParams.get('view');
+        
+        let allowed = false;
 
-      if (pathname.startsWith('/myshift') && !effectiveIsAslab && !effectiveIsAdmin) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
-      }
+        if (effectiveIsAdmin) {
+          if (pathname === '/dashboard') allowed = true;
+          else if (pathname === '/myshift') allowed = true;
+          else if (pathname === '/agenda') allowed = true;
+          else if (pathname.startsWith('/absensi')) allowed = true; // Added to prevent breaking Riwayat Agenda
+          else if (pathname === '/profile') allowed = true;
+          else if (pathname === '/competitions') {
+            if (!tab && !view) allowed = true; // default tab (Belmawa)
+            else if (tab === 'Non-Belmawa' && !view) allowed = true;
+            else if (tab === 'Internal' && !view) allowed = true;
+            else if (tab === 'Preview Lomba' && !view) allowed = true;
+            else if (view === 'draft' && tab === 'Guidebook') allowed = true;
+          }
+        } else if (effectiveIsAslab) {
+          if (pathname === '/dashboard') allowed = true;
+          else if (pathname === '/aslab-proker') allowed = true;
+          else if (pathname === '/aslab-onboarding') allowed = true;
+          else if (pathname === '/my-divisi') allowed = true;
+          else if (pathname === '/myshift') allowed = true;
+          else if (pathname === '/agenda') allowed = true;
+          else if (pathname.startsWith('/absensi')) allowed = true; // Added to prevent breaking Riwayat Agenda
+          else if (pathname === '/notifications') allowed = true;
+          else if (pathname === '/profile') allowed = true;
+          else if (pathname === '/competitions') {
+            if (!tab && !view) allowed = true;
+            else if (tab === 'Proposal' && !view) allowed = true;
+            else if (tab === 'Pitch Deck' && !view) allowed = true;
+          }
+        } else { // effective role is talent
+          if (pathname === '/dashboard') allowed = true;
+          else if (pathname.startsWith('/dashboard/team/')) allowed = true;
+          else if (pathname.startsWith('/team-invite/')) allowed = true; // Added to prevent breaking invites
+          else if (pathname === '/matchmaking') allowed = true;
+          else if (pathname === '/faq') allowed = true;
+          else if (pathname === '/notifications') allowed = true;
+          else if (pathname === '/profile') allowed = true;
+          else if (pathname === '/competitions') {
+            if (!tab && !view) allowed = true;
+            else if (tab === 'Non-Belmawa' && !view) allowed = true;
+            else if (tab === 'Internal' && !view) allowed = true;
+            else if (view === 'draft' && !tab) allowed = true;
+            else if (view === 'draft' && tab === 'Proposal') allowed = true;
+            else if (view === 'draft' && tab === 'Pitch Deck') allowed = true;
+          }
+        }
 
-      if (pathname.startsWith('/agenda') && !effectiveIsAdmin && !effectiveIsAslab) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
-      }
-
-      if (pathname.startsWith('/matchmaking') && effectiveIsAdmin) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
+        if (!allowed && pathname !== '/dashboard') {
+          return NextResponse.redirect(new URL('/dashboard', request.url));
+        }
       }
     }
   }
