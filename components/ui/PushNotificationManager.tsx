@@ -95,9 +95,14 @@ export function PushNotificationManager() {
                       const permission = await Notification.requestPermission();
                       if (permission === "granted") {
                         await subscribeToPush();
+                        toast.success("Notifikasi berhasil diaktifkan!");
+                      } else {
+                        toast.error("Izin notifikasi ditolak. Aktifkan lewat pengaturan browser/device.");
                       }
                     } catch (err) {
                       console.error("Failed to subscribe to push notifications:", err);
+                      const message = err instanceof Error ? err.message : String(err);
+                      toast.error(`Gagal mengaktifkan notifikasi: ${message}`, { duration: 8000 });
                     }
                   }}
                   className="text-xs font-semibold text-[#111] bg-[#FFC917] px-3 py-1.5 rounded-lg"
