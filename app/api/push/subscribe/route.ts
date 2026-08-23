@@ -24,12 +24,13 @@ export async function POST(req: Request) {
 
     const { error } = await adminDb.from("PushSubscription").upsert(
       {
+        id: crypto.randomUUID(),
         userId: user.id,
         endpoint,
         p256dh: keys.p256dh,
         auth: keys.auth,
       },
-      { onConflict: "endpoint" }
+      { onConflict: "endpoint", ignoreDuplicates: false }
     );
 
     if (error) {
