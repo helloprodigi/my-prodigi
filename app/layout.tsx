@@ -8,9 +8,14 @@ const jakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
 });
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://my.helloprodigi.pro";
+const title = "MyProdigi by DTC PRODIGI";
+const description = "Compete, connect, and grow with MyProdigi";
+
 export const metadata: Metadata = {
-  title: "MyProdigi by DTC PRODIGI",
-  description: "Compete, connect, and grow with MyProdigi",
+  metadataBase: new URL(baseUrl),
+  title,
+  description,
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -19,6 +24,24 @@ export const metadata: Metadata = {
   },
   icons: {
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title,
+    description,
+    url: baseUrl,
+    siteName: "MyProdigi",
+    images: [{ url: "/icon-512x512.png", width: 512, height: 512 }],
+    locale: "id_ID",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title,
+    description,
+    images: ["/icon-512x512.png"],
   },
 };
 
