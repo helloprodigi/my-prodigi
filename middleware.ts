@@ -98,10 +98,13 @@ export async function middleware(request: NextRequest) {
                            pathname.startsWith('/absensi') ||
                            pathname.startsWith('/faq');
 
-  // Redirect root to /dashboard
+  // Redirect root to /dashboard for logged-in users, /login for anonymous
+  // visitors (and crawlers) — going straight there avoids bouncing through
+  // /dashboard, which robots.txt disallows and would otherwise make Google
+  // treat "/" itself as blocked.
   if (pathname === '/') {
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/dashboard'
+    redirectUrl.pathname = user ? '/dashboard' : '/login'
     return NextResponse.redirect(redirectUrl)
   }
 
