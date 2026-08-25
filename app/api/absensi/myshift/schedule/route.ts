@@ -159,6 +159,36 @@ export async function POST(req: Request) {
       }
     }
 
+    // Resolve userId-by-NIM for every assigned aslab up front, in a single
+    // query, instead of one findMany + updateMany per session inside the
+    // transaction below. That N+1 pattern was slow enough over the network
+    // (each session round-tripping separately) that it could blow past
+    // Prisma's default 5s interactive-transaction timeout in production
+    // (higher latency to the DB than local dev), aborting the whole save
+    // with a generic 500 even though nothing was actually wrong with the data.
+    const allNims = Array.from(
+      new Set(
+        days.flatMap((day: any) =>
+          Array.isArray(day.sessions)
+            ? day.sessions.flatMap((session: any) =>
+                (session.assignedAslabs ?? []).map((a: any) => a.nim).filter(Boolean)
+              )
+            : []
+        )
+      )
+    ) as string[];
+
+    const usersByNim = new Map<string, string>();
+    if (allNims.length > 0) {
+      const existingUsers = await prisma.user.findMany({
+        where: { nim: { in: allNims } },
+        select: { id: true, nim: true }
+      });
+      for (const eu of existingUsers) {
+        if (eu.nim) usersByNim.set(eu.nim, eu.id);
+      }
+    }
+
     // Perform atomic update inside transaction
     await prisma.$transaction(async (tx) => {
       // 1. Clear existing template schedules
@@ -173,7 +203,7 @@ export async function POST(req: Request) {
         if (!Array.isArray(day.sessions)) continue;
 
         for (const session of day.sessions) {
-          const createdSchedule = await tx.myShiftSchedule.create({
+          await tx.myShiftSchedule.create({
             data: {
               hari: dayName,
               dayOfWeek: dayOfWeek,
@@ -183,7 +213,11 @@ export async function POST(req: Request) {
               createdById: user.id,
               assignedAslabs: {
                 create: session.assignedAslabs.map((aslab: any) => ({
-                  userId: aslab.userId || (aslab.id?.startsWith("static-") ? null : aslab.id) || null,
+                  userId:
+                    (aslab.nim && usersByNim.get(aslab.nim)) ||
+                    aslab.userId ||
+                    (aslab.id?.startsWith("static-") ? null : aslab.id) ||
+                    null,
                   nama: aslab.nama,
                   nim: aslab.nim,
                   divisi: aslab.divisi || "Asisten Lab",
@@ -192,26 +226,9 @@ export async function POST(req: Request) {
               }
             }
           });
-
-          // Link any user IDs if missing by NIM
-          const nims = session.assignedAslabs.map((a: any) => a.nim).filter(Boolean);
-          if (nims.length > 0) {
-            const existingUsers = await tx.user.findMany({
-              where: { nim: { in: nims } },
-              select: { id: true, nim: true }
-            });
-            for (const eu of existingUsers) {
-              if (eu.nim) {
-                await tx.myShiftScheduleAssignment.updateMany({
-                  where: { scheduleId: createdSchedule.id, nim: eu.nim },
-                  data: { userId: eu.id }
-                });
-              }
-            }
-          }
         }
       }
-    });
+    }, { timeout: 20000 });
 
     // 3. Immediately sync today's absensi agendas if today matches any of the schedules
     try {
@@ -221,6 +238,8 @@ export async function POST(req: Request) {
       const wibYear = nowWib.getUTCFullYear();
       const wibMonth = nowWib.getUTCMonth();
       const wibDay = nowWib.getUTCDate();
+      const startOfDay = new Date(Date.UTC(wibYear, wibMonth, wibDay, 0, 0, 0, 0) - WIB_OFFSET_MS);
+      const endOfDay = new Date(Date.UTC(wibYear, wibMonth, wibDay, 23, 59, 59, 999) - WIB_OFFSET_MS);
 
       const todayTemplates = await prisma.myShiftSchedule.findMany({
         where: { dayOfWeek: todayWibDayOfWeek },
@@ -234,35 +253,55 @@ export async function POST(req: Request) {
         const sessionStart = new Date(Date.UTC(wibYear, wibMonth, wibDay, startH, startM, 0, 0) - WIB_OFFSET_MS);
         const sessionEnd = new Date(Date.UTC(wibYear, wibMonth, wibDay, endH, endM, 0, 0) - WIB_OFFSET_MS);
 
+        // Match by name + calendar day (not exact time) so editing a
+        // template's time updates today's already-generated instance in
+        // place instead of orphaning it and creating a duplicate.
         let existingAgenda = await prisma.absensiAgenda.findFirst({
           where: {
-            waktuMulai: sessionStart,
-            waktuSelesai: sessionEnd,
-            nama: template.namaSesi || "Shift"
+            waktuMulai: { gte: startOfDay, lte: endOfDay },
+            nama: template.namaSesi || "Shift",
+            deskripsi: null
           },
           include: { assignedUsers: true }
         });
 
-        if (!existingAgenda) {
-          await prisma.absensiAgenda.create({
-            data: {
-              nama: template.namaSesi || "Shift",
-              deskripsi: null,
-              divisi: "Asisten Lab",
-              waktuMulai: sessionStart,
-              waktuSelesai: sessionEnd,
-              kodeQrDatang: crypto.randomUUID(),
-              kodeQrPulang: crypto.randomUUID(),
-              createdById: user.id,
-              assignedUsers: {
-                create: template.assignedAslabs.map(aslab => ({
-                  nama: aslab.nama,
-                  nim: aslab.nim,
-                  userId: aslab.userId
-                }))
-              }
-            }
+        if (existingAgenda && (
+          existingAgenda.waktuMulai.getTime() !== sessionStart.getTime() ||
+          existingAgenda.waktuSelesai.getTime() !== sessionEnd.getTime()
+        )) {
+          existingAgenda = await prisma.absensiAgenda.update({
+            where: { id: existingAgenda.id },
+            data: { waktuMulai: sessionStart, waktuSelesai: sessionEnd },
+            include: { assignedUsers: true }
           });
+        }
+
+        if (!existingAgenda) {
+          try {
+            await prisma.absensiAgenda.create({
+              data: {
+                nama: template.namaSesi || "Shift",
+                deskripsi: null,
+                divisi: "Asisten Lab",
+                waktuMulai: sessionStart,
+                waktuSelesai: sessionEnd,
+                kodeQrDatang: crypto.randomUUID(),
+                kodeQrPulang: crypto.randomUUID(),
+                createdById: user.id,
+                assignedUsers: {
+                  create: template.assignedAslabs.map(aslab => ({
+                    nama: aslab.nama,
+                    nim: aslab.nim,
+                    userId: aslab.userId
+                  }))
+                }
+              }
+            });
+          } catch (createErr: any) {
+            // P2002 = another request already created this agenda concurrently.
+            // Nothing more to do here — it already has the current template's data.
+            if (createErr?.code !== "P2002") throw createErr;
+          }
         } else {
           if (!existingAgenda.kodeQrDatang || !existingAgenda.kodeQrPulang) {
             await prisma.absensiAgenda.update({
@@ -275,7 +314,7 @@ export async function POST(req: Request) {
           }
           for (const aslab of template.assignedAslabs) {
             const alreadyAssigned = existingAgenda.assignedUsers.some(
-              au => (au.nim && aslab.nim && au.nim.trim() === aslab.nim.trim()) || 
+              au => (au.nim && aslab.nim && au.nim.trim() === aslab.nim.trim()) ||
                     (au.userId && aslab.userId && au.userId === aslab.userId)
             );
             if (!alreadyAssigned) {
@@ -289,6 +328,24 @@ export async function POST(req: Request) {
               }).catch(() => {});
             }
           }
+
+          // Remove assignments no longer present in the (just-saved) template
+          const templateNims = new Set(
+            template.assignedAslabs.map(a => a.nim?.trim().toLowerCase()).filter(Boolean)
+          );
+          const templateUserIds = new Set(
+            template.assignedAslabs.map(a => a.userId).filter(Boolean)
+          );
+          const toUnassign = existingAgenda.assignedUsers.filter(au => {
+            const matchesNim = au.nim && templateNims.has(au.nim.trim().toLowerCase());
+            const matchesUserId = au.userId && templateUserIds.has(au.userId);
+            return !matchesNim && !matchesUserId;
+          });
+          if (toUnassign.length > 0) {
+            await prisma.shiftAssignment.deleteMany({
+              where: { id: { in: toUnassign.map(a => a.id) } }
+            }).catch(() => {});
+          }
         }
       }
     } catch (syncErr) {
@@ -298,6 +355,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, message: "Jadwal shift berhasil diperbarui!" });
   } catch (error) {
     console.error("Error saving MyShift schedule:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Internal Server Error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

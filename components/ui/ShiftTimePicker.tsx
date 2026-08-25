@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Calendar, Clock, X, Check, AlertCircle } from "lucide-react";
+import { Clock, X, Check, AlertCircle } from "lucide-react";
 import { formatShiftTimeDisplay } from "./WaktuPelaksanaanPicker";
 
 interface ShiftTimePickerProps {
@@ -9,7 +9,6 @@ interface ShiftTimePickerProps {
   waktuMulai: string; // e.g. '08:00'
   waktuSelesai: string; // e.g. '11:30'
   onChange: (waktuMulai: string, waktuSelesai: string) => void;
-  placeholder?: string;
   className?: string;
 }
 
@@ -23,7 +22,6 @@ export default function ShiftTimePicker({
   waktuMulai,
   waktuSelesai,
   onChange,
-  placeholder = "Pilih waktu pelaksanaan",
   className = ""
 }: ShiftTimePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -81,26 +79,13 @@ export default function ShiftTimePicker({
 
   return (
     <div className={`w-full ${className}`}>
-      {/* Trigger Card matching user screenshot */}
+      {/* Trigger */}
       <div
         onClick={handleOpen}
-        className="w-full bg-[#F8F9FB] hover:bg-[#F1F3F7] active:bg-[#EAECEF] border border-gray-200/90 hover:border-gray-300 rounded-2xl px-4 py-3 flex items-center justify-between cursor-pointer transition-all duration-150 shadow-sm group select-none"
+        role="button"
+        className="w-full bg-[#F5F5F5] hover:bg-[#EFEFEF] rounded-lg px-4 py-3 cursor-pointer transition-colors select-none"
       >
-        <div className="flex-1 pr-3">
-          {displayValue ? (
-            <span className="text-[#0B132B] font-medium text-sm sm:text-base block">
-              {displayValue}
-            </span>
-          ) : (
-            <span className="text-gray-400 font-normal text-sm sm:text-base block">
-              {placeholder}
-            </span>
-          )}
-        </div>
-
-        <div className="text-gray-500 group-hover:text-gray-700 transition-colors flex-shrink-0">
-          <Calendar className="w-5 h-5 stroke-[1.75]" />
-        </div>
+        <span className="text-sm text-[#0A1024]">{displayValue}</span>
       </div>
 
       {/* Modal */}

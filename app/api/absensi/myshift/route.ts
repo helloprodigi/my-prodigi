@@ -77,14 +77,27 @@ export async function GET(req: Request) {
     const startOfDay = new Date(Date.UTC(wibYear, wibMonth, wibDay, 0, 0, 0, 0) - WIB_OFFSET_MS);
     const endOfDay = new Date(Date.UTC(wibYear, wibMonth, wibDay, 23, 59, 59, 999) - WIB_OFFSET_MS);
 
+    // Only materialize (auto-create) concrete agenda instances within a
+    // reasonable window around today — otherwise someone repeatedly clicking
+    // "next day" would silently spawn agenda + assignment rows forever into
+    // the future (or past) with nobody ever attending them.
+    const nowWibForBounds = new Date(Date.now() + WIB_OFFSET_MS);
+    const todayStartOfDay = new Date(
+      Date.UTC(nowWibForBounds.getUTCFullYear(), nowWibForBounds.getUTCMonth(), nowWibForBounds.getUTCDate(), 0, 0, 0, 0) - WIB_OFFSET_MS
+    );
+    const daysFromToday = Math.round((startOfDay.getTime() - todayStartOfDay.getTime()) / (24 * 60 * 60 * 1000));
+    const withinAutoGenerateWindow = daysFromToday >= -180 && daysFromToday <= 60;
+
     // AUTO-GENERATE / SYNC: Check if there are recurring templates in MyShiftSchedule for this dayOfWeek
-    const recurringTemplates = await prisma.myShiftSchedule.findMany({
-      where: { dayOfWeek: wibDayOfWeek },
-      include: {
-        assignedAslabs: true
-      },
-      orderBy: { waktuMulai: "asc" }
-    });
+    const recurringTemplates = withinAutoGenerateWindow
+      ? await prisma.myShiftSchedule.findMany({
+          where: { dayOfWeek: wibDayOfWeek },
+          include: {
+            assignedAslabs: true
+          },
+          orderBy: { waktuMulai: "asc" }
+        })
+      : [];
 
     if (recurringTemplates.length > 0) {
       for (const template of recurringTemplates) {
@@ -94,45 +107,81 @@ export async function GET(req: Request) {
         const sessionStart = new Date(Date.UTC(wibYear, wibMonth, wibDay, startH, startM, 0, 0) - WIB_OFFSET_MS);
         const sessionEnd = new Date(Date.UTC(wibYear, wibMonth, wibDay, endH, endM, 0, 0) - WIB_OFFSET_MS);
 
-        // Check if an agenda already exists for this exact time and session name
+        // Check if an agenda already exists for this session on this calendar
+        // day — match by name + day only (not exact time), so that editing a
+        // template's time later updates the existing instance in place
+        // instead of leaving the old one orphaned and creating a duplicate.
         let existingAgenda = await prisma.absensiAgenda.findFirst({
           where: {
-            waktuMulai: sessionStart,
-            waktuSelesai: sessionEnd,
-            nama: template.namaSesi || "Shift"
+            waktuMulai: { gte: startOfDay, lte: endOfDay },
+            nama: template.namaSesi || "Shift",
+            deskripsi: null
           },
           include: {
             assignedUsers: true
           }
         });
 
+        if (existingAgenda && (
+          existingAgenda.waktuMulai.getTime() !== sessionStart.getTime() ||
+          existingAgenda.waktuSelesai.getTime() !== sessionEnd.getTime()
+        )) {
+          existingAgenda = await prisma.absensiAgenda.update({
+            where: { id: existingAgenda.id },
+            data: { waktuMulai: sessionStart, waktuSelesai: sessionEnd },
+            include: { assignedUsers: true }
+          });
+        }
+
+        let wasFreshlyCreated = false;
         if (!existingAgenda) {
           const kodeQrDatang = crypto.randomUUID();
           const kodeQrPulang = crypto.randomUUID();
 
-          existingAgenda = await prisma.absensiAgenda.create({
-            data: {
-              nama: template.namaSesi || "Shift",
-              deskripsi: null, // Null indicates a standard MyShift
-              divisi: "Asisten Lab",
-              waktuMulai: sessionStart,
-              waktuSelesai: sessionEnd,
-              kodeQrDatang,
-              kodeQrPulang,
-              createdById: template.createdById || user.id,
-              assignedUsers: {
-                create: template.assignedAslabs.map(aslab => ({
-                  nama: aslab.nama,
-                  nim: aslab.nim,
-                  userId: aslab.userId
-                }))
+          try {
+            existingAgenda = await prisma.absensiAgenda.create({
+              data: {
+                nama: template.namaSesi || "Shift",
+                deskripsi: null, // Null indicates a standard MyShift
+                divisi: "Asisten Lab",
+                waktuMulai: sessionStart,
+                waktuSelesai: sessionEnd,
+                kodeQrDatang,
+                kodeQrPulang,
+                createdById: template.createdById || user.id,
+                assignedUsers: {
+                  create: template.assignedAslabs.map(aslab => ({
+                    nama: aslab.nama,
+                    nim: aslab.nim,
+                    userId: aslab.userId
+                  }))
+                }
+              },
+              include: {
+                assignedUsers: true
               }
-            },
-            include: {
-              assignedUsers: true
+            });
+            wasFreshlyCreated = true;
+          } catch (createErr: any) {
+            // P2002 = unique constraint violation: a concurrent request
+            // (findFirst-then-create race) already created this exact
+            // session's agenda for today. Fall back to it instead of 500ing.
+            if (createErr?.code === "P2002") {
+              existingAgenda = await prisma.absensiAgenda.findFirst({
+                where: {
+                  waktuMulai: { gte: startOfDay, lte: endOfDay },
+                  nama: template.namaSesi || "Shift",
+                  deskripsi: null
+                },
+                include: { assignedUsers: true }
+              });
+            } else {
+              throw createErr;
             }
-          });
-        } else {
+          }
+        }
+
+        if (existingAgenda && !wasFreshlyCreated) {
           // Ensure QR codes exist
           if (!existingAgenda.kodeQrDatang || !existingAgenda.kodeQrPulang) {
             const newDatang = existingAgenda.kodeQrDatang || crypto.randomUUID();
@@ -148,7 +197,7 @@ export async function GET(req: Request) {
           // Sync assigned users from template
           for (const aslab of template.assignedAslabs) {
             const alreadyAssigned = existingAgenda.assignedUsers.some(
-              au => (au.nim && aslab.nim && au.nim.trim() === aslab.nim.trim()) || 
+              au => (au.nim && aslab.nim && au.nim.trim() === aslab.nim.trim()) ||
                     (au.userId && aslab.userId && au.userId === aslab.userId)
             );
             if (!alreadyAssigned) {
@@ -161,6 +210,26 @@ export async function GET(req: Request) {
                 }
               }).catch(() => {});
             }
+          }
+
+          // Remove assignments for aslabs that were unassigned from the
+          // template (e.g. admin removed them after the agenda was already
+          // generated) — otherwise they'd stay able to check in indefinitely.
+          const templateNims = new Set(
+            template.assignedAslabs.map(a => a.nim?.trim().toLowerCase()).filter(Boolean)
+          );
+          const templateUserIds = new Set(
+            template.assignedAslabs.map(a => a.userId).filter(Boolean)
+          );
+          const toUnassign = existingAgenda.assignedUsers.filter(au => {
+            const matchesNim = au.nim && templateNims.has(au.nim.trim().toLowerCase());
+            const matchesUserId = au.userId && templateUserIds.has(au.userId);
+            return !matchesNim && !matchesUserId;
+          });
+          if (toUnassign.length > 0) {
+            await prisma.shiftAssignment.deleteMany({
+              where: { id: { in: toUnassign.map(a => a.id) } }
+            }).catch(() => {});
           }
         }
       }

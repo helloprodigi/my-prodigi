@@ -130,6 +130,8 @@ export default function MyShiftPage() {
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [agendas, setAgendas] = useState<Agenda[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isLoadingAgendas, setIsLoadingAgendas] = useState(true);
+  const [agendaLoadError, setAgendaLoadError] = useState(false);
   
   // QR Generator Modal
   const [showQRModal, setShowQRModal] = useState(false);
@@ -170,6 +172,8 @@ export default function MyShiftPage() {
   }, []);
 
   const fetchAgendas = (date: Date) => {
+    setIsLoadingAgendas(true);
+    setAgendaLoadError(false);
     fetch(`/api/absensi/myshift?date=${date.toISOString()}`)
       .then(res => res.json())
       .then(data => {
@@ -177,9 +181,14 @@ export default function MyShiftPage() {
           setAgendas(data);
         } else {
           setAgendas([]);
+          setAgendaLoadError(true);
         }
       })
-      .catch(() => setAgendas([]));
+      .catch(() => {
+        setAgendas([]);
+        setAgendaLoadError(true);
+      })
+      .finally(() => setIsLoadingAgendas(false));
   };
 
   useEffect(() => {
@@ -603,7 +612,11 @@ export default function MyShiftPage() {
               <div className="flex items-center gap-2 bg-yellow-50 text-yellow-800 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border border-yellow-200/80">
                 <AlertCircle className="w-4 h-4 text-yellow-700 shrink-0" />
                 <span>
-                  Rentang Jadwal: {formatTime(agendas[0].waktuMulai)} - {formatTime(agendas[agendas.length-1].waktuSelesai)} WIB (Lokasi: LAB DTC)
+                  Rentang Jadwal: {formatTime(
+                    agendas.reduce((earliest, a) => a.waktuMulai < earliest ? a.waktuMulai : earliest, agendas[0].waktuMulai)
+                  )} - {formatTime(
+                    agendas.reduce((latest, a) => a.waktuSelesai > latest ? a.waktuSelesai : latest, agendas[0].waktuSelesai)
+                  )} WIB (Lokasi: LAB DTC)
                 </span>
               </div>
             )}
@@ -611,7 +624,24 @@ export default function MyShiftPage() {
 
           {/* Grid of Aslabs */}
           <div className="space-y-10">
-            {agendas.length === 0 ? (
+            {isLoadingAgendas ? (
+              <div className="text-center py-20 flex flex-col items-center">
+                <Loader2 className="w-10 h-10 mb-4 text-[#FFC727] animate-spin" />
+                <p className="font-semibold text-gray-500 text-sm">Memuat jadwal shift...</p>
+              </div>
+            ) : agendaLoadError ? (
+              <div className="text-center py-20 text-gray-400 flex flex-col items-center">
+                <AlertCircle className="w-12 h-12 mb-4 text-red-300" />
+                <p className="font-semibold text-gray-700 text-base">Gagal memuat jadwal shift.</p>
+                <button
+                  type="button"
+                  onClick={() => fetchAgendas(selectedDate)}
+                  className="mt-4 px-4 py-2 bg-[#0B132B] hover:bg-[#1a2b5e] text-white rounded-xl text-xs font-semibold transition-colors"
+                >
+                  Coba Lagi
+                </button>
+              </div>
+            ) : agendas.length === 0 ? (
               <div className="text-center py-20 text-gray-400 flex flex-col items-center">
                 <Clock className="w-12 h-12 mb-4 text-gray-300" />
                 <p className="font-semibold text-gray-700 text-base">
@@ -690,17 +720,9 @@ export default function MyShiftPage() {
           <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             
             {/* Modal Header */}
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/70">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-[#0B132B] flex items-center justify-center text-[#FFC727] shadow-sm">
-                  <CalendarDays className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-[#0B132B]">Atur Jadwal Piket MyShift</h2>
-                  <p className="text-xs text-gray-500">Kelola jadwal berulang mingguan per hari (Format 24 Jam)</p>
-                </div>
-              </div>
-              <button 
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/70 flex-shrink-0">
+              <h2 className="text-xl font-bold text-[#0B132B]">Atur Jadwal Piket MyShift</h2>
+              <button
                 onClick={() => setShowScheduleModal(false)}
                 className="p-2 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
               >
@@ -709,7 +731,7 @@ export default function MyShiftPage() {
             </div>
 
             {/* Day Tabs Navigation */}
-            <div className="bg-gray-100/70 border-b border-gray-200 px-6 py-3 overflow-x-auto">
+            <div className="bg-gray-100/70 border-b border-gray-200 px-6 py-3 overflow-x-auto flex-shrink-0">
               <div className="flex items-center gap-2 min-w-max">
                 {ALL_DAYS.map(dayName => {
                   const dayData = scheduleDays.find(d => d.hari === dayName);
@@ -745,7 +767,7 @@ export default function MyShiftPage() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-5 flex-1">
+            <div className="p-6 overflow-y-auto space-y-5 flex-1 min-h-0">
               
               {scheduleModalError && (
                 <div className="bg-red-50 text-red-700 p-4 rounded-2xl border border-red-200 text-xs sm:text-sm flex items-start gap-3">
@@ -830,26 +852,25 @@ export default function MyShiftPage() {
                         );
 
                         return (
-                          <div key={sessionIndex} className="bg-white p-5 rounded-2xl border border-gray-200/90 shadow-sm space-y-4">
+                          <div key={sessionIndex} className="bg-white p-5 rounded-2xl border border-gray-200/90 space-y-4">
                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                               
                               {/* Nama Sesi Input */}
                               <div className="flex-1">
-                                <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-1.5">
+                                <label className="block text-sm text-[#0A1024] mb-2">
                                   Nama Sesi / Shift
                                 </label>
-                                <input 
+                                <input
                                   type="text"
                                   value={session.namaSesi}
                                   onChange={(e) => handleSessionFieldChange(sessionIndex, "namaSesi", e.target.value)}
-                                  placeholder="Contoh: Shift 1 / Shift Pagi"
-                                  className="w-full bg-[#F8F9FB] border border-gray-200 rounded-xl px-4 py-3 text-sm text-[#0B132B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#FFC727] focus:bg-white transition-all"
+                                  className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700]"
                                 />
                               </div>
 
                               {/* Waktu Pelaksanaan Shift (24 Jam) */}
                               <div className="w-full lg:w-72">
-                                <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-1.5">
+                                <label className="block text-sm text-[#0A1024] mb-2">
                                   Waktu Pelaksanaan (24 Jam)
                                 </label>
                                 <ShiftTimePicker
@@ -878,12 +899,9 @@ export default function MyShiftPage() {
 
                             {/* Aslab Selector */}
                             <div className="space-y-2.5 pt-3 border-t border-gray-100">
-                              <div className="flex items-center justify-between">
-                                <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block">
-                                  Asisten Lab Bertugas ({(session.assignedAslabs || []).length} Orang)
-                                </label>
-                                <span className="text-[11px] text-gray-400">Pilih dari database asisten lab</span>
-                              </div>
+                              <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block">
+                                Asisten Lab Bertugas ({(session.assignedAslabs || []).length} Orang)
+                              </label>
 
                               {/* Selected Aslabs Chips */}
                               <div className="flex flex-wrap gap-2 min-h-[32px] items-center">
@@ -891,7 +909,7 @@ export default function MyShiftPage() {
                                   session.assignedAslabs.map((aslab, aslabIdx) => (
                                     <span 
                                       key={aslab.nim || aslab.id || aslabIdx}
-                                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-yellow-100/70 border border-yellow-300 rounded-full text-xs font-bold text-[#0B132B] shadow-sm animate-in fade-in zoom-in-95 duration-150"
+                                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-yellow-100/70 border border-yellow-300 rounded-full text-xs font-bold text-[#0B132B] animate-in fade-in zoom-in-95 duration-150"
                                     >
                                       <span>{aslab.nama}</span>
                                       <span className="text-[10px] text-gray-600 font-normal">({aslab.posisi || aslab.jabatan || aslab.divisi})</span>
@@ -912,11 +930,10 @@ export default function MyShiftPage() {
 
                               {/* Search & Selection Dropdown */}
                               <div className="relative">
-                                <div className="flex items-center bg-[#F8F9FB] border border-gray-200 rounded-xl px-3.5 py-2.5 focus-within:ring-2 focus-within:ring-[#FFC727] focus-within:bg-white transition-all">
+                                <div className="flex items-center bg-[#F5F5F5] rounded-lg px-3.5 py-2.5 focus-within:ring-2 focus-within:ring-[#FFC700] transition-colors">
                                   <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
-                                  <input 
+                                  <input
                                     type="text"
-                                    placeholder="Cari nama, NIM, atau divisi aslab..."
                                     value={searchVal}
                                     onFocus={() => setAslabDropdownOpen(prev => ({ ...prev, [dropdownKey]: true }))}
                                     onChange={(e) => {
@@ -966,7 +983,7 @@ export default function MyShiftPage() {
                                               </div>
                                             </div>
                                             {isSelected ? (
-                                              <div className="w-5 h-5 rounded-full bg-[#FFC727] flex items-center justify-center text-[#0B132B] shrink-0 shadow-sm">
+                                              <div className="w-5 h-5 rounded-full bg-[#FFC727] flex items-center justify-center text-[#0B132B] shrink-0">
                                                 <Check className="w-3.5 h-3.5 stroke-[3]" />
                                               </div>
                                             ) : (
@@ -993,7 +1010,7 @@ export default function MyShiftPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-6 border-t border-gray-100 bg-gray-50/80 flex items-center justify-end gap-3">
+            <div className="p-6 border-t border-gray-100 bg-gray-50/80 flex items-center justify-end gap-3 flex-shrink-0">
               <button 
                 type="button"
                 onClick={() => setShowScheduleModal(false)}
