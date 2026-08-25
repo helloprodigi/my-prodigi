@@ -266,16 +266,7 @@ export async function GET(req: Request) {
     const userNim = dbUser?.nim?.trim();
     const userName = (dbUser?.name || user.user_metadata?.name || "").trim().toLowerCase();
 
-    const myAgendas = isAdmin
-      ? allAgendas
-      : allAgendas.filter(agenda => {
-          return agenda.assignedUsers.some(au => {
-            if (au.userId && au.userId === user.id) return true;
-            if (userNim && au.nim && au.nim.trim() === userNim) return true;
-            if (userName && au.nama && au.nama.trim().toLowerCase() === userName) return true;
-            return false;
-          });
-        });
+    const myAgendas = allAgendas;
 
     const formattedAgendas = await Promise.all(myAgendas.map(async (agenda) => {
       // Ensure QR tokens are always present
