@@ -28,8 +28,8 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] p-8 md:p-12 w-full">
-      <h1 className="text-4xl font-bold text-[#0A1024] mb-8">Profile</h1>
+    <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 md:p-12 w-full">
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#0A1024] mb-6 md:mb-8">Profile</h1>
       <ProfileClient profile={profile} />
     </div>
   );

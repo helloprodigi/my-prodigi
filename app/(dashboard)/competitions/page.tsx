@@ -7,6 +7,7 @@ import AdminDraftActions from "@/components/AdminDraftActions";
 import CompetitionsHeader from "@/components/CompetitionsHeader";
 import DownloadDraftButton from "@/components/DownloadDraftButton";
 import PreviewLombaCard from "@/components/PreviewLombaCard";
+import ShareCompetitionButton from "@/components/ShareCompetitionButton";
 import { getEffectiveRole } from "@/lib/get-effective-role";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { createClient } from "@/utils/supabase/server";
@@ -80,7 +81,7 @@ export default async function CompetitionsPage({
 
     return (
       <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 md:p-10 w-full overflow-hidden">
-        <div className="mb-6 sm:mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-6 sm:mb-8 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-[22px] font-bold text-[#0A1024] sm:text-3xl md:text-4xl">Draft Competition</h1>
           <CompetitionsHeader role={role} isDraftView={true} />
         </div>
@@ -187,7 +188,7 @@ export default async function CompetitionsPage({
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 md:p-10 w-full overflow-hidden">
-      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 sm:mb-8">
         <h1 className="text-[22px] font-bold text-[#0A1024] sm:text-3xl md:text-4xl">Competitions</h1>
         <CompetitionsHeader role={role} isDraftView={false} />
       </div>
@@ -228,7 +229,10 @@ export default async function CompetitionsPage({
                   <p className="text-[11px] font-semibold text-[#FFC700] sm:text-xs">
                     Deadline • {new Date(comp.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
                   </p>
-                  {role === "admin" && <AdminCompetitionActions competition={comp} />}
+                  <div className="flex items-center gap-2">
+                    {role === "admin" && <AdminCompetitionActions competition={comp} />}
+                    <ShareCompetitionButton competition={comp} />
+                  </div>
                 </div>
                 <h3 className="mb-2 line-clamp-2 text-[15px] font-bold leading-tight text-[#0A1024] sm:text-lg">{comp.title}</h3>
                 <p className="mb-4 flex-1 break-words text-[13px] leading-relaxed text-gray-500 sm:text-sm">Diselenggarakan oleh : {comp.organizer}</p>

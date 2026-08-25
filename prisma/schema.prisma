@@ -303,3 +303,11 @@ model MyShiftScheduleAssignment {
   @@unique([scheduleId, nim])
   @@index([scheduleId])
 }
+
+// Single-row global counters that must survive hard-deletes elsewhere (e.g.
+// Team rows are deleted when a competition is marked complete or expires),
+// so admin analytics can report true lifetime totals, not just live counts.
+model AppStats {
+  id                String @id
+  totalTeamsCreated Int    @default(0)
+}

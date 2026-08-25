@@ -108,12 +108,12 @@ export default function MatchmakingPage() {
   return (
     <div className="min-h-screen bg-[#FBFBFB] relative overflow-hidden flex flex-col justify-between">
       {/* Wrapper Konten Utama */}
-      <div className="w-full z-10 max-w-[1400px] pl-6 pr-4">
+      <div className="w-full z-10 max-w-[1400px] px-4 sm:px-6 lg:pl-6 lg:pr-4">
         {/* Header */}
-        <div className="flex items-center justify-between pt-8 pb-4 w-full">
-          <h1 className="text-3xl font-bold text-[#0A1024]">Matchmaking</h1>
+        <div className="flex items-center justify-between pt-6 sm:pt-8 pb-4 w-full gap-3">
+          <h1 className="text-[22px] sm:text-3xl font-bold text-[#0A1024]">Matchmaking</h1>
           <Link href="/competitions">
-            <button className="bg-[#FFC700] text-[#0A1024] font-bold px-9 py-3 rounded-[8px] text-sm hover:brightness-95 transition-all shadow-sm">
+            <button className="bg-[#FFC700] text-[#0A1024] font-bold px-5 sm:px-9 py-2.5 sm:py-3 rounded-[8px] text-sm hover:brightness-95 transition-all shadow-sm whitespace-nowrap">
               Cari Lomba
             </button>
           </Link>

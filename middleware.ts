@@ -174,6 +174,7 @@ export async function middleware(request: NextRequest) {
             else if (tab === 'Preview Lomba' && !view) allowed = true;
             else if (view === 'draft' && tab === 'Guidebook') allowed = true;
           }
+          else if (pathname.startsWith('/competitions/')) allowed = true; // competition detail (share link target)
         } else if (effectiveIsAslab) {
           if (pathname === '/dashboard') allowed = true;
           else if (pathname === '/aslab-proker') allowed = true;
@@ -189,6 +190,7 @@ export async function middleware(request: NextRequest) {
             else if (tab === 'Proposal' && !view) allowed = true;
             else if (tab === 'Pitch Deck' && !view) allowed = true;
           }
+          else if (pathname.startsWith('/competitions/')) allowed = true; // competition detail (share link target)
         } else { // effective role is talent
           if (pathname === '/dashboard') allowed = true;
           else if (pathname.startsWith('/dashboard/team/')) allowed = true;
@@ -205,6 +207,7 @@ export async function middleware(request: NextRequest) {
             else if (view === 'draft' && tab === 'Proposal') allowed = true;
             else if (view === 'draft' && tab === 'Pitch Deck') allowed = true;
           }
+          else if (pathname.startsWith('/competitions/')) allowed = true; // competition detail (share link target)
         }
 
         if (!allowed && pathname !== '/dashboard') {

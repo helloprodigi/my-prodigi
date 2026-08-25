@@ -7,6 +7,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "10", 10);
+    const search = (searchParams.get("search") || "").trim();
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
@@ -31,12 +32,18 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Fetch all active users with pagination
-    const { data: users, error, count } = await supabase
+    // Fetch all active users with pagination, optionally filtered by name/email
+    let query = supabase
       .from("User")
       .select("*", { count: "exact" })
-      .order("createdAt", { ascending: false })
-      .range(from, to);
+      .order("createdAt", { ascending: false });
+
+    if (search) {
+      const safeSearch = search.replace(/[,()%]/g, "");
+      query = query.or(`name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`);
+    }
+
+    const { data: users, error, count } = await query.range(from, to);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

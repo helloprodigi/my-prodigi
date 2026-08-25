@@ -2,22 +2,45 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { LayoutGrid, Trophy, Sparkles, BookOpen, Bell, User, LogOut, Menu, X, ChevronRight, ChevronLeft, FileText, ShieldUser, CalendarClock, Calendar } from "lucide-react";
+import { Trophy, BookOpen, Bell, User, LogOut, Menu, X, ChevronRight, ChevronLeft, FileText, ShieldUser, CalendarClock, Calendar } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import { useState, useEffect, useRef } from "react";
 
+// Asymmetric 2x2 grid (tall frames on the main diagonal, short frames on the
+// other) — Material Symbols "dashboard" outline icon via Iconify, matches
+// the Figma dashboard icon almost exactly.
+function DashboardIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M13 9V3h8v6zM3 13V3h8v10zm10 8V11h8v10zM3 21v-6h8v6zm2-10h4V5H5zm10 8h4v-6h-4zm0-12h4V5h-4zM5 19h4v-2H5zm4-2" />
+    </svg>
+  );
+}
+
+// Two hollow-center twinkle stars — Hugeicons "sparkles" via Iconify, matches
+// the Figma matchmaking icon (outline strokes naturally leave the diamond
+// center hollow, unlike lucide's Sparkles which pairs one solid star with a
+// cross-hair and a dot).
+function MatchmakingIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth={1.5} className={className}>
+      <path d="m15 2l.539 2.392a5.39 5.39 0 0 0 4.07 4.07L22 9l-2.392.539a5.39 5.39 0 0 0-4.07 4.07L15 16l-.539-2.392a5.39 5.39 0 0 0-4.07-4.07L8 9l2.392-.539a5.39 5.39 0 0 0 4.07-4.07zM7 12l.385 1.708a3.85 3.85 0 0 0 2.907 2.907L12 17l-1.708.385a3.85 3.85 0 0 0-2.907 2.907L7 22l-.385-1.708a3.85 3.85 0 0 0-2.907-2.907L2 17l1.708-.385a3.85 3.85 0 0 0 2.907-2.907z" />
+    </svg>
+  );
+}
+
 const talentNavItems = [
-  { icon: LayoutGrid, href: "/dashboard", label: "Dashboard", disabled: false },
+  { icon: DashboardIcon, href: "/dashboard", label: "Dashboard", disabled: false },
   { icon: Trophy, href: "/competitions", label: "Competition", disabled: false },
   { icon: FileText, href: "/competitions?view=draft", label: "Draft Competition", disabled: false },
-  { icon: Sparkles, href: "/matchmaking", label: "Matchmaking", disabled: false },
+  { icon: MatchmakingIcon, href: "/matchmaking", label: "Matchmaking", disabled: false },
   { icon: BookOpen, href: "/faq", label: "Tutorial & FAQ", disabled: false },
   { icon: Bell, href: "/notifications", label: "Notifikasi", disabled: false },
 ];
 
 const aslabNavItems = [
-  { icon: LayoutGrid, href: "/dashboard", label: "Dashboard" },
+  { icon: DashboardIcon, href: "/dashboard", label: "Dashboard" },
   { icon: Trophy, href: "/competitions", label: "Draft Competition" },
   { icon: FileText, href: "/aslab-proker", label: "Program Kerja", disabled: false },
   { icon: ShieldUser, href: "/my-divisi", label: "MyDivisi", disabled: false },
@@ -27,7 +50,7 @@ const aslabNavItems = [
 ];
 
 const adminNavItems = [
-  { icon: LayoutGrid, href: "/dashboard", label: "Dashboard" },
+  { icon: DashboardIcon, href: "/dashboard", label: "Dashboard" },
   { icon: Trophy, href: "/competitions", label: "Competition", disabled: false },
   { icon: CalendarClock, href: "/myshift", label: "MyShift", disabled: false },
   { icon: Calendar, href: "/agenda", label: "Kelola Agenda", disabled: false },
@@ -215,13 +238,19 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
         />
       )}
 
-      {/* Hamburger for mobile (when closed) */}
-      <button 
-        className="lg:hidden fixed top-6 left-4 z-30 p-2 bg-[#0A1024] text-white rounded-md"
-        onClick={() => setIsMobileOpen(true)}
-      >
-        <Menu className="w-6 h-6" />
-      </button>
+      {/* Mobile top bar: hamburger + right-justified logo */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 z-30 bg-white border-b border-gray-200 flex items-center px-4">
+        <button onClick={() => setIsMobileOpen(true)} className="text-[#0A1024]">
+          <Menu className="w-6 h-6" />
+        </button>
+        <Image
+          src="/assets/myprodigi-logo.svg"
+          alt="MyProdigi"
+          width={160}
+          height={48}
+          className="h-8 w-auto object-contain absolute right-4 top-1/2 -translate-y-1/2"
+        />
+      </div>
 
       {/* Sidebar */}
       <aside className={`
@@ -310,7 +339,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
                   {item.label}
                 </span>
                 {isActive && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#FFC700] rounded-r-md" />
+                  <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-[#FFC700] rounded-l-md" />
                 )}
               </Link>
             );

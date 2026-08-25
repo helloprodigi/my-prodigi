@@ -301,7 +301,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
   return (
     <div className="flex flex-col lg:flex-row gap-8">
       {/* Sidebar */}
-      <div className="w-full lg:w-80 flex-shrink-0 bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex flex-col items-center">
+      <div className="w-full lg:w-80 flex-shrink-0 bg-white rounded-3xl p-5 sm:p-6 md:p-8 shadow-sm border border-gray-100 flex flex-col items-center">
         <div className="relative mb-4 mt-4">
           <div className="w-32 h-32 rounded-full border-4 border-[#FFC700] overflow-hidden bg-gray-200">
             {profile.photoUrl ? (
@@ -371,7 +371,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+      <div className="flex-1 bg-white rounded-3xl p-5 sm:p-6 md:p-8 shadow-sm border border-gray-100">
 
         {/* TAB: Personal Information */}
         {activeTab === "personal" && (

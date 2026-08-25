@@ -133,8 +133,15 @@ export default function TalentDashboard() {
     <div className="min-h-screen bg-[#FBFBFB] relative overflow-hidden flex flex-col justify-between">
       <div className="w-full z-10">
         {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pt-8 pb-6 w-full pl-6 pr-4">
-          <h1 className="text-[22px] sm:text-3xl md:text-4xl font-bold text-[#0A1024]">Dashboard</h1>
+        <div className="flex flex-col gap-3 pt-6 sm:pt-8 pb-6 w-full px-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:pl-6 lg:pr-4">
+          <div className="flex items-center justify-between gap-3 lg:block">
+            <h1 className="text-[22px] sm:text-3xl md:text-4xl font-bold text-[#0A1024]">Dashboard</h1>
+            <Link href="/matchmaking" className="lg:hidden">
+              <button className="bg-[#FFC700] text-[#0A1024] font-bold px-5 py-2.5 rounded-[8px] text-sm hover:brightness-95 transition-all shadow-sm">
+                Buat Tim
+              </button>
+            </Link>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
             <div className="relative">
@@ -158,7 +165,7 @@ export default function TalentDashboard() {
               ))}
             </select>
 
-            <Link href="/matchmaking">
+            <Link href="/matchmaking" className="hidden lg:block">
               <button className="w-full sm:w-auto bg-[#FFC700] text-[#0A1024] font-bold px-9 py-3 rounded-[8px] text-sm hover:brightness-95 transition-all shadow-sm">
                 Buat Tim
               </button>
@@ -166,7 +173,7 @@ export default function TalentDashboard() {
           </div>
         </div>
 
-        <div className="max-w-[1400px] pl-6 pr-4">
+        <div className="max-w-[1400px] px-4 sm:px-6 lg:pl-6 lg:pr-4">
         {/* Tabs */}
         <div className="flex justify-between items-center border-b border-gray-200 mb-6 w-full">
           <div className="flex gap-6">
