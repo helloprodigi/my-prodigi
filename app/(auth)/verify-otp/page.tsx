@@ -100,8 +100,8 @@ export default function VerifyOtpPage() {
                 <Image 
                   src="/assets/login/myprodigi-logo.svg" 
                   alt="logo" 
-                  width={310} 
-                  height={91.5} 
+                  width={218} 
+                  height={50} 
                   className="object-contain"
                 />
               </div>

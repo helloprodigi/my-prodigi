@@ -144,7 +144,7 @@ export default function OnboardingPage() {
       {/* Header */}
       <header className="w-full bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-10 py-4 sticky top-0 z-50 shadow-sm">
         <div className="flex items-center cursor-pointer">
-          <Image src="/assets/myprodigi-logo.svg" alt="MyProdigi Logo" width={160} height={48} className="h-12 w-auto object-contain" />
+          <Image src="/assets/myprodigi-logo.svg" alt="MyProdigi Logo" width={218} height={50} className="h-12 w-auto object-contain" />
         </div>
 
         {/* Stepper */}

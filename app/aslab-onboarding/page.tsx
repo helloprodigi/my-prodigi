@@ -84,8 +84,8 @@ export default function AslabOnboardingPage() {
           <Image
             src="/assets/myprodigi-logo.svg"
             alt="MyProdigi Logo"
-            width={160}
-            height={48}
+            width={218}
+            height={50}
             className="h-12 w-auto object-contain"
           />
         </div>

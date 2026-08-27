@@ -82,8 +82,8 @@ export default function RegisterPage() {
                 <Image
                   src="/assets/register/myprodigi-logo.svg"
                   alt="logo"
-                  width={310}
-                  height={91.5}
+                  width={218}
+                  height={50}
                   className="object-contain w-full max-w-[310px] h-auto"
                 />
               </div>
