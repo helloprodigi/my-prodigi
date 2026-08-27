@@ -7,7 +7,10 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/login", "/register"],
+        // "/competitions/" (with trailing slash) is more specific than the
+        // "/competitions" disallow below, so per-competition share pages
+        // stay crawlable/previewable while the login-gated list does not.
+        allow: ["/", "/login", "/register", "/competitions/"],
         disallow: [
           "/api/",
           "/dashboard",

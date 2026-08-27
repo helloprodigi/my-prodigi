@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { setRememberMe } from "@/utils/supabase/remember-me";
+import { getSafeRedirect } from "@/utils/getSafeRedirect";
 import { loadGoogleIdentityScript, createGoogleNonce } from "@/utils/google-identity";
 
 type Props = {
@@ -82,7 +83,7 @@ export function GoogleSignInButton({ intent, label, loadingLabel, remember, onEr
                 );
               }
 
-              window.location.href = "/";
+              window.location.href = getSafeRedirect();
             } catch (err: any) {
               onError(err.message || String(err));
               setLoading(false);

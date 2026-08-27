@@ -13,10 +13,10 @@ type Competition = {
 };
 
 export default function ShareCompetitionButton({ competition }: { competition: Competition }) {
-  const shareUrl =
-    competition.link && competition.link.trim().length > 0
-      ? competition.link
-      : `${typeof window !== "undefined" ? window.location.origin : ""}/competitions/${competition.id}`;
+  // Always the MyProdigi detail page, never the raw competition.link — that
+  // page shows this specific competition's card and is where "Buat Tim"
+  // actually lives, whether or not the person opening it is logged in.
+  const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/competitions/${competition.id}`;
 
   const deadlineLabel = new Date(competition.deadline).toLocaleDateString("id-ID", {
     day: "numeric",

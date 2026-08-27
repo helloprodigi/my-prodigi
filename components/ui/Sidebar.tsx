@@ -238,18 +238,29 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
         />
       )}
 
-      {/* Mobile top bar: hamburger + right-justified logo */}
+      {/* Mobile top bar: hamburger + right-justified logo.
+          Built from the vector icon + real text instead of
+          /assets/myprodigi-logo.svg, which is a low-res raster image
+          wrapped in an <svg> tag and renders blurry at any zoom level. */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 z-30 bg-white border-b border-gray-200 flex items-center px-4">
         <button onClick={() => setIsMobileOpen(true)} className="text-[#0A1024]">
           <Menu className="w-6 h-6" />
         </button>
-        <Image
-          src="/assets/myprodigi-logo.svg"
-          alt="MyProdigi"
-          width={160}
-          height={48}
-          className="h-8 w-auto object-contain absolute right-4 top-1/2 -translate-y-1/2"
-        />
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+          <Image
+            src="/assets/myprodigi-sidebar.svg"
+            alt=""
+            width={28}
+            height={28}
+            className="w-7 h-7 object-contain shrink-0"
+          />
+          <div className="flex flex-col leading-none">
+            <span className="text-[15px] font-extrabold tracking-tight text-[#0A1024]">
+              MY<span className="text-[#FFC700]">PRO</span>DIGI
+            </span>
+            <span className="text-[8px] text-gray-400 font-medium tracking-wide">By PRODIGI @ DTC LAB</span>
+          </div>
+        </div>
       </div>
 
       {/* Sidebar */}

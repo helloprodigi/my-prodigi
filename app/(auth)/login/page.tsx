@@ -3,6 +3,7 @@ import Image from "next/image";
 import React, { useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { setRememberMe } from "@/utils/supabase/remember-me";
+import { getSafeRedirect } from "@/utils/getSafeRedirect";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 export default function LoginPage() {
@@ -23,7 +24,7 @@ export default function LoginPage() {
       setRememberMe(remember);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      window.location.href = "/";
+      window.location.href = getSafeRedirect();
     } catch (err: any) {
       setError(err.message || String(err));
     } finally {
