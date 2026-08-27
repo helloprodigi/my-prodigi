@@ -80,7 +80,7 @@ export default function RegisterPage() {
             <div className="flex flex-col items-center w-full">
               <div className="flex justify-center items-center w-full px-2">
                 <Image
-                  src="/assets/register/myprodigi-logo.svg"
+                  src="/assets/myprodigi-logo.svg"
                   alt="logo"
                   width={218}
                   height={50}
