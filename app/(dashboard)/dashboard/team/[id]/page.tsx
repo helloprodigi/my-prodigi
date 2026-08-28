@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Crown } from "lucide-react";
+import { Check, Crown } from "lucide-react";
 import {
   getTeamDetailAction,
   inviteMemberAction,
@@ -56,7 +56,14 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
       const result = await inviteMemberAction(id, memberId);
       if (result.success) {
         if (result.warning) {
-          toast(result.warning, { icon: "⚠️", duration: 8000 });
+          toast(result.warning, {
+            icon: (
+              <span className="flex w-5 h-5 items-center justify-center rounded-full bg-[#22C55E]">
+                <Check className="w-3 h-3 text-white" strokeWidth={3} />
+              </span>
+            ),
+            duration: 8000,
+          });
         } else {
           toast.success(`Undangan email berhasil dikirim ke ${name}!`);
         }

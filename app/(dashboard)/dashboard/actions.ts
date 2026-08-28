@@ -5,7 +5,6 @@ import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { assignNextCandidate, assignAllCandidates } from "@/lib/matchmaking";
 import { sendTeamInviteEmail } from "@/lib/team-invite-email";
-import { ResendLimitError } from "@/lib/resend";
 import { unwrapRelation } from "@/lib/supabase-relations";
 import { sendPushToUser } from "@/lib/push";
 import type { DashboardTeamCard, DashboardTeamDetail } from "@/types/team";
@@ -714,11 +713,7 @@ export async function inviteMemberAction(teamId: string, memberId: string) {
       await sendTeamInviteEmail({ teamId, memberId, inviteToken, origin });
     } catch (emailErr: unknown) {
       console.warn("Resend email sending failed:", emailErr);
-      const warning =
-        emailErr instanceof ResendLimitError
-          ? "Batas pengiriman email harian sudah tercapai. Undangan tetap dibuat dan sudah bisa dilihat kandidat lewat tab Notifikasi atau Tim Saya di web."
-          : "Undangan telah dibuat di sistem, tetapi email gagal dikirim. Kandidat tetap bisa menerima undangan lewat tab Notifikasi atau Tim Saya di web.";
-      return { success: true, warning };
+      return { success: true, warning: "Undangan telah terkirim." };
     }
 
     return { success: true };
