@@ -97,10 +97,10 @@ export default function TutorialFAQPage() {
                     <div className="w-full max-w-[780px] bg-black rounded-[10px] aspect-video relative shadow-md overflow-hidden group flex flex-col justify-between z-10">
                         <iframe
                             className="w-full h-full"
-                            src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-                            title="YouTube video player"
+                            src="https://drive.google.com/file/d/1cTn9Nwdx3S1JmqyEm6qhusOSZ5wCtKh6/preview"
+                            title="Video player"
                             frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allow="autoplay"
                             allowFullScreen>
                         </iframe>
                     </div>
