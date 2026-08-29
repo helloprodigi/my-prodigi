@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/lib/supabase-admin";
 
 export async function GET(req: Request) {
   try {
@@ -32,10 +33,34 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Fetch all active users with pagination, optionally filtered by name/email
+    // Keep the management table in sync with Supabase Auth. User rows can
+    // remain in public.User after an account is deleted from auth.users.
+    const adminSupabase = createAdminClient();
+    const authUserIds: string[] = [];
+    const perPage = 1000;
+    let authPage = 1;
+
+    while (true) {
+      const { data: authUsers, error: authUsersError } = await adminSupabase.auth.admin.listUsers({
+        page: authPage,
+        perPage,
+      });
+
+      if (authUsersError) {
+        return NextResponse.json({ error: authUsersError.message }, { status: 500 });
+      }
+
+      authUserIds.push(...authUsers.users.map((authUser) => authUser.id));
+      if (authUsers.users.length < perPage) break;
+      authPage += 1;
+    }
+
+    // Fetch only users that still exist in auth.users, with pagination and
+    // optional name/email filtering.
     let query = supabase
       .from("User")
       .select("*", { count: "exact" })
+      .in("id", authUserIds)
       .order("createdAt", { ascending: false });
 
     if (search) {

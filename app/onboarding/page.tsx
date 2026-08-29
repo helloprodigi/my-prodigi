@@ -142,41 +142,43 @@ export default function OnboardingPage() {
       <div className="absolute -bottom-40 -left-20 w-96 h-96 border-[4px] border-[#FFC700] rounded-full opacity-50 pointer-events-none"></div>
 
       {/* Header */}
-      <header className="w-full bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-10 py-4 sticky top-0 z-50 shadow-sm">
-        <div className="flex items-center cursor-pointer">
-          <Image src="/assets/myprodigi-logo.svg" alt="MyProdigi Logo" width={218} height={50} className="h-12 w-auto object-contain" />
+      <header className="w-full bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+        <div className="flex items-center justify-between px-4 sm:px-6 lg:px-10 py-3 sm:py-4">
+          <div className="flex items-center cursor-pointer">
+            <Image src="/assets/myprodigi-logo.svg" alt="MyProdigi Logo" width={218} height={50} className="h-10 sm:h-12 w-auto object-contain" />
+          </div>
         </div>
 
         {/* Stepper */}
-        <div className="hidden md:flex items-center gap-6 text-sm font-medium">
-          <div className={`flex items-center gap-3 transition-colors duration-300 ${step >= 1 ? "text-[#FFC700]" : "text-gray-400"}`}>
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-sm ${step >= 1 ? "bg-[#FFC700] border-[#FFC700] text-white shadow-[#FFC700]/40" : "border-gray-300"}`}>1</div>
-            <span className={step >= 1 ? "text-[#0A1024] font-bold" : "font-medium"}>Data Diri</span>
+        <div className="grid grid-cols-3 items-start sm:flex sm:items-center sm:justify-center gap-2 sm:gap-6 text-xs sm:text-sm font-medium w-full overflow-hidden px-2 sm:px-6 lg:px-10 pb-3 sm:pb-4">
+          <div className={`flex min-w-0 shrink-0 flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-colors duration-300 ${step >= 1 ? "text-[#FFC700]" : "text-gray-400"}`}>
+            <div className={`flex h-9 w-9 shrink-0 aspect-square items-center justify-center rounded-full border-2 transition-all duration-300 shadow-sm ${step >= 1 ? "bg-[#FFC700] border-[#FFC700] text-white shadow-[#FFC700]/40" : "border-gray-300"}`}>1</div>
+            <span className={`whitespace-nowrap text-[10px] sm:text-sm ${step >= 1 ? "text-[#0A1024] font-bold" : "font-medium"}`}>Data Diri</span>
           </div>
-          <div className={`w-16 h-1.5 rounded-full transition-colors duration-500 ${step >= 2 ? "bg-[#FFC700]" : "bg-gray-200"}`}></div>
-          <div className={`flex items-center gap-3 transition-colors duration-300 ${step >= 2 ? "text-[#FFC700]" : "text-gray-400"}`}>
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-sm ${step >= 2 ? "bg-[#FFC700] border-[#FFC700] text-white shadow-[#FFC700]/40" : "border-gray-300"}`}>2</div>
-            <span className={step >= 2 ? "text-[#0A1024] font-bold" : "font-medium"}>Kategori Skill</span>
+          <div className={`hidden sm:block w-8 sm:w-16 h-1.5 shrink-0 rounded-full transition-colors duration-500 ${step >= 2 ? "bg-[#FFC700]" : "bg-gray-200"}`}></div>
+          <div className={`flex min-w-0 shrink-0 flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-colors duration-300 ${step >= 2 ? "text-[#FFC700]" : "text-gray-400"}`}>
+            <div className={`flex h-9 w-9 shrink-0 aspect-square items-center justify-center rounded-full border-2 transition-all duration-300 shadow-sm ${step >= 2 ? "bg-[#FFC700] border-[#FFC700] text-white shadow-[#FFC700]/40" : "border-gray-300"}`}>2</div>
+            <span className={`whitespace-nowrap text-[10px] sm:text-sm ${step >= 2 ? "text-[#0A1024] font-bold" : "font-medium"}`}>Kategori Skill</span>
           </div>
-          <div className={`w-16 h-1.5 rounded-full transition-colors duration-500 ${step >= 3 ? "bg-[#FFC700]" : "bg-gray-200"}`}></div>
-          <div className={`flex items-center gap-3 transition-colors duration-300 ${step >= 3 ? "text-[#FFC700]" : "text-gray-400"}`}>
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-sm ${step >= 3 ? "bg-[#FFC700] border-[#FFC700] text-white shadow-[#FFC700]/40" : "border-gray-300"}`}>3</div>
-            <span className={step >= 3 ? "text-[#0A1024] font-bold" : "font-medium"}>Peminatan Lomba</span>
+          <div className={`hidden sm:block w-8 sm:w-16 h-1.5 shrink-0 rounded-full transition-colors duration-500 ${step >= 3 ? "bg-[#FFC700]" : "bg-gray-200"}`}></div>
+          <div className={`flex min-w-0 shrink-0 flex-col sm:flex-row items-center gap-1 sm:gap-3 transition-colors duration-300 ${step >= 3 ? "text-[#FFC700]" : "text-gray-400"}`}>
+            <div className={`flex h-9 w-9 shrink-0 aspect-square items-center justify-center rounded-full border-2 transition-all duration-300 shadow-sm ${step >= 3 ? "bg-[#FFC700] border-[#FFC700] text-white shadow-[#FFC700]/40" : "border-gray-300"}`}>3</div>
+            <span className={`whitespace-nowrap text-[10px] sm:text-sm ${step >= 3 ? "text-[#0A1024] font-bold" : "font-medium"}`}>Peminatan Lomba</span>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center p-8 z-10">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl p-12">
+      <main className="flex-1 flex items-start justify-center p-4 sm:p-6 lg:p-8 z-10">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl w-full max-w-4xl p-6 sm:p-8 lg:p-12">
 
-          <div className="text-center mb-10">
-            <h1 className="text-3xl font-bold text-[#0A1024] mb-2">
+          <div className="text-center mb-8 sm:mb-10">
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#0A1024] mb-2">
               {step === 1 && "Data Diri"}
               {step === 2 && "Kategori Skill"}
               {step === 3 && "Peminatan Lomba"}
             </h1>
-            <p className="text-gray-500">Silahkan lengkapi data diri untuk keperluan registrasi</p>
+            <p className="text-sm sm:text-base text-gray-500">Silahkan lengkapi data diri untuk keperluan registrasi</p>
           </div>
 
           {/* STEP 1: Data Diri */}
@@ -186,7 +188,7 @@ export default function OnboardingPage() {
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium text-gray-900">Jurusan</label>
                   <select
-                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
+                    className="w-full px-4 py-3 bg-[#F5F5F5] rounded-lg text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700]"
                     value={formData.jurusan}
                     onChange={(e) => setFormData({ ...formData, jurusan: e.target.value })}
                   >
@@ -202,7 +204,7 @@ export default function OnboardingPage() {
                   <input
                     type="text"
                     placeholder="2025"
-                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900 placeholder:text-gray-400"
+                    className="w-full px-4 py-3 bg-[#F5F5F5] rounded-lg text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700] placeholder:text-gray-400"
                     value={formData.angkatan}
                     onChange={(e) => setFormData({ ...formData, angkatan: e.target.value })}
                   />
@@ -210,14 +212,14 @@ export default function OnboardingPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-900">Nomor WA</label>
-                  <div className={`flex bg-gray-50 border rounded-xl focus-within:ring-2 focus-within:ring-[#FFC700] overflow-hidden ${waError ? 'border-red-500' : 'border-gray-200'}`}>
-                    <div className="flex items-center px-4 bg-gray-100 text-gray-600 border-r border-gray-200 font-medium">
+                  <div className={`flex bg-[#F5F5F5] rounded-lg focus-within:ring-2 focus-within:ring-[#FFC700] overflow-hidden ${waError ? 'ring-2 ring-red-400' : ''}`}>
+                    <div className="flex items-center px-4 bg-gray-200/70 text-gray-600 text-sm font-medium">
                       +62
                     </div>
                     <input
                       type="text"
                       placeholder="821 0676 7676"
-                      className="w-full p-4 bg-transparent outline-none text-gray-900 placeholder:text-gray-400"
+                      className="w-full px-4 py-3 bg-transparent outline-none text-sm text-[#0A1024] placeholder:text-gray-400"
                       value={formData.nomorWa.replace(/^\+?62/, '').replace(/^0/, '')}
                       onChange={(e) => {
                         let val = e.target.value.replace(/\D/g, '');
@@ -247,7 +249,7 @@ export default function OnboardingPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-900">Upload CV</label>
                 <div 
-                  className={`border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-colors ${isDragging ? "border-[#FFC700] bg-[#FFF9E6]" : "border-gray-300 hover:bg-gray-50"}`}
+                  className={`border-2 border-dashed rounded-xl sm:rounded-2xl p-8 sm:p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-colors ${isDragging ? "border-[#FFC700] bg-[#FFF9E6]" : "border-gray-300 hover:bg-gray-50"}`}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
@@ -276,11 +278,11 @@ export default function OnboardingPage() {
                 {formData.cvUrl && !isUploading && <p className="text-sm text-green-600 mt-2">✓ CV berhasil ditambahkan</p>}
               </div>
 
-              <div className="flex justify-end mt-10">
+              <div className="flex flex-col sm:flex-row sm:justify-end gap-3 mt-8 sm:mt-10">
                 <button
                   onClick={handleNext}
                   disabled={!formData.jurusan || !formData.angkatan || !formData.nomorWa || !formData.cvUrl || isUploading || !!waError}
-                  className="bg-[#FFC700] text-[#0A1024] font-semibold py-3 px-10 rounded-xl hover:bg-[#e6b400] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto bg-[#FFC700] text-[#0A1024] font-semibold py-3 px-10 rounded-lg hover:bg-[#e6b400] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                 </button>
@@ -291,12 +293,12 @@ export default function OnboardingPage() {
           {/* STEP 2: Kategori Skill */}
           {step === 2 && (
             <div className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 {SKILL_CATEGORIES.map(skill => (
                   <button
                     key={skill}
                     onClick={() => toggleSkill(skill)}
-                    className={`p-4 border rounded-xl text-left font-medium transition-all ${formData.skills.includes(skill)
+                    className={`w-full min-w-0 min-h-16 overflow-hidden p-2 sm:min-h-20 sm:p-4 border rounded-lg text-left text-xs sm:text-base leading-tight font-medium transition-all ${formData.skills.includes(skill)
                         ? "border-[#FFC700] bg-[#FFF9E6] text-[#0A1024]"
                         : "border-gray-200 text-gray-600 hover:border-gray-300"
                       }`}
@@ -306,17 +308,17 @@ export default function OnboardingPage() {
                 ))}
               </div>
 
-              <div className="flex justify-end gap-4 mt-10">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-4 mt-8 sm:mt-10">
                 <button
                   onClick={handlePrev}
-                  className="bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-8 rounded-xl hover:bg-gray-50 transition-colors"
+                  className="w-full sm:w-auto bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-8 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Previous
                 </button>
                 <button
                   onClick={handleNext}
                   disabled={formData.skills.length === 0}
-                  className="bg-[#FFC700] text-[#0A1024] font-semibold py-3 px-10 rounded-xl hover:bg-[#e6b400] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto bg-[#FFC700] text-[#0A1024] font-semibold py-3 px-10 rounded-lg hover:bg-[#e6b400] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                 </button>
@@ -327,35 +329,35 @@ export default function OnboardingPage() {
           {/* STEP 3: Peminatan Lomba */}
           {step === 3 && (
             <div className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 {COMPETITION_INTERESTS.map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
                     onClick={() => toggleInterest(id)}
-                    className={`p-4 border rounded-xl flex items-center gap-3 font-medium transition-all ${formData.interests.includes(id)
+                    className={`w-full min-w-0 min-h-20 overflow-hidden p-2 sm:min-h-24 sm:p-4 border rounded-lg flex items-center gap-2 sm:gap-3 text-left text-xs sm:text-base leading-tight font-medium transition-all ${formData.interests.includes(id)
                         ? "border-[#FFC700] bg-[#FFF9E6] text-[#0A1024]"
                         : "border-gray-200 text-gray-600 hover:border-gray-300"
                       }`}
                   >
-                    <div className={`p-2 rounded-lg ${formData.interests.includes(id) ? "bg-[#FFC700] text-white" : "bg-gray-100 text-gray-500"}`}>
-                      <Icon className="w-5 h-5" />
+                    <div className={`shrink-0 p-1.5 sm:p-2 rounded-lg ${formData.interests.includes(id) ? "bg-[#FFC700] text-white" : "bg-gray-100 text-gray-500"}`}>
+                      <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
-                    {label}
+                    <span className="min-w-0 whitespace-normal">{label}</span>
                   </button>
                 ))}
               </div>
 
-              <div className="flex justify-end gap-4 mt-10">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-4 mt-8 sm:mt-10">
                 <button
                   onClick={handlePrev}
-                  className="bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-8 rounded-xl hover:bg-gray-50 transition-colors"
+                  className="w-full sm:w-auto bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-8 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Previous
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={loading || formData.interests.length === 0}
-                  className="bg-[#FFC700] text-[#0A1024] font-semibold py-3 px-10 rounded-xl hover:bg-[#e6b400] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto bg-[#FFC700] text-[#0A1024] font-semibold py-3 px-10 rounded-lg hover:bg-[#e6b400] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? "Saving..." : "Continue"}
                 </button>

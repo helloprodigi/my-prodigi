@@ -38,7 +38,7 @@ export default function AdminDashboard() {
     try {
       const params = new URLSearchParams({ page: String(page), limit: "10" });
       if (search) params.set("search", search);
-      const res = await fetch(`/api/admin/users?${params.toString()}`);
+      const res = await fetch(`/api/admin/users?${params.toString()}`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         setUsers(data.users || []);
