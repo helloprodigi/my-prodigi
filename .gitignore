@@ -63,3 +63,4 @@ next-env.d.ts
 # Uploaded Profile Photos & Assets
 /public/uploaded-photo-*
 /public/uploads/
+/scripts/change-password.js
