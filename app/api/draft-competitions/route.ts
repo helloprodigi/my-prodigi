@@ -53,8 +53,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { title, organizer, tab, category, skills, description, link } = body;
 
-    if (!title || !organizer || !tab) {
-      return NextResponse.json({ error: "Title, organizer, dan tab wajib diisi" }, { status: 400 });
+    if (!title || !tab) {
+      return NextResponse.json({ error: "Title dan tab wajib diisi" }, { status: 400 });
     }
 
     const { error } = await adminDb.from("DraftCompetition").insert({

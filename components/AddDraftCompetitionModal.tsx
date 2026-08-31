@@ -58,10 +58,20 @@ export default function AddDraftCompetitionModal({ isOpen, onClose, onSuccess }:
     if ("key" in e && e.key !== "Enter") return;
     e.preventDefault();
     const trimmed = customSkill.trim();
-    if (trimmed && !selectedSkills.includes(trimmed)) {
-      setSelectedSkills([...selectedSkills, trimmed]);
-      setCustomSkill("");
-    }
+    if (!trimmed) return;
+    setSelectedSkills((prev) => {
+      if (prev.includes(trimmed)) return prev;
+      return [...prev, trimmed];
+    });
+    setCustomSkill("");
+  };
+
+  const handleBidangChange = (value: string) => {
+    if (!value) return;
+    setSelectedSkills((prev) => {
+      if (prev.includes(value)) return prev;
+      return [...prev, value];
+    });
   };
 
   // PDF File handling
@@ -158,12 +168,18 @@ export default function AddDraftCompetitionModal({ isOpen, onClose, onSuccess }:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
+
+    const normalizedTitle = title.trim();
+    const normalizedOrganizer = organizer.trim() || "Admin";
+    const normalizedDescription = description.trim();
+    const normalizedSkills = [...new Set(selectedSkills.map((skill) => skill.trim()).filter(Boolean))];
+
+    if (!normalizedTitle) {
       toast.error("Nama Lomba / Judul Draft wajib diisi.");
       return;
     }
 
-    if (selectedSkills.length === 0) {
+    if (normalizedSkills.length === 0) {
       toast.error("Jenis Lomba (Bidang) wajib dipilih minimal 1.");
       return;
     }
@@ -179,12 +195,12 @@ export default function AddDraftCompetitionModal({ isOpen, onClose, onSuccess }:
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: title.trim(),
-          organizer: tab !== "Guidebook" ? (organizer.trim() || "Admin") : "Admin",
+          title: normalizedTitle,
+          organizer: normalizedOrganizer,
           tab,
           category,
-          skills: selectedSkills,
-          description: description.trim(),
+          skills: normalizedSkills,
+          description: normalizedDescription,
           link: pdfUrl,
         }),
       });
@@ -315,30 +331,25 @@ export default function AddDraftCompetitionModal({ isOpen, onClose, onSuccess }:
                 <label className="text-sm font-semibold text-[#0A1024] block">
                   Jenis Lomba (Bidang) <span className="text-red-500">*</span>
                 </label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {COMPETITION_TYPES.map((type) => {
-                    const isSelected = selectedSkills.includes(type);
-                    return (
-                      <button
-                        type="button"
-                        key={type}
-                        onClick={() => toggleSkill(type)}
-                        className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
-                          isSelected
-                            ? "bg-[#FFF9E6] text-[#0A1024] border border-[#FFC700] font-semibold"
-                            : "bg-[#F4F4F5] text-gray-600 hover:bg-gray-200 border border-transparent"
-                        }`}
-                      >
-                        {type}
-                      </button>
-                    );
-                  })}
+
+                <div className="relative">
+                  <select
+                    value=""
+                    onChange={(e) => handleBidangChange(e.target.value)}
+                    className="w-full bg-[#F4F4F5] border border-transparent rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all text-[#0A1024] appearance-none pr-10 cursor-pointer font-medium"
+                  >
+                    <option value="">Pilih bidang lomba</option>
+                    {COMPETITION_TYPES.filter((type) => !selectedSkills.includes(type)).map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 mt-2">
                   <input
                     type="text"
-                    placeholder="Tambah jenis lomba kustom..."
+                    placeholder="Tambah bidang kustom..."
                     value={customSkill}
                     onChange={(e) => setCustomSkill(e.target.value)}
                     onKeyDown={handleAddCustomSkill}
@@ -352,6 +363,27 @@ export default function AddDraftCompetitionModal({ isOpen, onClose, onSuccess }:
                     Tambah
                   </button>
                 </div>
+
+                {selectedSkills.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {selectedSkills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="flex items-center justify-center gap-1.5 rounded-full bg-[#FFF9E6] text-[#0A1024] border border-[#FFC700] px-2.5 py-1 text-[11px] font-semibold leading-none h-[32px]"
+                      >
+                        <span className="flex items-center leading-none">{skill}</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSkills((prev) => prev.filter((item) => item !== skill))}
+                          className="flex h-4 w-4 items-center justify-center rounded-full text-[#0A1024]/70 hover:text-[#0A1024] p-0 m-0 shrink-0"
+                          aria-label={`Hapus ${skill}`}
+                        >
+                          <span className="leading-none">×</span>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* 6. Deskripsi */}
