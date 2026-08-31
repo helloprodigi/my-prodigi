@@ -69,11 +69,11 @@ export default function VerifyOtpPage() {
   };
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-cover bg-center font-sans" style={{ backgroundImage: "url('/assets/login/background.svg')" }}>
-      <div className="h-full grid lg:grid-cols-12 items-center">
-        
-        {/* Sisi Kiri - Branding & Ilustrasi */}
-        <div className="lg:col-span-6 px-16 py-12 flex flex-col justify-center h-full">
+    <div className="min-h-screen w-full overflow-y-auto bg-cover bg-center font-sans lg:h-screen lg:overflow-hidden" style={{ backgroundImage: "url('/assets/login/background.svg')" }}>
+      <div className="flex flex-col lg:grid lg:grid-cols-12 lg:h-full lg:items-center">
+
+        {/* Sisi Kiri - Branding & Ilustrasi (hidden on mobile) */}
+        <div className="hidden lg:flex lg:col-span-6 px-16 py-12 flex-col justify-center h-full">
           <div className="max-w-xl text-left">
             <h1 className="text-3xl lg:text-4xl font-bold leading-tight text-white">
               Bangun tim <span className="text-[#FFC917]">Juara,</span> <br /> Menangkan Kompetisi
@@ -89,25 +89,22 @@ export default function VerifyOtpPage() {
         </div>
 
         {/* Sisi Kanan - Container Kartu Putih */}
-        <div className="lg:col-span-6 flex items-center justify-center w-full h-full lg:-translate-x-6 transition-transform">
-          <div 
-            className="bg-white rounded-lg shadow-xl p-7 pt-8 pb-8 flex flex-col justify-start box-border" 
-            style={{ width: '400px' }}
-          >
+        <div className="min-h-screen flex items-center justify-center px-5 py-8 lg:min-h-0 lg:col-span-6 lg:h-full lg:px-0 lg:py-0 lg:-translate-x-6 transition-transform">
+          <div className="bg-white rounded-2xl lg:rounded-lg shadow-xl p-5 pt-6 pb-6 lg:p-7 lg:pt-8 lg:pb-8 flex flex-col justify-start box-border w-full max-w-[400px] lg:w-[400px]">
             {/* Header Kartu */}
             <div className="flex flex-col items-center w-full">
               <div className="flex justify-center items-center w-full px-2">
-                <Image 
-                  src="/assets/login/myprodigi-logo.svg" 
-                  alt="logo" 
-                  width={218} 
-                  height={50} 
-                  className="object-contain"
+                <Image
+                  src="/assets/myprodigi-logo.svg"
+                  alt="logo"
+                  width={218}
+                  height={50}
+                  className="object-contain w-full max-w-[310px] h-auto"
                 />
               </div>
-              <div className="w-full max-w-[310px] h-[1px] bg-gray-100 my-3" />
-              <h2 className="text-base font-bold text-gray-900 tracking-tight mt-1">Verifikasi Email</h2>
-              <p className="text-[11px] text-[#6E7980] text-center max-w-[300px] mt-2 leading-relaxed">
+              <div className="w-full max-w-[310px] h-[1px] bg-gray-100 my-2.5" />
+              <h2 className="text-base font-bold text-gray-900 tracking-tight mt-0.5">Verifikasi Email</h2>
+              <p className="text-[11px] text-[#6E7980] text-center max-w-[320px] mt-2 leading-relaxed break-words">
                 Masukkan kode verifikasi yang telah kami kirim ke alamat email Anda. Pengguna dengan akun{" "}
                 <span className="font-semibold">@student.telkomuniversity.ac.id</span> dapat melihat email melalui Outlook.
                 <br /><br />
@@ -116,21 +113,23 @@ export default function VerifyOtpPage() {
             </div>
 
             {/* Form Utama */}
-            <form onSubmit={submit} className="flex flex-col w-full items-center mt-6">
-              {error && <div className="text-xs text-red-600 bg-red-50 p-2 rounded-md w-[340px] mb-3 text-center">{error}</div>}
-              {success && <div className="text-xs text-green-600 bg-green-50 p-2 rounded-md w-[340px] mb-3 text-center">{success}</div>}
+            <form onSubmit={submit} className="flex flex-col w-full items-center mt-4">
+              {error && <div className="text-xs text-red-600 bg-red-50 p-2 rounded-md w-full mb-2.5 text-center">{error}</div>}
+              {success && <div className="text-xs text-green-600 bg-green-50 p-2 rounded-md w-full mb-2.5 text-center">{success}</div>}
 
               {/* Input Kode Verifikasi */}
-              <div className="w-[340px] mb-5">
+              <div className="w-full mb-4">
                 <label className="block text-[11px] text-[#6E7980] font-semibold mb-1.5 pl-0.5">Kode Verifikasi</label>
                 <div className="relative w-full">
                   <input
                     type="text"
                     required
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
                     maxLength={6}
                     placeholder="000000"
                     value={token}
-                    onChange={(e) => setToken(e.target.value.replace(/\D/g, ""))} // Hanya menerima angka
+                    onChange={(e) => setToken(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     className="block w-full rounded-md bg-gray-100 text-gray-700 placeholder-gray-300 text-base font-bold text-center tracking-[0.5em] focus:outline-none border-0"
                     style={{ height: '44px' }}
                   />
@@ -138,7 +137,7 @@ export default function VerifyOtpPage() {
               </div>
 
               {/* Tombol Verifikasi */}
-              <div className="w-[340px] mb-4">
+              <div className="w-full mb-4">
                 <button
                   type="submit"
                   disabled={loading || token.length < 6}
@@ -153,7 +152,7 @@ export default function VerifyOtpPage() {
             {/* Footer Kartu - Kirim Ulang Kode / Kembali ke Login */}
             <div className="w-full text-center mt-2">
               {error && error.includes("already been registered") ? (
-                <button 
+                <button
                   type="button"
                   onClick={() => window.location.href = "/login"}
                   className="text-xs text-[#FFC917] font-semibold hover:underline bg-transparent border-0 cursor-pointer"
@@ -161,7 +160,7 @@ export default function VerifyOtpPage() {
                   Kembali ke Login
                 </button>
               ) : (
-                <button 
+                <button
                   type="button"
                   onClick={resendOtp}
                   disabled={resendLoading || loading}
@@ -171,10 +170,8 @@ export default function VerifyOtpPage() {
                 </button>
               )}
             </div>
-
           </div>
         </div>
-
       </div>
     </div>
   );

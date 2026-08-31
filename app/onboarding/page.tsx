@@ -203,10 +203,12 @@ export default function OnboardingPage() {
                   <label className="text-sm font-medium text-gray-900">Angkatan</label>
                   <input
                     type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     placeholder="2025"
                     className="w-full px-4 py-3 bg-[#F5F5F5] rounded-lg text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700] placeholder:text-gray-400"
                     value={formData.angkatan}
-                    onChange={(e) => setFormData({ ...formData, angkatan: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, angkatan: e.target.value.replace(/\D/g, '') })}
                   />
                 </div>
 
