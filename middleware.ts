@@ -179,7 +179,7 @@ export async function middleware(request: NextRequest) {
           }
         } else if (effectiveIsAslab) {
           if (pathname === '/dashboard') allowed = true;
-          else if (pathname === '/aslab-proker') allowed = true;
+          else if (pathname === '/aslab-proker' || pathname.startsWith('/aslab-proker/')) allowed = true;
           else if (pathname === '/aslab-onboarding') allowed = true;
           else if (pathname === '/my-divisi') allowed = true;
           else if (pathname === '/myshift') allowed = true;
