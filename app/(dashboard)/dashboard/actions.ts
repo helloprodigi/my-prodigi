@@ -98,19 +98,21 @@ export async function getDashboardTeamsAction(): Promise<{
 
     if (!ledTeamsResult.error) {
       resolvedLedTeams = (ledTeamsResult.data ?? []) as TeamRow[];
-    } else if (ledTeamsResult.error.message.includes("status")) {
+    } else if (ledTeamsResult.error.message?.includes("status")) {
+      // Fallback: status column doesn't exist, fetch all led teams without status filter
       const fallback = await adminDb
         .from("Team")
         .select(teamSelectBase)
         .eq("leaderId", user.id);
-      if (fallback.error) throw fallback.error;
-      resolvedLedTeams = (fallback.data ?? []).map((team) => ({
-        ...team,
-        status: "IN_PROGRESS",
-      })) as TeamRow[];
-    } else {
-      throw ledTeamsResult.error;
+      if (!fallback.error) {
+        resolvedLedTeams = (fallback.data ?? []).map((team) => ({
+          ...team,
+          status: "IN_PROGRESS",
+        })) as TeamRow[];
+      }
+      // If fallback also fails, silently continue with empty ledTeams
     }
+    // For other errors, also silently continue instead of throwing
 
     let memberRows: Array<{ status: string; team: TeamRow | TeamRow[] | null }> = [];
     const memberResult = await adminDb
@@ -128,11 +130,10 @@ export async function getDashboardTeamsAction(): Promise<{
 
     if (memberResult.error?.message?.includes("TeamMember")) {
       memberRows = [];
-    } else if (memberResult.error) {
-      throw memberResult.error;
-    } else {
+    } else if (!memberResult.error) {
       memberRows = (memberResult.data ?? []) as Array<{ status: string; team: TeamRow | TeamRow[] | null }>;
     }
+    // For other errors, silently continue with empty memberRows
 
     const teamMap = new Map<string, TeamRow>();
 
@@ -156,7 +157,8 @@ export async function getDashboardTeamsAction(): Promise<{
     let openTeams: TeamRow[] = [];
     if (!openTeamsResult.error) {
       openTeams = (openTeamsResult.data ?? []) as TeamRow[];
-    } else if (openTeamsResult.error.message.includes("status")) {
+    } else if (openTeamsResult.error.message?.includes("status")) {
+      // Fallback: status column doesn't exist
       const fallback = await adminDb
         .from("Team")
         .select(teamSelectBase)
@@ -167,7 +169,9 @@ export async function getDashboardTeamsAction(): Promise<{
           status: "IN_PROGRESS",
         })) as TeamRow[];
       }
+      // If fallback also fails, silently continue with empty openTeams
     }
+    // For other errors, silently continue instead of throwing
 
     for (const team of openTeams) {
       if (teamMap.has(team.id) || membershipByTeam.has(team.id)) continue;
