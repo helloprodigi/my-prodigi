@@ -3,9 +3,10 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/lib/supabase-admin";
-import { assignNextCandidate } from "@/lib/matchmaking";
+import { assignNextCandidate, assignAllCandidates } from "@/lib/matchmaking";
 import { sendTeamInviteEmail } from "@/lib/team-invite-email";
 import { unwrapRelation } from "@/lib/supabase-relations";
+import { sendPushToUser } from "@/lib/push";
 import type { DashboardTeamCard, DashboardTeamDetail } from "@/types/team";
 
 type TeamRow = {
@@ -18,6 +19,7 @@ type TeamRow = {
   status: string;
   requiredSkills?: string[];
   leader?: any;
+  competitionId: string | null;
   competition: { title: string; organizer: string } | { title: string; organizer: string }[] | null;
 };
 
@@ -76,12 +78,12 @@ export async function getDashboardTeamsAction(): Promise<{
     );
 
     const teamSelectWithStatus = `
-      id, name, memberCount, category, createdAt, leaderId, status, requiredSkills,
+      id, name, memberCount, category, createdAt, leaderId, status, requiredSkills, competitionId,
       leader:User!Team_leaderId_fkey(name, photoUrl),
       competition:Competition(title, organizer)
     `;
     const teamSelectBase = `
-      id, name, memberCount, category, createdAt, leaderId, requiredSkills,
+      id, name, memberCount, category, createdAt, leaderId, requiredSkills, competitionId,
       leader:User!Team_leaderId_fkey(name, photoUrl),
       competition:Competition(title, organizer)
     `;
@@ -96,19 +98,21 @@ export async function getDashboardTeamsAction(): Promise<{
 
     if (!ledTeamsResult.error) {
       resolvedLedTeams = (ledTeamsResult.data ?? []) as TeamRow[];
-    } else if (ledTeamsResult.error.message.includes("status")) {
+    } else if (ledTeamsResult.error.message?.includes("status")) {
+      // Fallback: status column doesn't exist, fetch all led teams without status filter
       const fallback = await adminDb
         .from("Team")
         .select(teamSelectBase)
         .eq("leaderId", user.id);
-      if (fallback.error) throw fallback.error;
-      resolvedLedTeams = (fallback.data ?? []).map((team) => ({
-        ...team,
-        status: "IN_PROGRESS",
-      })) as TeamRow[];
-    } else {
-      throw ledTeamsResult.error;
+      if (!fallback.error) {
+        resolvedLedTeams = (fallback.data ?? []).map((team) => ({
+          ...team,
+          status: "IN_PROGRESS",
+        })) as TeamRow[];
+      }
+      // If fallback also fails, silently continue with empty ledTeams
     }
+    // For other errors, also silently continue instead of throwing
 
     let memberRows: Array<{ status: string; team: TeamRow | TeamRow[] | null }> = [];
     const memberResult = await adminDb
@@ -116,7 +120,7 @@ export async function getDashboardTeamsAction(): Promise<{
       .select(`
         status,
         team:Team(
-          id, name, memberCount, category, createdAt, leaderId, requiredSkills, status,
+          id, name, memberCount, category, createdAt, leaderId, requiredSkills, status, competitionId,
           leader:User!Team_leaderId_fkey(name, photoUrl),
           competition:Competition(title, organizer)
         )
@@ -126,11 +130,10 @@ export async function getDashboardTeamsAction(): Promise<{
 
     if (memberResult.error?.message?.includes("TeamMember")) {
       memberRows = [];
-    } else if (memberResult.error) {
-      throw memberResult.error;
-    } else {
+    } else if (!memberResult.error) {
       memberRows = (memberResult.data ?? []) as Array<{ status: string; team: TeamRow | TeamRow[] | null }>;
     }
+    // For other errors, silently continue with empty memberRows
 
     const teamMap = new Map<string, TeamRow>();
 
@@ -154,7 +157,8 @@ export async function getDashboardTeamsAction(): Promise<{
     let openTeams: TeamRow[] = [];
     if (!openTeamsResult.error) {
       openTeams = (openTeamsResult.data ?? []) as TeamRow[];
-    } else if (openTeamsResult.error.message.includes("status")) {
+    } else if (openTeamsResult.error.message?.includes("status")) {
+      // Fallback: status column doesn't exist
       const fallback = await adminDb
         .from("Team")
         .select(teamSelectBase)
@@ -165,7 +169,9 @@ export async function getDashboardTeamsAction(): Promise<{
           status: "IN_PROGRESS",
         })) as TeamRow[];
       }
+      // If fallback also fails, silently continue with empty openTeams
     }
+    // For other errors, silently continue instead of throwing
 
     for (const team of openTeams) {
       if (teamMap.has(team.id) || membershipByTeam.has(team.id)) continue;
@@ -194,7 +200,7 @@ export async function getDashboardTeamsAction(): Promise<{
         .order("slotNumber", { ascending: true, nullsFirst: false });
 
       const members = membersResult.error ? [] : (membersResult.data ?? []);
-      const approvedCount = members.length + 1; // +1 to include the team leader
+      const approvedCount = members.filter((m) => m.userId !== team.leaderId).length;
       const leaderData = unwrapRelation(team.leader as any);
       const memberNames = [
         leaderData?.name ?? "Ketua",
@@ -219,7 +225,9 @@ export async function getDashboardTeamsAction(): Promise<{
       cards.push({
         id: teamId,
         teamName: team.name,
+        competitionId: team.competitionId,
         competitionTitle: competition?.title ?? "-",
+        requiredSkills: team.requiredSkills ?? [],
         createdDate: formatDate(team.createdAt),
         createdAt: team.createdAt,
         category: team.category,
@@ -278,15 +286,16 @@ export async function getTeamDetailAction(teamId: string): Promise<{
 
     const { data: membership } = await adminDb
       .from("TeamMember")
-      .select("id, status")
+      .select("id, status, inviteToken")
       .eq("teamId", teamId)
       .eq("userId", user.id)
       .maybeSingle();
 
     const isMember = membership?.status === "APPROVED";
-    const hasJoinRequest = membership?.status === "WAITING";
+    const hasJoinRequest = membership?.status === "WAITING" && membership?.inviteToken === "REQUEST_JOIN";
+    const isInvited = membership?.status === "WAITING" && membership?.inviteToken !== "REQUEST_JOIN";
 
-    if (!isLeader && !isMember && !hasJoinRequest) {
+    if (!isLeader && !isMember && !hasJoinRequest && !isInvited) {
       const { data: viewerProfile } = await adminDb
         .from("User")
         .select("skills")
@@ -297,7 +306,8 @@ export async function getTeamDetailAction(teamId: string): Promise<{
         .from("TeamMember")
         .select("id", { count: "exact", head: true })
         .eq("teamId", teamId)
-        .eq("status", "APPROVED");
+        .eq("status", "APPROVED")
+        .neq("userId", team.leaderId);
 
       const teamNeedsMembers = (approvedTotal ?? 0) < team.memberCount;
       const canView =
@@ -313,7 +323,7 @@ export async function getTeamDetailAction(teamId: string): Promise<{
       .from("TeamMember")
       .select(
         `
-        id, status, slotNumber, userId, inviteToken,
+        id, status, slotNumber, userId, inviteToken, invitedAt,
         user:User!TeamMember_userId_fkey(name, skills, nomorWa, cvUrl)
       `,
       )
@@ -350,7 +360,7 @@ export async function getTeamDetailAction(teamId: string): Promise<{
         .from("TeamMember")
         .select(
           `
-          id, status, slotNumber, userId, inviteToken,
+          id, status, slotNumber, userId, inviteToken, invitedAt,
           user:User!TeamMember_userId_fkey(name, skills, nomorWa, cvUrl)
         `,
         )
@@ -362,7 +372,7 @@ export async function getTeamDetailAction(teamId: string): Promise<{
       }
     }
 
-    const approvedCount = (memberRows ?? []).filter((m) => m.status === "APPROVED").length;
+    const approvedCount = (memberRows ?? []).filter((m) => m.status === "APPROVED" && m.userId !== team.leaderId).length;
     const teamNeedsMembers = approvedCount < team.memberCount;
     const competition = unwrapRelation(
       team.competition as { title: string } | { title: string }[] | null,
@@ -383,12 +393,17 @@ export async function getTeamDetailAction(teamId: string): Promise<{
         competitionTitle: competition?.title ?? "-",
         competitionLink: team.link,
         leadName: leader?.name ?? "Ketua Tim",
+        leaderId: team.leaderId,
+        currentUserId: user.id,
         maxAdditionalMembersNeeded: team.memberCount,
         approvedCount,
         isLeader,
         isMember,
-        canJoin: !isLeader && !isMember && !hasJoinRequest && teamNeedsMembers,
+        canJoin: !isLeader && !isMember && !hasJoinRequest && !isInvited && teamNeedsMembers,
         hasJoinRequest,
+        isInvited,
+        inviteToken: membership?.inviteToken ?? null,
+        membershipId: membership?.id ?? null,
         members: visibleMembers.map((row) => {
           const memberUser = unwrapRelation(
             row.user as
@@ -417,6 +432,7 @@ export async function getTeamDetailAction(teamId: string): Promise<{
             cvUrl: memberUser?.cvUrl ?? null,
             userId: row.userId,
             inviteToken: row.inviteToken,
+            invitedAt: row.invitedAt,
           };
         }),
       },
@@ -444,14 +460,14 @@ export async function findMemberAction(teamId: string) {
       return { success: false, error: "Hanya ketua tim yang dapat mencari anggota." };
     }
 
-    const assigned = await assignNextCandidate(adminDb, {
+    const assigned = await assignAllCandidates(adminDb, {
       id: team.id,
       leaderId: team.leaderId,
       memberCount: team.memberCount,
       requiredSkills: team.requiredSkills ?? [],
     });
 
-    if (!assigned) {
+    if (assigned === 0) {
       return { success: false, error: "Belum ada kandidat yang cocok saat ini." };
     }
 
@@ -471,7 +487,7 @@ export async function requestJoinAction(teamId: string) {
 
     const { data: team } = await adminDb
       .from("Team")
-      .select("id, leaderId, memberCount, requiredSkills")
+      .select("id, leaderId, memberCount, requiredSkills, name, competition:Competition(title)")
       .eq("id", teamId)
       .single();
 
@@ -505,7 +521,8 @@ export async function requestJoinAction(teamId: string) {
       .from("TeamMember")
       .select("id", { count: "exact", head: true })
       .eq("teamId", teamId)
-      .eq("status", "APPROVED");
+      .eq("status", "APPROVED")
+      .neq("userId", team.leaderId);
 
     if ((count ?? 0) >= team.memberCount) {
       return { success: false, error: "Tim sudah penuh." };
@@ -522,6 +539,34 @@ export async function requestJoinAction(teamId: string) {
     });
 
     if (error) return { success: false, error: error.message };
+
+    try {
+      const { data: requester } = await adminDb.from("User").select("name").eq("id", user.id).single();
+      const requesterName = (requester as any)?.name ?? "Seseorang";
+      const teamName = (team as any).name ?? "Tim";
+      const compRaw = unwrapRelation((team as any).competition as { title: string } | { title: string }[] | null);
+      const competitionTitle = compRaw?.title ?? "Lomba";
+
+      const { error: notifError } = await adminDb.from("Notification").insert({
+        id: crypto.randomUUID(),
+        userId: team.leaderId,
+        type: "request_join",
+        title: `${requesterName} ingin bergabung ke timmu`,
+        description: `${requesterName} mengajukan permintaan bergabung ke tim "${teamName}" untuk kompetisi ${competitionTitle}. Buka halaman detail tim untuk menerima atau menolak permintaan ini.`,
+        isRead: false,
+        createdAt: now,
+      });
+      if (notifError) console.error("[Notification] requestJoin insert error:", notifError.message);
+
+      await sendPushToUser(team.leaderId, {
+        title: `${requesterName} ingin bergabung ke timmu`,
+        body: `${requesterName} mengajukan permintaan bergabung ke tim "${teamName}" untuk kompetisi ${competitionTitle}.`,
+        url: "/notifications",
+      });
+    } catch (notifErr) {
+      console.error("[Notification] requestJoin unexpected error:", notifErr);
+    }
+
     return { success: true };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Gagal mengirim permintaan bergabung.";
@@ -660,16 +705,19 @@ export async function inviteMemberAction(teamId: string, memberId: string) {
         isRead: false,
         createdAt: now,
       });
+
+      await sendPushToUser(memberData.userId, {
+        title: "Undangan Bergabung Tim",
+        body: `Kamu diundang untuk bergabung dengan tim "${teamName}".`,
+        url: `/team-invite/${memberId}?token=${inviteToken}`,
+      });
     }
 
     try {
       await sendTeamInviteEmail({ teamId, memberId, inviteToken, origin });
-    } catch (emailErr: any) {
+    } catch (emailErr: unknown) {
       console.warn("Resend email sending failed:", emailErr);
-      return { 
-        success: true, 
-        warning: "Resend sandbox limit: Undangan telah dibuat di sistem, tetapi email gagal dikirim karena limitasi Resend Free. Pengguna dapat menerima undangan langsung melalui tab Notifikasi atau Tim Saya."
-      };
+      return { success: true, warning: "Undangan telah terkirim." };
     }
 
     return { success: true };
@@ -700,11 +748,11 @@ export async function getMyTeamsAction(): Promise<{
     );
 
     const teamSelectWithStatus = `
-      id, name, memberCount, category, createdAt, leaderId, status, requiredSkills,
+      id, name, memberCount, category, createdAt, leaderId, status, requiredSkills, competitionId,
       competition:Competition(title, organizer)
     `;
     const teamSelectBase = `
-      id, name, memberCount, category, createdAt, leaderId, requiredSkills,
+      id, name, memberCount, category, createdAt, leaderId, requiredSkills, competitionId,
       competition:Competition(title, organizer)
     `;
 
@@ -736,7 +784,7 @@ export async function getMyTeamsAction(): Promise<{
         `
         status, inviteToken,
         team:Team(
-          id, name, memberCount, category, createdAt, leaderId, status,
+          id, name, memberCount, category, createdAt, leaderId, status, competitionId, requiredSkills,
           competition:Competition(title, organizer)
         )
       `,
@@ -770,7 +818,7 @@ export async function getMyTeamsAction(): Promise<{
         .order("slotNumber", { ascending: true, nullsFirst: false });
 
       const members = membersResult.error ? [] : (membersResult.data ?? []);
-      const approvedCount = members.length;
+      const approvedCount = members.filter((m) => m.userId !== team.leaderId).length;
       const memberNames = (members ?? []).map((m) => {
         const memberUser = unwrapRelation(
           m.user as { name: string | null } | { name: string | null }[] | null,
@@ -793,7 +841,9 @@ export async function getMyTeamsAction(): Promise<{
       cards.push({
         id: teamId,
         teamName: team.name,
+        competitionId: team.competitionId,
         competitionTitle: competition?.title ?? "-",
+        requiredSkills: team.requiredSkills ?? [],
         createdDate: formatDate(team.createdAt),
         createdAt: team.createdAt,
         category: team.category,
@@ -839,15 +889,15 @@ export async function getAllTeamsAction(): Promise<{
 
     const { data: myMemberships } = await adminDb
       .from("TeamMember")
-      .select("teamId, status, inviteToken")
+      .select("id, teamId, status, inviteToken")
       .eq("userId", user.id);
 
     const membershipByTeam = new Map(
-      (myMemberships ?? []).map((m) => [m.teamId, { status: m.status, inviteToken: m.inviteToken }]),
+      (myMemberships ?? []).map((m) => [m.teamId, { id: m.id, status: m.status, inviteToken: m.inviteToken }]),
     );
 
     const teamSelectWithStatus = `
-      id, name, memberCount, category, createdAt, leaderId, status, requiredSkills,
+      id, name, memberCount, category, createdAt, leaderId, status, requiredSkills, competitionId,
       competition:Competition(title, organizer)
     `;
 
@@ -870,7 +920,7 @@ export async function getAllTeamsAction(): Promise<{
         .order("slotNumber", { ascending: true, nullsFirst: false });
 
       const members = membersResult.error ? [] : (membersResult.data ?? []);
-      const approvedCount = members.length;
+      const approvedCount = members.filter((m) => m.userId !== team.leaderId).length;
       const memberNames = (members ?? []).map((m) => {
         const memberUser = unwrapRelation(
           m.user as { name: string | null } | { name: string | null }[] | null,
@@ -888,13 +938,21 @@ export async function getAllTeamsAction(): Promise<{
       const userMembership = membershipByTeam.get(teamId);
       const isMember = !isLeader && userMembership?.status === "APPROVED";
       const hasJoinRequest = !isLeader && userMembership?.status === "WAITING" && userMembership?.inviteToken === "REQUEST_JOIN";
-      
+      const isInvited = !isLeader && userMembership?.status === "WAITING" && userMembership?.inviteToken !== "REQUEST_JOIN";
+
       const isDiscoverable = !isLeader && !isMember && !userMembership;
+      const isFull = approvedCount >= team.memberCount;
+
+      // Teams the viewer has no stake in (not leader/member/invited/requested) and
+      // that are already full shouldn't be shown — there's nothing they can do with them.
+      if (isDiscoverable && isFull) continue;
 
       cards.push({
         id: teamId,
         teamName: team.name,
+        competitionId: team.competitionId,
         competitionTitle: competition?.title ?? "-",
+        requiredSkills: team.requiredSkills ?? [],
         createdDate: formatDate(team.createdAt),
         createdAt: team.createdAt,
         category: team.category,
@@ -906,8 +964,11 @@ export async function getAllTeamsAction(): Promise<{
         isLeader,
         isMember,
         isDiscoverable,
-        isComplete: approvedCount >= team.memberCount,
+        isComplete: isFull,
         hasJoinRequest,
+        isInvited,
+        membershipId: userMembership?.id,
+        inviteToken: userMembership?.inviteToken,
       });
     }
 
@@ -932,7 +993,7 @@ export async function approveJoinRequestAction(teamId: string, memberId: string)
 
     const { data: team } = await adminDb
       .from("Team")
-      .select("id, name, leaderId, memberCount")
+      .select("id, name, leaderId, memberCount, competition:Competition(title)")
       .eq("id", teamId)
       .single();
 
@@ -951,49 +1012,95 @@ export async function approveJoinRequestAction(teamId: string, memberId: string)
       return { success: false, error: "Permintaan gabung tidak valid atau sudah diproses." };
     }
 
+    const { count: approvedNonLeaderCount } = await adminDb
+      .from("TeamMember")
+      .select("id", { count: "exact", head: true })
+      .eq("teamId", teamId)
+      .eq("status", "APPROVED")
+      .neq("userId", team.leaderId);
+
+    if ((approvedNonLeaderCount ?? 0) >= team.memberCount) {
+      return { success: false, error: "Tim sudah penuh." };
+    }
+
     const { count } = await adminDb
       .from("TeamMember")
       .select("id", { count: "exact", head: true })
       .eq("teamId", teamId)
       .eq("status", "APPROVED");
 
-    const approvedCount = count ?? 0;
-    if (approvedCount >= team.memberCount) {
-      return { success: false, error: "Tim sudah penuh." };
-    }
-
-    const slotNumber = approvedCount + 1;
+    const slotNumber = (count ?? 0) + 1;
     const now = new Date().toISOString();
 
     const { error: updateError } = await adminDb
       .from("TeamMember")
-      .update({
-        status: "APPROVED",
-        slotNumber,
-        updatedAt: now,
-      })
+      .update({ status: "APPROVED", slotNumber, updatedAt: now })
       .eq("id", memberId);
 
     if (updateError) {
       return { success: false, error: updateError.message };
     }
 
+    const teamName = (team as any).name ?? "Tim";
+    const competitionTitle = unwrapRelation((team as any).competition as { title: string } | { title: string }[] | null)?.title ?? "Lomba";
+    const nonLeaderApproved = slotNumber - 1; // slot 1 is leader, so slotNumber-1 = non-leader count
+    const totalCount = team.memberCount;
+
+    const { data: memberUser } = await adminDb.from("User").select("name").eq("id", member.userId).single();
+    const memberName = (memberUser as any)?.name ?? "Anggota";
+
+    // Notify the member who was approved
     await adminDb.from("Notification").insert({
       id: crypto.randomUUID(),
       userId: member.userId,
       type: "team_approve",
-      title: "Permintaan Gabung Disetujui",
-      description: `Permintaan bergabung kamu di tim "${team.name ?? 'Tim'}" telah disetujui oleh ketua tim.`,
+      title: "Permintaan Gabung Disetujui!",
+      description: `Selamat! Permintaan bergabungmu ke tim "${teamName}" untuk kompetisi ${competitionTitle} telah disetujui oleh ketua tim. Kamu resmi menjadi anggota tim.`,
       isRead: false,
       createdAt: now,
     });
 
+    await sendPushToUser(member.userId, {
+      title: "Permintaan Gabung Disetujui!",
+      body: `Selamat! Kamu resmi bergabung ke tim "${teamName}" untuk kompetisi ${competitionTitle}.`,
+      url: "/notifications",
+    });
+
+    // Notify other approved members
+    const { data: otherApproved } = await adminDb
+      .from("TeamMember")
+      .select("userId")
+      .eq("teamId", teamId)
+      .eq("status", "APPROVED")
+      .neq("userId", team.leaderId)
+      .neq("userId", member.userId);
+
+    if (otherApproved && otherApproved.length > 0) {
+      await adminDb.from("Notification").insert(
+        otherApproved.map((m: any) => ({
+          id: crypto.randomUUID(),
+          userId: m.userId,
+          type: "member_joined",
+          title: `${memberName} bergabung ke tim`,
+          description: `${memberName} bergabung ke tim "${teamName}" untuk kompetisi ${competitionTitle}. Jumlah anggota tim saat ini menjadi ${nonLeaderApproved}/${totalCount} anggota.`,
+          isRead: false,
+          createdAt: now,
+        }))
+      );
+
+      await Promise.allSettled(
+        otherApproved.map((m: any) =>
+          sendPushToUser(m.userId, {
+            title: `${memberName} bergabung ke tim`,
+            body: `Tim "${teamName}" kini beranggotakan ${nonLeaderApproved}/${totalCount} orang untuk kompetisi ${competitionTitle}.`,
+            url: "/notifications",
+          })
+        )
+      );
+    }
+
     if (slotNumber >= team.memberCount) {
-      await adminDb
-        .from("TeamMember")
-        .delete()
-        .eq("teamId", teamId)
-        .eq("status", "WAITING");
+      await adminDb.from("TeamMember").delete().eq("teamId", teamId).eq("status", "WAITING");
     }
 
     return { success: true };
@@ -1012,7 +1119,7 @@ export async function rejectJoinRequestAction(teamId: string, memberId: string) 
 
     const { data: team } = await adminDb
       .from("Team")
-      .select("id, name, leaderId")
+      .select("id, leaderId")
       .eq("id", teamId)
       .single();
 
@@ -1031,8 +1138,6 @@ export async function rejectJoinRequestAction(teamId: string, memberId: string) 
       return { success: false, error: "Permintaan gabung tidak valid atau sudah diproses." };
     }
 
-    const now = new Date().toISOString();
-
     const { error: deleteError } = await adminDb
       .from("TeamMember")
       .delete()
@@ -1041,16 +1146,6 @@ export async function rejectJoinRequestAction(teamId: string, memberId: string) 
     if (deleteError) {
       return { success: false, error: deleteError.message };
     }
-
-    await adminDb.from("Notification").insert({
-      id: crypto.randomUUID(),
-      userId: member.userId,
-      type: "team_reject",
-      title: "Permintaan Gabung Ditolak",
-      description: `Permintaan bergabung kamu di tim "${team.name ?? 'Tim'}" ditolak oleh ketua tim.`,
-      isRead: false,
-      createdAt: now,
-    });
 
     return { success: true };
   } catch (error: unknown) {

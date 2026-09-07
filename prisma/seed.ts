@@ -1,7 +1,6 @@
 import "dotenv/config";
-import { PrismaClient } from '../generated/prisma';
+import { prisma } from '../lib/prisma';
 
-const prisma = new PrismaClient();
 
 async function main() {
   console.log('Clearing existing competitions...');

@@ -1,6 +1,53 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { prisma } from "@/lib/prisma";
+
+export async function GET() {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { id: true, name: true, role: true, photoUrl: true }
+    });
+
+    const realRole = (dbUser?.role || user.user_metadata?.role || "talent").toLowerCase();
+    const normalizedRealRole = realRole === "aslab" ? "asisten_lab" : realRole;
+
+    const activeRoleCookie = cookieStore.get("activeRole")?.value;
+    const normalizedCookie = activeRoleCookie === "aslab" ? "asisten_lab" : activeRoleCookie;
+
+    const availableRoles = normalizedRealRole === "admin"
+      ? ["talent", "asisten_lab", "admin"]
+      : normalizedRealRole === "asisten_lab"
+        ? ["talent", "asisten_lab"]
+        : ["talent"];
+
+    const effectiveRole = (normalizedCookie && availableRoles.includes(normalizedCookie))
+      ? normalizedCookie
+      : normalizedRealRole;
+
+    return NextResponse.json({
+      id: user.id,
+      name: dbUser?.name || user.user_metadata?.name || user.email?.split("@")[0] || "User",
+      dbRole: normalizedRealRole,
+      role: effectiveRole,
+      availableRoles,
+      photoUrl: dbUser?.photoUrl || user.user_metadata?.photoUrl || null
+    });
+  } catch (err: any) {
+    console.error("API Error fetching profile:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
 
 export async function PUT(req: Request) {
   try {

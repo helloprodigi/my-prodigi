@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { User, Lock, LogOut, FileText, CheckCircle2, Briefcase, Link as LinkIcon, Download, ExternalLink, Info, Upload, Users } from "lucide-react";
+import { User, Lock, LogOut, FileText, CheckCircle2, Briefcase, Link as LinkIcon, Download, ExternalLink, Info, Upload, ChevronDown } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -39,7 +39,15 @@ export default function ProfileClient({ profile }: { profile: any }) {
   const [selectedRole, setSelectedRole] = useState(profile.role);
 
   useEffect(() => {
-    const saved = localStorage.getItem('activeRole');
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+      return null;
+    };
+    // Cookie is authoritative: it's the only source the server (middleware) can read,
+    // so the client must agree with it rather than trusting a possibly-stale localStorage value.
+    const saved = getCookie('activeRole') || localStorage.getItem('activeRole');
     if (saved && availableRoles.includes(saved)) {
       setActiveRole(saved);
       setSelectedRole(saved);
@@ -57,6 +65,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
     jurusan: profile.jurusan || "",
   });
   const [isSavingPersonal, setIsSavingPersonal] = useState(false);
+  const [waError, setWaError] = useState("");
 
   // State for Skills Edit
   const [isEditingSkills, setIsEditingSkills] = useState(false);
@@ -78,59 +87,13 @@ export default function ProfileClient({ profile }: { profile: any }) {
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
 
-  // State for User Management (Admin only)
-  const [users, setUsers] = useState<any[]>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
-  const [updatingRole, setUpdatingRole] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-
-  const fetchUsers = async (page: number = 1) => {
-    setIsLoadingUsers(true);
+  const handleLogout = () => {
     try {
-      const res = await fetch(`/api/admin/users?page=${page}&limit=10`);
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(data.users || []);
-        setCurrentPage(data.currentPage || 1);
-        setTotalPages(data.totalPages || 1);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-    setIsLoadingUsers(false);
-  };
-
-  useEffect(() => {
-    if (activeTab === "management" && activeRole === "admin") {
-      fetchUsers(currentPage);
-    }
-  }, [activeTab, activeRole, currentPage]);
-
-  const handleUpdateRole = async (userId: string, newRole: string) => {
-    setUpdatingRole(userId);
-    try {
-      const res = await fetch("/api/admin/users", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, role: newRole })
-      });
-      if (res.ok) {
-        toast.success("Role berhasil diupdate!");
-        fetchUsers(currentPage);
-      } else {
-        toast.error("Gagal update role.");
-      }
-    } catch (err) {
-      console.error(err);
-    }
-    setUpdatingRole(null);
-  };
-
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
+      localStorage.clear();
+      sessionStorage.clear();
+      document.cookie = "activeRole=; path=/; max-age=0; SameSite=Lax";
+    } catch {}
+    window.location.href = "/auth/logout";
   };
 
   const handleSavePersonal = async () => {
@@ -215,7 +178,8 @@ export default function ProfileClient({ profile }: { profile: any }) {
       });
 
       if (!uploadRes.ok) {
-        throw new Error("Gagal mengunggah file CV.");
+        const errData = await uploadRes.json().catch(() => ({}));
+        throw new Error(errData?.error ?? "Gagal mengunggah file CV.");
       }
 
       const { url } = await uploadRes.json();
@@ -272,6 +236,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
         
         if (res.ok) {
           toast.success("Foto profil berhasil diubah.");
+          window.dispatchEvent(new CustomEvent("myprodigi:profile-updated", { detail: { photoUrl: url } }));
           router.refresh();
         } else {
           toast.error("Gagal mengubah foto profil.");
@@ -333,14 +298,10 @@ export default function ProfileClient({ profile }: { profile: any }) {
     { id: "password", label: "Reset Password", icon: Lock },
   ];
 
-  if (activeRole === "admin") {
-    tabs.push({ id: "management", label: "Management Akun", icon: Users });
-  }
-
   return (
     <div className="flex flex-col lg:flex-row gap-8">
       {/* Sidebar */}
-      <div className="w-full lg:w-80 flex-shrink-0 bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex flex-col items-center">
+      <div className="w-full lg:w-80 flex-shrink-0 bg-white rounded-3xl p-5 sm:p-6 md:p-8 shadow-sm border border-gray-100 flex flex-col items-center">
         <div className="relative mb-4 mt-4">
           <div className="w-32 h-32 rounded-full border-4 border-[#FFC700] overflow-hidden bg-gray-200">
             {profile.photoUrl ? (
@@ -395,8 +356,12 @@ export default function ProfileClient({ profile }: { profile: any }) {
         </div>
 
         <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-medium text-red-500 hover:bg-red-50 transition-colors mt-auto"
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleLogout();
+          }}
+          className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-medium text-red-500 hover:bg-red-50 transition-colors mt-auto cursor-pointer"
         >
           <LogOut className="w-5 h-5 text-red-500" />
           Log Out
@@ -406,7 +371,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+      <div className="flex-1 bg-white rounded-3xl p-5 sm:p-6 md:p-8 shadow-sm border border-gray-100">
 
         {/* TAB: Personal Information */}
         {activeTab === "personal" && (
@@ -440,7 +405,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                   </button>
                   <button
                     onClick={handleSavePersonal}
-                    disabled={isSavingPersonal}
+                    disabled={isSavingPersonal || !!waError}
                     className="bg-[#FFC700] text-[#0A1024] px-6 py-2 rounded-lg font-semibold hover:bg-[#e6b400] transition-colors text-sm disabled:opacity-50"
                   >
                     {isSavingPersonal ? "Saving..." : "Save"}
@@ -451,77 +416,111 @@ export default function ProfileClient({ profile }: { profile: any }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-600">Nama Lengkap</label>
+                <label className="block text-sm text-[#0A1024] mb-2">Nama Lengkap</label>
                 {isEditingPersonal ? (
                   <input
                     type="text"
                     value={personalForm.name}
                     onChange={e => setPersonalForm({ ...personalForm, name: e.target.value })}
-                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
+                    className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700]"
                   />
                 ) : (
-                  <div className="w-full p-4 bg-gray-50 rounded-xl text-gray-900 text-sm border border-transparent">{profile.name || "-"}</div>
+                  <div className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0A1024]">{profile.name || "-"}</div>
                 )}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-600">NIM</label>
+                <label className="block text-sm text-[#0A1024] mb-2">NIM</label>
                 {isEditingPersonal ? (
                   <input
                     type="text"
+                    inputMode="numeric"
                     value={personalForm.nim}
-                    onChange={e => setPersonalForm({ ...personalForm, nim: e.target.value })}
-                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
+                    onChange={e => setPersonalForm({ ...personalForm, nim: e.target.value.replace(/\D/g, '') })}
+                    className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700]"
                   />
                 ) : (
-                  <div className="w-full p-4 bg-gray-50 rounded-xl text-gray-900 text-sm border border-transparent">{profile.nim || "Belum diatur"}</div>
+                  <div className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0A1024]">{profile.nim || "Belum diatur"}</div>
                 )}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-600">Email</label>
+                <label className="block text-sm text-[#0A1024] mb-2">Email</label>
                 {/* Email is always disabled */}
-                <div className="w-full p-4 bg-gray-100 rounded-xl text-gray-500 text-sm border border-transparent cursor-not-allowed">{profile.email || "-"}</div>
+                <div className="w-full bg-gray-100 rounded-lg px-4 py-3 text-sm text-gray-500 cursor-not-allowed">{profile.email || "-"}</div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-600">Nomor WA</label>
+                <label className="block text-sm text-[#0A1024] mb-2">Nomor WA</label>
                 {isEditingPersonal ? (
-                  <input
-                    type="text"
-                    value={personalForm.nomorWa}
-                    onChange={e => setPersonalForm({ ...personalForm, nomorWa: e.target.value })}
-                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
-                  />
+                  <div>
+                    <div className={`flex bg-[#F5F5F5] rounded-lg overflow-hidden ${waError ? 'ring-2 ring-red-400' : 'focus-within:ring-2 focus-within:ring-[#FFC700]'}`}>
+                      <div className="flex items-center px-4 bg-gray-200/70 text-gray-600 text-sm font-medium">
+                        +62
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="821 0676 7676"
+                        className="w-full px-4 py-3 bg-transparent outline-none text-sm text-[#0A1024]"
+                        value={personalForm.nomorWa.replace(/^\+?62/, '').replace(/^0/, '')}
+                        onChange={e => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val.startsWith('0')) val = val.substring(1);
+                          if (val.startsWith('62')) val = val.substring(2);
+
+                          setPersonalForm({ ...personalForm, nomorWa: val ? '+62' + val : '' });
+
+                          if (val.length === 0) {
+                            setWaError("Nomor WA harus diisi");
+                          } else if (val.length < 9) {
+                            setWaError("Nomor WA terlalu pendek (minimal 9 angka)");
+                          } else if (val.length > 13) {
+                            setWaError("Nomor WA terlalu panjang (maksimal 13 angka)");
+                          } else if (!val.startsWith('8')) {
+                            setWaError("Nomor tidak valid (harus diawali angka 8)");
+                          } else {
+                            setWaError("");
+                          }
+                        }}
+                      />
+                    </div>
+                    {waError && <p className="text-red-500 text-xs mt-1">{waError}</p>}
+                  </div>
                 ) : (
-                  <div className="w-full p-4 bg-gray-50 rounded-xl text-gray-900 text-sm border border-transparent">{profile.nomorWa || "-"}</div>
+                  <div className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0A1024]">{profile.nomorWa || "-"}</div>
                 )}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-600">Angkatan</label>
+                <label className="block text-sm text-[#0A1024] mb-2">Angkatan</label>
                 {isEditingPersonal ? (
                   <input
                     type="text"
+                    inputMode="numeric"
+                    maxLength={4}
                     value={personalForm.angkatan}
-                    onChange={e => setPersonalForm({ ...personalForm, angkatan: e.target.value })}
-                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
+                    onChange={e => setPersonalForm({ ...personalForm, angkatan: e.target.value.replace(/\D/g, '') })}
+                    className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700]"
                   />
                 ) : (
-                  <div className="w-full p-4 bg-gray-50 rounded-xl text-gray-900 text-sm border border-transparent">{profile.angkatan || "-"}</div>
+                  <div className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0A1024]">{profile.angkatan || "-"}</div>
                 )}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-600">Jurusan</label>
+                <label className="block text-sm text-[#0A1024] mb-2">Jurusan</label>
                 {isEditingPersonal ? (
-                  <select
-                    value={personalForm.jurusan}
-                    onChange={e => setPersonalForm({ ...personalForm, jurusan: e.target.value })}
-                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
-                  >
-                    <option value="S1 Informatika">S1 Informatika</option>
-                    <option value="S1 Teknologi Informasi">S1 Teknologi Informasi</option>
-                    <option value="S1 Rekayasa Perangkat Lunak">S1 Rekayasa Perangkat Lunak</option>
-                    <option value="S1 Data Science">S1 Data Science</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={personalForm.jurusan}
+                      onChange={e => setPersonalForm({ ...personalForm, jurusan: e.target.value })}
+                      className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 pr-10 text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700] appearance-none cursor-pointer"
+                    >
+                      <option value="" disabled>Pilih Jurusan</option>
+                      <option value="S1 Informatika">S1 Informatika</option>
+                      <option value="S1 Teknologi Informasi">S1 Teknologi Informasi</option>
+                      <option value="S1 Rekayasa Perangkat Lunak">S1 Rekayasa Perangkat Lunak</option>
+                      <option value="S1 Data Science">S1 Data Science</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  </div>
                 ) : (
-                  <div className="w-full p-4 bg-gray-50 rounded-xl text-gray-900 text-sm border border-transparent">{profile.jurusan || "-"}</div>
+                  <div className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0A1024]">{profile.jurusan || "-"}</div>
                 )}
               </div>
             </div>
@@ -573,7 +572,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                     key={skill}
                     onClick={() => toggleSkill(skill)}
                     disabled={!isEditingSkills}
-                    className={`p-4 border rounded-xl flex justify-between items-center text-sm transition-all ${hasSkill ? "border-[#FFC700] bg-[#FFF9E6] text-[#0A1024] font-medium" : "border-gray-200 text-gray-600"
+                    className={`p-4 border rounded-xl flex justify-between items-center text-sm text-left transition-all ${hasSkill ? "border-[#FFC700] bg-[#FFF9E6] text-[#0A1024] font-medium" : "border-gray-200 text-gray-600"
                       } ${isEditingSkills ? "hover:border-[#FFC700] cursor-pointer" : "cursor-default"}`}
                   >
                     <span>{skill}</span>
@@ -593,7 +592,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                     key={interest}
                     onClick={() => toggleInterest(interest)}
                     disabled={!isEditingSkills}
-                    className={`p-4 border rounded-xl flex justify-between items-center text-sm transition-all ${hasInterest ? "border-[#FFC700] bg-[#FFF9E6] text-[#0A1024] font-medium" : "border-gray-200 text-gray-600"
+                    className={`p-4 border rounded-xl flex justify-between items-center text-sm text-left transition-all ${hasInterest ? "border-[#FFC700] bg-[#FFF9E6] text-[#0A1024] font-medium" : "border-gray-200 text-gray-600"
                       } ${isEditingSkills ? "hover:border-[#FFC700] cursor-pointer" : "cursor-default"}`}
                   >
                     <div className="flex items-center gap-3">
@@ -637,10 +636,12 @@ export default function ProfileClient({ profile }: { profile: any }) {
                       if (!isChangingRole) {
                         setIsChangingRole(true);
                       } else {
+                        document.cookie = `activeRole=${selectedRole}; path=/; max-age=31536000; SameSite=Lax`;
                         localStorage.setItem('activeRole', selectedRole);
                         setActiveRole(selectedRole);
                         setIsChangingRole(false);
-                        router.push('/');
+                        window.dispatchEvent(new CustomEvent("myprodigi:profile-updated", { detail: { role: selectedRole } }));
+                        router.push('/dashboard');
                         router.refresh();
                       }
                     }}
@@ -667,8 +668,8 @@ export default function ProfileClient({ profile }: { profile: any }) {
                         : "border-gray-200 bg-gray-50 opacity-60"
                     } ${isChangingRole ? "cursor-pointer hover:border-[#FFC700]" : ""}`}
                   >
-                    {isActive && <CheckCircle2 className="w-6 h-6 text-[#FFC700] absolute top-6 right-6" />}
-                    <h3 className="text-lg font-bold text-[#0A1024] mb-2">{roleInfo.title}</h3>
+                    {isActive && <CheckCircle2 className="w-6 h-6 text-[#FFC700] absolute top-6 right-6 shrink-0" />}
+                    <h3 className="text-lg font-bold text-[#0A1024] mb-2 pr-8">{roleInfo.title}</h3>
                     <p className="text-sm text-gray-600 leading-relaxed">
                       {roleInfo.desc}
                     </p>
@@ -703,7 +704,6 @@ export default function ProfileClient({ profile }: { profile: any }) {
                   </div>
                   <div className="overflow-hidden">
                     <h3 className="font-semibold text-[#0A1024] truncate">CV {profile.name || "User"}</h3>
-                    <p className="text-xs text-gray-500 truncate">{profile.cvUrl}</p>
                   </div>
                 </div>
 
@@ -777,13 +777,13 @@ export default function ProfileClient({ profile }: { profile: any }) {
             <h2 className="text-2xl font-bold text-[#0A1024] mb-8">Reset Password</h2>
             <div className="max-w-md space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-600">Email Address</label>
+                <label className="block text-sm text-[#0A1024] mb-2">Email Address</label>
                 <input
                   type="email"
                   placeholder="name@example.com"
                   value={resetEmail}
                   onChange={e => setResetEmail(e.target.value)}
-                  className="w-full p-4 bg-gray-50 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#FFC700] outline-none text-gray-900"
+                  className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700]"
                 />
                 <p className="text-xs text-gray-500">Masukkan email Anda yang terdaftar untuk menerima tautan atur ulang kata sandi.</p>
               </div>
@@ -797,126 +797,11 @@ export default function ProfileClient({ profile }: { profile: any }) {
               <button
                 onClick={handleRequestReset}
                 disabled={isSendingReset || !resetEmail}
-                className="bg-[#FFC700] text-[#0A1024] px-8 py-3 rounded-xl font-semibold hover:bg-[#e6b400] transition-colors w-full mt-4 disabled:opacity-50"
+                className="w-full bg-[#FFC700] text-[#0A1024] font-bold py-3.5 rounded-lg text-sm hover:bg-[#e6b400] transition-colors disabled:opacity-50"
               >
                 {isSendingReset ? "Mengirim..." : "Kirim Tautan Reset Password"}
               </button>
             </div>
-          </div>
-        )}
-
-        {/* TAB: Management Akun (Admin Only) */}
-        {activeTab === "management" && activeRole === "admin" && (
-          <div className="animate-in fade-in duration-300">
-            <h2 className="text-2xl font-bold text-[#0A1024] mb-8">Management Akun</h2>
-
-            {isLoadingUsers ? (
-              <div className="flex justify-center p-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FFC700]"></div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="py-4 px-4 font-semibold text-gray-600">Nama</th>
-                      <th className="py-4 px-4 font-semibold text-gray-600">Email</th>
-                      <th className="py-4 px-4 font-semibold text-gray-600">Role Saat Ini</th>
-                      <th className="py-4 px-4 font-semibold text-gray-600">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((u: any) => (
-                      <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td className="py-4 px-4 text-gray-900">{u.name || "-"}</td>
-                        <td className="py-4 px-4 text-gray-600 text-sm">{u.email}</td>
-                        <td className="py-4 px-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${u.role === "admin" ? "bg-red-100 text-red-700" :
-                            u.role === "asisten_lab" ? "bg-blue-100 text-blue-700" :
-                              "bg-gray-100 text-gray-700"
-                            }`}>
-                            {u.role === "asisten_lab" ? "Asisten Lab" : u.role.charAt(0).toUpperCase() + u.role.slice(1)}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-3">
-                            <select
-                              className="
-        min-w-[220px]
-        px-4 py-2.5
-        bg-white
-        border border-gray-300
-        rounded-xl
-        text-sm font-medium text-gray-700
-        shadow-sm
-        transition-all duration-200
-
-        hover:border-gray-400
-        focus:outline-none
-        focus:ring-2
-        focus:ring-[#FFC700]/30
-        focus:border-[#FFC700]
-
-        disabled:bg-gray-50
-        disabled:text-gray-500
-        disabled:border-gray-200
-        disabled:cursor-not-allowed
-      "
-                              value={u.role}
-                              onChange={(event) =>
-                                handleUpdateRole(u.id, event.target.value)
-                              }
-                              disabled={updatingRole === u.id || u.id === profile.id}
-                            >
-                              <option value="talent">Talent</option>
-                              <option value="asisten_lab">Asisten Laboratorium</option>
-                              <option value="admin">Admin</option>
-                            </select>
-
-                            {updatingRole === u.id && (
-                              <div
-                                className="
-          animate-spin
-          h-5 w-5
-          rounded-full
-          border-2 border-gray-200
-          border-t-[#FFC700]
-        "
-                                role="status"
-                                aria-label="Memperbarui role pengguna"
-                              />
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Pagination Controls for Management Akun */}
-            {!isLoadingUsers && totalPages > 1 && (
-              <div className="flex justify-center items-center gap-4 mt-8">
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage <= 1}
-                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <span className="text-sm font-medium text-gray-600">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage >= totalPages}
-                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            )}
           </div>
         )}
 

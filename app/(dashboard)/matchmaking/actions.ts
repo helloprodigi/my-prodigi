@@ -2,6 +2,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { prisma } from "@/lib/prisma";
 import type { CreateTeamInput } from "@/types/team";
 
 export async function createTeamAction({ teamName, memberCount, competitionId, competitionLink, competitionCategory, requiredSkills }: CreateTeamInput) {
@@ -87,6 +88,12 @@ export async function createTeamAction({ teamName, memberCount, competitionId, c
     }
     return { success: false, error: message };
   }
+
+  await prisma.appStats.upsert({
+    where: { id: "global" },
+    create: { id: "global", totalTeamsCreated: 1 },
+    update: { totalTeamsCreated: { increment: 1 } },
+  }).catch((err) => console.error("Failed to increment team counter:", err));
 
   return { success: true, team: data };
 }

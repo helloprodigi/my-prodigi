@@ -1,35 +1,30 @@
 "use client";
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { setRememberMe } from "@/utils/supabase/remember-me";
+import { getSafeRedirect } from "@/utils/getSafeRedirect";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const supabase = createClient();
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const oauthError = params.get("error");
-
-    if (oauthError === "google_not_registered") {
-      setError("Akun Google ini belum terdaftar. Silakan register dulu.");
-    }
-  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
+      setRememberMe(remember);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      window.location.href = "/";
+      window.location.href = getSafeRedirect();
     } catch (err: any) {
       setError(err.message || String(err));
     } finally {
@@ -37,36 +32,12 @@ export default function LoginPage() {
     }
   };
 
-  const signInWithGoogle = async () => {
-    setGoogleLoading(true);
-    setError(null);
-
-    try {
-      await supabase.auth.signOut({ scope: "local" });
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/&intent=login`,
-          queryParams: {
-            prompt: "select_account",
-          },
-        },
-      });
-
-      if (error) throw error;
-    } catch (err: any) {
-      setError(err.message || String(err));
-      setGoogleLoading(false);
-    }
-  };
-
   return (
-    <div className="h-screen w-full overflow-hidden bg-cover bg-center font-sans" style={{ backgroundImage: "url('/assets/login/background.svg')" }}>
-      <div className="h-full grid lg:grid-cols-12 items-center">
-        
-        {/* Sisi Kiri - Branding & Ilustrasi */}
-        <div className="lg:col-span-6 px-16 py-12 flex flex-col justify-center h-full">
+    <div className="h-screen w-full overflow-y-auto bg-cover bg-center font-sans" style={{ backgroundImage: "url('/assets/login/background.svg')" }}>
+      <div className="flex flex-col lg:grid lg:grid-cols-12 lg:h-full lg:items-center">
+
+        {/* Sisi Kiri - Branding & Ilustrasi (hidden on mobile) */}
+        <div className="hidden lg:flex lg:col-span-6 px-16 py-12 flex-col justify-center h-full">
           <div className="max-w-xl text-left">
             <h1 className="text-3xl lg:text-4xl font-bold leading-tight text-white">
               Bangun tim <span className="text-[#FFC917]">Juara,</span> <br /> Menangkan Kompetisi
@@ -82,21 +53,19 @@ export default function LoginPage() {
         </div>
 
         {/* Sisi Kanan - Container Kartu Putih */}
-        <div className="lg:col-span-6 flex items-center justify-center w-full h-full lg:-translate-x-6 transition-transform">
-          {/* Lebar kartu dinaikkan ke 400px dan padding diperlonggar ke p-7 */}
-          <div 
-            className="bg-white rounded-lg shadow-xl p-7 pt-8 pb-8 flex flex-col justify-start box-border" 
-            style={{ width: '400px' }}
+        <div className="min-h-screen flex items-center justify-center px-5 py-8 lg:min-h-0 lg:col-span-6 lg:h-full lg:px-0 lg:py-0 lg:-translate-x-6 transition-transform">
+          <div
+            className="bg-white rounded-2xl lg:rounded-lg shadow-xl p-7 pt-8 pb-8 flex flex-col justify-start box-border w-full max-w-[400px]"
           >
             {/* Header Kartu */}
             <div className="flex flex-col items-center w-full">
               <div className="flex justify-center items-center w-full px-2">
-                <Image 
-                  src="/assets/login/myprodigi-logo.svg" 
-                  alt="logo" 
-                  width={310} 
-                  height={91.5} 
-                  className="object-contain"
+                <Image
+                  src="/assets/myprodigi-logo.svg"
+                  alt="logo"
+                  width={218}
+                  height={50}
+                  className="object-contain w-full max-w-[310px] h-auto"
                 />
               </div>
               <div className="w-full max-w-[310px] h-[1px] bg-gray-100 my-3" />
@@ -105,10 +74,10 @@ export default function LoginPage() {
 
             {/* Form Utama */}
             <form onSubmit={submit} className="flex flex-col w-full items-center mt-6">
-              {error && <div className="text-xs text-red-600 bg-red-50 p-2 rounded-md w-[340px] mb-3">{error}</div>}
+              {error && <div className="text-xs text-red-600 bg-red-50 p-2 rounded-md w-full mb-3">{error}</div>}
 
               {/* Input Email */}
-              <div className="w-[340px] mb-4">
+              <div className="w-full mb-4">
                 <label className="block text-[11px] text-[#6E7980] font-semibold mb-1.5 pl-0.5">Email Address</label>
                 <div className="relative w-full">
                   <span className="absolute inset-y-0 left-3 flex items-center text-[#6E7980] z-10">
@@ -129,7 +98,7 @@ export default function LoginPage() {
               </div>
 
               {/* Input Password */}
-              <div className="w-[340px] mb-5">
+              <div className="w-full mb-5">
                 <div className="flex items-center justify-between mb-1.5 pl-0.5">
                   <label className="text-[11px] text-[#6E7980] font-semibold">Password</label>
                   <a className="text-[#FFC917] text-xs font-semibold hover:underline" href="/request-reset">Forgot Password?</a>
@@ -168,8 +137,21 @@ export default function LoginPage() {
                 </div>
               </div>
 
+              {/* Remember Me */}
+              <div className="w-full mb-4 flex items-center">
+                <label className="flex items-center gap-2 text-[11px] text-[#6E7980] font-semibold cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-gray-300 accent-[#FFC917] text-[#FFC917] focus:ring-[#FFC917] focus:ring-offset-0"
+                  />
+                  Ingat saya
+                </label>
+              </div>
+
               {/* Tombol Masuk */}
-              <div className="w-[340px] mb-3.5">
+              <div className="w-full mb-3.5">
                 <button
                   type="submit"
                   disabled={loading}
@@ -181,22 +163,14 @@ export default function LoginPage() {
               </div>
 
               {/* Tombol Google OAuth */}
-              <div className="w-[340px]">
-                <button
-                  type="button"
-                  className="w-full rounded-md flex items-center justify-center gap-2 text-gray-600 font-medium text-[11px] transition-all hover:bg-gray-50 active:scale-[0.99] disabled:opacity-60"
-                  onClick={() => void signInWithGoogle()}
-                  disabled={googleLoading || loading}
-                  style={{ height: '46px', backgroundColor: '#ffffff', border: '1px solid #D9D9D9' }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 533.5 544.3" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M533.5 278.4c0-17.4-1.5-34.1-4.3-50.4H272v95.4h147.3c-6.3 34.1-25.4 62.9-54.3 82.1v68h87.6c51.3-47.2 81.9-117.1 81.9-195.1z" fill="#4285F4"/>
-                    <path d="M272 544.3c73.7 0 135.6-24.4 180.8-66.3l-87.6-68c-24.4 16.4-55.6 26-93.2 26-71.6 0-132.3-48.4-154.1-113.3H29.9v71.1C75.4 489.8 168.6 544.3 272 544.3z" fill="#34A853"/>
-                    <path d="M117.9 332.7c-10.7-32.1-10.7-66.8 0-98.9V162.7H29.9c-39 77.6-39 169.7 0 247.3l88-77.3z" fill="#FBBC05"/>
-                    <path d="M272 109.1c39.9 0 76 13.7 104.2 40.5l78-78C409.1 24.6 347.2 0 272 0 168.6 0 75.4 54.5 29.9 138.7l88 71.1C139.7 157.5 200.4 109.1 272 109.1z" fill="#EA4335"/>
-                  </svg>
-                  {googleLoading ? "Connecting..." : "Sign In With Google"}
-                </button>
+              <div className="w-full">
+                <GoogleSignInButton
+                  intent="login"
+                  label="Sign In With Google"
+                  loadingLabel="Connecting..."
+                  remember={remember}
+                  onError={setError}
+                />
               </div>
             </form>
 

@@ -81,13 +81,26 @@ model User {
   interests   String[]
   role        String   @default("talent") // Can be "talent", "asisten_lab", "admin"
   isOnboarded Boolean  @default(false)
+  jabatan     String?
+  divisi      String?
+  hasProkerAccess Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  competitionsCreated Competition[] @relation("CreatedCompetitions")
-  teamsAsLeader       Team[]        @relation("UserLedTeams")
-  teamMemberships     TeamMember[]  @relation("UserTeamMemberships")
+  competitionsCreated Competition[]  @relation("CreatedCompetitions")
+  draftCompetitionsCreated DraftCompetition[] @relation("DraftCompetitionCreatedBy")
+  teamsAsLeader       Team[]         @relation("UserLedTeams")
+  teamMemberships     TeamMember[]   @relation("UserTeamMemberships")
   notifications       Notification[]
+  pushSubscriptions   PushSubscription[]
+  programKerjaCreated ProgramKerja[] @relation("ProgramKerjaCreatedBy")
+  laporanCreated      Laporan[]      @relation("LaporanCreatedBy")
+  
+  absensiAgendaCreated AbsensiAgenda[] @relation("AbsensiAgendaCreatedBy")
+  shiftAssignments     ShiftAssignment[] @relation("UserShiftAssignments")
+  absensiRecords       AbsensiRecord[]   @relation("UserAbsensiRecords")
+  myShiftSchedulesCreated MyShiftSchedule[] @relation("MyShiftScheduleCreatedBy")
+  myShiftScheduleAssignments MyShiftScheduleAssignment[] @relation("UserMyShiftScheduleAssignments")
 }
 
 model Competition {
@@ -109,12 +122,29 @@ model Competition {
   teams       Team[]    @relation("CompetitionTeams")
 }
 
+model DraftCompetition {
+  id          String   @id @default(uuid())
+  title       String
+  organizer   String
+  tab         String   // Guidebook, Proposal, Pitch Deck
+  category    String?  // Belmawa, Non-Belmawa, Internal
+  skills      String[]
+  description String?
+  link        String?
+  createdById String?
+  createdBy   User?     @relation("DraftCompetitionCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tab])
+}
+
 model Team {
   id                 String   @id @default(uuid())
   name               String
   memberCount        Int
   competitionId      String
-  competition        Competition @relation("CompetitionTeams", fields: [competitionId], references: [id])
+  competition        Competition @relation("CompetitionTeams", fields: [competitionId], references: [id], onDelete: Cascade)
   leaderId           String?  
   leader             User?    @relation("UserLedTeams", fields: [leaderId], references: [id])
   requiredSkills     String[] 
@@ -151,6 +181,133 @@ model Notification {
   description String
   isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())
-  
+
   user        User     @relation(fields: [userId], references: [id])
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProgramKerja {
+  id             String   @id @default(uuid())
+  divisi         String   // matches the `name` field in lib/divisions.ts
+  nama           String
+  deskripsi      String?
+  tanggalMulai   DateTime
+  tanggalSelesai DateTime
+  status         String   @default("BELUM_SELESAI") // "BELUM_SELESAI", "SELESAI"
+  createdById    String?
+  createdBy      User?    @relation("ProgramKerjaCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  laporan        Laporan[]
+}
+
+model Laporan {
+  id             String   @id @default(uuid())
+  programKerjaId String
+  programKerja   ProgramKerja @relation(fields: [programKerjaId], references: [id], onDelete: Cascade)
+  catatan        String?
+  fileUrl        String
+  createdById    String?
+  createdBy      User?    @relation("LaporanCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model AbsensiAgenda {
+  id           String   @id @default(uuid())
+  nama         String
+  deskripsi    String?
+  divisi       String
+  waktuMulai   DateTime
+  waktuSelesai DateTime
+  kodeQrDatang String?  // Optional token for attendance check-in
+  kodeQrPulang String?  // Optional token for attendance check-out
+  createdAt    DateTime @default(now())
+  
+  createdById  String?
+  createdBy    User?    @relation("AbsensiAgendaCreatedBy", fields: [createdById], references: [id])
+  
+  assignedUsers ShiftAssignment[] 
+  records       AbsensiRecord[]
+}
+
+model ShiftAssignment {
+  id          String        @id @default(uuid())
+  agendaId    String
+  agenda      AbsensiAgenda @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?         @relation("UserShiftAssignments", fields: [userId], references: [id])
+  nama        String
+  nim         String
+  
+  @@unique([agendaId, nim])
+}
+
+model AbsensiRecord {
+  id             String        @id @default(uuid())
+  agendaId       String
+  agenda         AbsensiAgenda @relation(fields: [agendaId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?         @relation("UserAbsensiRecords", fields: [userId], references: [id])
+  nama           String?
+  nim            String?
+  waktuDatang    DateTime?
+  waktuPulang    DateTime?
+  status         String        @default("ALPA") // "HADIR", "ALPA", "IZIN"
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([agendaId, userId])
+}
+
+model MyShiftSchedule {
+  id           String   @id @default(uuid())
+  hari         String   // "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"
+  dayOfWeek    Int      // 1: Senin, 2: Selasa, 3: Rabu, 4: Kamis, 5: Jumat, 6: Sabtu, 0 / 7: Minggu
+  namaSesi     String?  // e.g., "Shift 1", "Shift Pagi"
+  waktuMulai   String   // "HH:mm" 24-jam, e.g., "08:00"
+  waktuSelesai String   // "HH:mm" 24-jam, e.g., "12:00"
+  createdById  String?
+  createdBy    User?    @relation("MyShiftScheduleCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignedAslabs MyShiftScheduleAssignment[]
+
+  @@index([dayOfWeek])
+}
+
+model MyShiftScheduleAssignment {
+  id         String          @id @default(uuid())
+  scheduleId String
+  schedule   MyShiftSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?           @relation("UserMyShiftScheduleAssignments", fields: [userId], references: [id])
+  nama       String
+  nim        String
+  jabatan    String?
+  divisi     String?
+
+  @@unique([scheduleId, nim])
+  @@index([scheduleId])
+}
+
+// Single-row global counters that must survive hard-deletes elsewhere (e.g.
+// Team rows are deleted when a competition is marked complete or expires),
+// so admin analytics can report true lifetime totals, not just live counts.
+model AppStats {
+  id                String @id
+  totalTeamsCreated Int    @default(0)
 }

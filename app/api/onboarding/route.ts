@@ -16,23 +16,24 @@ export async function POST(req: Request) {
     // Actually, to get the user safely, we get it from normal client
     const { data: { user } } = await supabaseAdmin.auth.getUser();
 
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     // Then use a separate admin client to bypass RLS
     const { createClient: createSupabaseClient } = require("@supabase/supabase-js");
     const adminDb = createSupabaseClient(supabaseUrl, serviceRoleKey);
-    
+
     const body = await req.json();
     const { jurusan, angkatan, nomorWa, cvUrl, skills, interests } = body;
 
-    // Use a placeholder UUID if user is not authenticated for development purposes
-    const userId = user?.id || "00000000-0000-0000-0000-000000000000";
-    
     // Extract name from user metadata (assuming it was passed during signup)
-    const displayName = user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.user_metadata?.name || null;
-    
+    const displayName = user.user_metadata?.display_name || user.user_metadata?.full_name || user.user_metadata?.name || null;
+
     // Construct User data
     const userData = {
-      id: userId,
-      email: user?.email || "dummy@example.com", // In a real app this should only come from user obj
+      id: user.id,
+      email: user.email,
       name: displayName,
       jurusan,
       angkatan,

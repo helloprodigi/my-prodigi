@@ -4,12 +4,14 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { X, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
+import CreatableSelect from 'react-select/creatable';
 
 interface AddCompetitionModalProps {
   isOpen: boolean;
   onClose: () => void;
   userRole?: string;
   competitionToApprove?: any;
+  isEditMode?: boolean;
 }
 
 const SKILL_CATEGORIES = [
@@ -19,7 +21,7 @@ const SKILL_CATEGORIES = [
   { name: "Web Development", activeClass: "bg-[#FFFBEB] text-[#D4AF37]" }
 ];
 
-export default function AddCompetitionModal({ isOpen, onClose, userRole = "talent", competitionToApprove }: AddCompetitionModalProps) {
+export default function AddCompetitionModal({ isOpen, onClose, userRole = "talent", competitionToApprove, isEditMode = false }: AddCompetitionModalProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -67,7 +69,14 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
 
     try {
       let res;
-      if (competitionToApprove) {
+      if (isEditMode && competitionToApprove) {
+        // Edit flow
+        res = await fetch(`/api/competitions/${competitionToApprove.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(submissionData)
+        });
+      } else if (competitionToApprove) {
         // Approve flow
         res = await fetch(`/api/competitions/${competitionToApprove.id}/approve`, {
           method: "POST",
@@ -115,9 +124,12 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 className="w-10 h-10 text-green-500" />
           </div>
-          <h3 className="text-2xl font-bold text-[#0A1024] mb-3">Terkirim!</h3>
+          <h3 className="text-2xl font-bold text-[#0A1024] mb-3">{isEditMode ? "Berhasil Disimpan!" : "Terkirim!"}</h3>
           <p className="text-[#6E7980] mb-8 leading-relaxed text-sm">
-            Terima kasih telah menambahkan informasi lomba. Informasi ini akan <span className="font-semibold text-[#0A1024]">di-review terlebih dahulu dan menunggu ACC (persetujuan) dari Admin</span> sebelum dipublikasikan.
+            {isEditMode 
+              ? "Perubahan pada informasi lomba berhasil disimpan."
+              : <><span className="font-semibold text-[#0A1024]">Terima kasih telah menambahkan informasi lomba. Informasi ini akan di-review terlebih dahulu dan menunggu ACC (persetujuan) dari Admin</span> sebelum dipublikasikan.</>
+            }
           </p>
           <button 
             onClick={() => { setShowSuccess(false); onClose(); }}
@@ -153,8 +165,8 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
                   <input 
                     type="text" 
                     required
-                    className="w-full bg-[#F4F4F5] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC700] transition-all text-[#0A1024]"
-                    placeholder="masukkan nama lomba"
+                    className="w-full bg-[#F4F4F5] border border-transparent rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all text-[#0A1024]"
+                    placeholder="Masukkan Nama Lomba"
                     value={formData.title}
                     onChange={e => setFormData({...formData, title: e.target.value})}
                   />
@@ -165,7 +177,7 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
                   <input 
                     type="text" 
                     required
-                    className="w-full bg-[#F4F4F5] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC700] transition-all text-[#0A1024]"
+                    className="w-full bg-[#F4F4F5] border border-transparent rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all text-[#0A1024]"
                     placeholder="Nama penyelenggara lomba"
                     value={formData.organizer}
                     onChange={e => setFormData({...formData, organizer: e.target.value})}
@@ -177,7 +189,8 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
                   <input 
                     type="date" 
                     required
-                    className="w-full bg-[#F4F4F5] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC700] transition-all text-[#0A1024]"
+                    min={new Date().toISOString().split("T")[0]}
+                    className="w-full bg-[#F4F4F5] border border-transparent rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all text-[#0A1024]"
                     value={formData.deadline}
                     onChange={e => setFormData({...formData, deadline: e.target.value})}
                   />
@@ -190,7 +203,7 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
               <input 
                 type="url" 
                 required
-                className="w-full bg-[#F4F4F5] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC700] transition-all text-[#0A1024]"
+                className="w-full bg-[#F4F4F5] border border-transparent rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all text-[#0A1024]"
                 placeholder="https://lomba-isme70-informatic-system-memorable-exhibition"
                 value={formData.link}
                 onChange={e => setFormData({...formData, link: e.target.value})}
@@ -201,45 +214,59 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
               <>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Kategori yang tersedia</label>
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {SKILL_CATEGORIES.map(skill => {
-                      const selectedSkills = formData.skillsString.split(",").map(s => s.trim()).filter(Boolean);
-                      const isSelected = selectedSkills.includes(skill.name);
-                      
-                      return (
-                        <button
-                          type="button"
-                          key={skill.name}
-                          onClick={() => {
-                            if (isSelected) {
-                              setFormData({
-                                ...formData, 
-                                skillsString: selectedSkills.filter(s => s !== skill.name).join(", ")
-                              });
-                            } else {
-                              setFormData({
-                                ...formData, 
-                                skillsString: [...selectedSkills, skill.name].join(", ")
-                              });
-                            }
-                          }}
-                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                            isSelected 
-                              ? skill.activeClass
-                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                          }`}
-                        >
-                          {skill.name}
-                        </button>
-                      );
+                  <CreatableSelect
+                    isMulti
+                    options={SKILL_CATEGORIES.map(skill => ({ value: skill.name, label: skill.name }))}
+                    value={formData.skillsString.split(",").map(s => s.trim()).filter(Boolean).map(s => ({ value: s, label: s }))}
+                    onChange={(newValue) => {
+                      setFormData({
+                        ...formData,
+                        skillsString: newValue.map(v => v.value).join(", ")
+                      });
+                    }}
+                    placeholder="Pilih atau ketik kategori baru..."
+                    className="text-sm react-select-container"
+                    classNamePrefix="react-select"
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        backgroundColor: '#F4F4F5',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '2px',
+                        boxShadow: 'none',
+                      }),
+                      option: (base, state) => ({
+                        ...base,
+                        color: '#0A1024',
+                        backgroundColor: state.isFocused ? '#E5E7EB' : 'white',
+                      }),
+                      multiValue: (base) => ({
+                        ...base,
+                        backgroundColor: '#FFC700',
+                        borderRadius: '8px',
+                      }),
+                      multiValueLabel: (base) => ({
+                        ...base,
+                        color: '#0A1024',
+                        fontWeight: '600',
+                      })
+                    }}
+                    theme={(theme) => ({
+                      ...theme,
+                      borderRadius: 12,
+                      colors: {
+                        ...theme.colors,
+                        primary: '#FFC700',
+                      },
                     })}
-                  </div>
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Jenis Lomba</label>
                   <select 
-                    className="w-full bg-[#F4F4F5] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFC700] transition-all text-[#0A1024] appearance-none"
+                    className="w-full bg-[#F4F4F5] border border-transparent rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-inset focus:ring-[#FFC700] focus:border-[#FFC700] transition-all text-[#0A1024] appearance-none"
                     value={formData.category}
                     onChange={e => setFormData({...formData, category: e.target.value})}
                   >
@@ -257,7 +284,7 @@ export default function AddCompetitionModal({ isOpen, onClose, userRole = "talen
                 disabled={loading || !isFormValid}
                 className="px-8 bg-[#FFC700] hover:bg-[#e6b400] text-[#0A1024] font-semibold py-3 rounded-xl transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Menyimpan..." : "Buat Lomba"}
+                {loading ? "Menyimpan..." : (isEditMode ? "Simpan Perubahan" : "Buat Lomba")}
               </button>
             </div>
           </form>

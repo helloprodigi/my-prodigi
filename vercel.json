@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/myshift-reminder",
+      "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-completed-teams",
+      "schedule": "0 2 * * 0"
+    }
+  ]
+}

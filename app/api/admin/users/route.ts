@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/lib/supabase-admin";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "10", 10);
+    const search = (searchParams.get("search") || "").trim();
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
@@ -31,12 +33,42 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Fetch all active users with pagination
-    const { data: users, error, count } = await supabase
+    // Keep the management table in sync with Supabase Auth. User rows can
+    // remain in public.User after an account is deleted from auth.users.
+    const adminSupabase = createAdminClient();
+    const authUserIds: string[] = [];
+    const perPage = 1000;
+    let authPage = 1;
+
+    while (true) {
+      const { data: authUsers, error: authUsersError } = await adminSupabase.auth.admin.listUsers({
+        page: authPage,
+        perPage,
+      });
+
+      if (authUsersError) {
+        return NextResponse.json({ error: authUsersError.message }, { status: 500 });
+      }
+
+      authUserIds.push(...authUsers.users.map((authUser) => authUser.id));
+      if (authUsers.users.length < perPage) break;
+      authPage += 1;
+    }
+
+    // Fetch only users that still exist in auth.users, with pagination and
+    // optional name/email filtering.
+    let query = supabase
       .from("User")
       .select("*", { count: "exact" })
-      .order("createdAt", { ascending: false })
-      .range(from, to);
+      .in("id", authUserIds)
+      .order("createdAt", { ascending: false });
+
+    if (search) {
+      const safeSearch = search.replace(/[,()%]/g, "");
+      query = query.or(`name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`);
+    }
+
+    const { data: users, error, count } = await query.range(from, to);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

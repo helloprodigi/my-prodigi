@@ -19,12 +19,15 @@ export interface DashboardTeamMember {
   cvUrl: string | null;
   userId: string;
   inviteToken?: string | null;
+  invitedAt?: string | null;
 }
 
 export interface DashboardTeamCard {
   id: string;
   teamName: string;
+  competitionId: string | null;
   competitionTitle: string;
+  requiredSkills: string[];
   createdDate: string;
   createdAt: string;
   category: string;
@@ -52,6 +55,8 @@ export interface DashboardTeamDetail {
   competitionTitle: string;
   competitionLink: string;
   leadName: string;
+  leaderId: string;
+  currentUserId: string;
   maxAdditionalMembersNeeded: number;
   approvedCount: number;
   isLeader: boolean;

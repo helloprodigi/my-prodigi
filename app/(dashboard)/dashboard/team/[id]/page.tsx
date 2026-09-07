@@ -5,8 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { Check, Crown } from "lucide-react";
 import {
-  findMemberAction,
   getTeamDetailAction,
   inviteMemberAction,
   refreshMemberAction,
@@ -31,12 +31,10 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
   const { id } = use(params);
   const router = useRouter();
   const [teamInfo, setTeamInfo] = useState<DashboardTeamDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshingMemberId, setRefreshingMemberId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const loadTeam = useCallback(async () => {
-    setIsLoading(true);
     const result = await getTeamDetailAction(id);
     if (result.success && result.data) {
       setTeamInfo(result.data);
@@ -44,7 +42,6 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
       toast.error(result.error ?? "Gagal memuat detail tim.");
       router.push("/dashboard");
     }
-    setIsLoading(false);
   }, [id, router]);
 
   useEffect(() => {
@@ -54,16 +51,19 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
   const approvedCount = teamInfo?.approvedCount ?? 0;
   const maxMembers = teamInfo?.maxAdditionalMembersNeeded ?? 0;
   const isTeamComplete = approvedCount >= maxMembers;
-  const hasWaitingMember = teamInfo?.members.some((member) => member.status === "WAITING" && member.inviteToken !== "REQUEST_JOIN") ?? false;
-  const canFindMember =
-    teamInfo?.isLeader && !isTeamComplete && !hasWaitingMember;
-
   const handleInvite = (memberId: string, name: string) => {
     startTransition(async () => {
       const result = await inviteMemberAction(id, memberId);
       if (result.success) {
         if (result.warning) {
-          toast(result.warning, { icon: "⚠️", duration: 8000 });
+          toast(result.warning, {
+            icon: (
+              <span className="flex w-5 h-5 items-center justify-center rounded-full bg-[#22C55E]">
+                <Check className="w-3 h-3 text-white" strokeWidth={3} />
+              </span>
+            ),
+            duration: 8000,
+          });
         } else {
           toast.success(`Undangan email berhasil dikirim ke ${name}!`);
         }
@@ -99,7 +99,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
   };
 
   const handleRefreshMember = async (memberId: string) => {
-    setIsRefreshing(true);
+    setRefreshingMemberId(memberId);
     try {
       const result = await refreshMemberAction(id, memberId);
       if (result.success) {
@@ -109,7 +109,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
         toast.error(result.error ?? "Gagal memperbarui rekomendasi anggota.");
       }
     } finally {
-      setIsRefreshing(false);
+      setRefreshingMemberId(null);
     }
   };
 
@@ -125,28 +125,14 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
 
   const handleLihatCV = (cvUrl: string | null, fullName: string) => {
     if (!cvUrl) {
-      toast.error(`CV ${fullName} belum tersedia.`);
+      toast.error(`${fullName} belum mengupload CV.`);
       return;
     }
-    let targetUrl = cvUrl;
-    if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
-      if (!targetUrl.startsWith("/")) {
-        targetUrl = `/uploads/${targetUrl}`;
-      }
+    if (!cvUrl.startsWith("http://") && !cvUrl.startsWith("https://")) {
+      toast.error(`CV ${fullName} menggunakan format lama. Minta ${fullName} untuk re-upload CV di halaman profil.`, { duration: 5000 });
+      return;
     }
-    window.open(targetUrl, "_blank");
-  };
-
-  const handleFindMember = () => {
-    startTransition(async () => {
-      const result = await findMemberAction(id);
-      if (result.success) {
-        toast.success("Kandidat anggota ditemukan.");
-        await loadTeam();
-      } else {
-        toast.error(result.error ?? "Gagal mencari anggota.");
-      }
-    });
+    window.open(cvUrl, "_blank");
   };
 
   const handleRequestJoin = () => {
@@ -161,16 +147,44 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
     });
   };
 
-  if (isLoading || !teamInfo) {
+  const handleAcceptInvite = () => {
+    startTransition(async () => {
+      const res = await fetch("/api/teams/invite/respond", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId: teamInfo?.membershipId, token: teamInfo?.inviteToken, action: "accept" }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Gagal menerima undangan."); return; }
+      toast.success("Kamu berhasil bergabung ke tim!");
+      await loadTeam();
+    });
+  };
+
+  const handleDeclineInvite = () => {
+    startTransition(async () => {
+      const res = await fetch("/api/teams/invite/respond", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId: teamInfo?.membershipId, token: teamInfo?.inviteToken, action: "decline" }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Gagal menolak undangan."); return; }
+      toast.success("Undangan ditolak.");
+      router.push("/dashboard");
+    });
+  };
+
+  if (!teamInfo) {
     return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-[#FBFBFB] relative overflow-hidden flex flex-col justify-between">
-      <div className="w-full z-10 max-w-[1400px] pl-6 pr-4">
-        <div className="pt-8 pb-4 w-full flex items-center justify-between">
+      <div className="w-full z-10 max-w-[1400px] px-4 sm:pl-6 sm:pr-4">
+        <div className="pt-6 sm:pt-8 pb-4 w-full flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold text-[#0A1024]">Dashboard</h1>
+            <h1 className="text-xl sm:text-3xl font-bold text-[#0A1024]">Dashboard</h1>
             <div className="text-xs text-gray-400 font-medium mt-1.5 flex items-center gap-1.5">
               <span>Dashboard</span>
               <span>&gt;</span>
@@ -178,7 +192,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
           <Link href="/matchmaking">
-            <button className="bg-[#FFC700] text-[#0A1024] font-bold px-9 py-3 rounded-[8px] text-sm hover:brightness-95 transition-all shadow-sm">
+            <button className="bg-[#FFC700] text-[#0A1024] font-bold px-4 sm:px-9 py-2 sm:py-3 rounded-[8px] text-xs sm:text-sm hover:brightness-95 transition-all shadow-sm whitespace-nowrap">
               Buat Tim
             </button>
           </Link>
@@ -203,7 +217,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
               </a>
             </div>
 
-            <div className="flex flex-col items-end justify-center">
+            <div className="flex flex-col items-start sm:items-end justify-center">
               <div className="flex items-center gap-4 mb-2">
                 <span className="text-sm font-bold text-[#0A1024]">
                   {approvedCount}/{maxMembers}
@@ -224,7 +238,117 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
 
-          <div className="overflow-x-auto w-full">
+          {teamInfo.isLeader && (
+            <div className="bg-[#FFF9E6] border border-[#FFE9A8] rounded-[6px] p-4 mb-4">
+              <p className="text-xs font-bold text-[#0A1024] mb-1.5">
+                Ini adalah tim yang kami rekomendasikan berdasarkan profil Anda.
+              </p>
+              <p className="text-xs text-gray-600 mb-1.5">
+                Pastikan untuk menganalisis calon anggota sebelum mengirimkan undangan.
+              </p>
+              <p className="text-xs font-semibold text-[#B45300]">
+                Peringatan: Anggota yang sudah menerima undangan dan bergabung tidak dapat di-kick dari tim.
+              </p>
+            </div>
+          )}
+
+          {/* Mobile card list */}
+          <div className="md:hidden space-y-3">
+            {teamInfo.members.map((member) => (
+              <div key={`m-${member.id}`} className="bg-gray-50 rounded-[6px] p-3 border border-gray-100">
+                <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="font-semibold text-sm text-gray-700 truncate">{member.fullName}</span>
+                    {member.userId === teamInfo.leaderId && (
+                      <Crown className="w-3.5 h-3.5 text-[#FFC700] fill-[#FFC700] shrink-0" />
+                    )}
+                  </div>
+                  {member.status === "APPROVED" ? (
+                    <span className="bg-[#EAF9E9] text-[#2E7D32] text-[10px] font-bold px-3 py-1.5 rounded-[4px] shrink-0">Accepted</span>
+                  ) : member.inviteToken === "REQUEST_JOIN" ? (
+                    <span className="bg-[#E8F0FE] text-[#1A73E8] text-[10px] font-bold px-3 py-1.5 rounded-[4px] shrink-0">Request Join</span>
+                  ) : (
+                    <span className="bg-[#FFF9E6] text-[#E2A600] text-[10px] font-bold px-3 py-1.5 rounded-[4px] shrink-0">Waiting</span>
+                  )}
+                </div>
+                {member.skills && <p className="text-xs text-gray-500 mb-2.5">{member.skills}</p>}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {member.status === "WAITING" && member.inviteToken !== "REQUEST_JOIN" && teamInfo.isLeader && (
+                    <button
+                      type="button"
+                      onClick={() => handleRefreshMember(member.id)}
+                      disabled={refreshingMemberId === member.id}
+                      title="Ganti kandidat"
+                      className="bg-[#FFC700] text-white p-1.5 rounded-[4px] hover:bg-[#e6b400] transition-colors inline-flex items-center justify-center shadow-sm disabled:opacity-50"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-3.5 h-3.5 ${refreshingMemberId === member.id ? "animate-spin" : ""}`}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                      </svg>
+                    </button>
+                  )}
+                  {member.userId !== teamInfo.currentUserId && (
+                    <button
+                      type="button"
+                      onClick={() => handleLihatCV(member.cvUrl, member.fullName)}
+                      className="border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-bold px-4 py-2 rounded-[4px] text-[11px] transition-all"
+                    >
+                      Lihat CV
+                    </button>
+                  )}
+                  {member.status === "APPROVED" && member.userId !== teamInfo.currentUserId && (teamInfo.isLeader || teamInfo.isMember) ? (
+                    <button
+                      type="button"
+                      onClick={() => handleChatWhatsApp(member.whatsappNumber)}
+                      className="bg-[#FFC700] text-[#0A1024] font-bold px-5 py-2 rounded-[4px] text-[11px] hover:brightness-95 transition-all shadow-xs"
+                    >
+                      Chat
+                    </button>
+                  ) : member.status === "APPROVED" ? null : teamInfo.isLeader ? (
+                    member.inviteToken === "REQUEST_JOIN" ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleApproveJoinRequest(member.id, member.fullName)}
+                          disabled={isPending}
+                          className="bg-[#FFC700] text-[#0A1024] font-bold px-4 py-2 rounded-[4px] text-[11px] hover:brightness-95 transition-all shadow-xs disabled:opacity-60"
+                        >
+                          Terima
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRejectJoinRequest(member.id, member.fullName)}
+                          disabled={isPending}
+                          className="border border-red-200 text-red-600 bg-white hover:bg-red-50 font-bold px-4 py-2 rounded-[4px] text-[11px] transition-all disabled:opacity-60"
+                        >
+                          Tolak
+                        </button>
+                      </>
+                    ) : member.invitedAt ? (
+                      <button
+                        type="button"
+                        disabled
+                        className="bg-gray-100 text-gray-400 font-bold px-5 py-2 rounded-[4px] text-[11px] cursor-not-allowed"
+                      >
+                        Invited
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleInvite(member.id, member.fullName)}
+                        disabled={isPending}
+                        className="bg-[#FFF9E6] text-[#0A1024] font-bold px-5 py-2 rounded-[4px] text-[11px] hover:brightness-95 transition-all shadow-xs disabled:opacity-60"
+                      >
+                        Invite
+                      </button>
+                    )
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto w-full">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[#F4F5F6] text-gray-400 text-[11px] font-bold uppercase tracking-wider">
@@ -243,11 +367,11 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                         <button
                           type="button"
                           onClick={() => handleRefreshMember(member.id)}
-                          disabled={isRefreshing}
-                          title="Ganti rekomendasi anggota"
+                          disabled={refreshingMemberId === member.id}
+                          title="Roll — ganti kandidat"
                           className="bg-[#FFC700] text-white p-1.5 rounded-[4px] hover:bg-[#e6b400] transition-colors inline-flex items-center justify-center shadow-sm disabled:opacity-50"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-3.5 h-3.5 ${refreshingMemberId === member.id ? "animate-spin" : ""}`}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
                           </svg>
                         </button>
@@ -255,7 +379,14 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                         <span className="text-gray-600 font-semibold">{member.no ?? "-"}</span>
                       )}
                     </td>
-                    <td className="py-4 px-4 font-semibold text-gray-700">{member.fullName}</td>
+                    <td className="py-4 px-4 font-semibold text-gray-700">
+                      <span className="flex items-center gap-1.5">
+                        {member.fullName}
+                        {member.userId === teamInfo.leaderId && (
+                          <Crown className="w-3.5 h-3.5 text-[#FFC700] fill-[#FFC700] shrink-0" />
+                        )}
+                      </span>
+                    </td>
                     <td className="py-4 px-4 text-gray-500 font-normal">{member.skills}</td>
                     <td className="py-4 px-4 text-center align-middle">
                       {member.status === "APPROVED" ? (
@@ -274,7 +405,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                     </td>
                     <td className="py-4 px-4 text-center align-middle">
                       <div className="flex items-center justify-center gap-2">
-                        {teamInfo.isLeader && (
+                        {member.userId !== teamInfo.currentUserId && (
                           <button
                             type="button"
                             onClick={() => handleLihatCV(member.cvUrl, member.fullName)}
@@ -284,7 +415,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                           </button>
                         )}
 
-                        {member.status === "APPROVED" ? (
+                        {member.status === "APPROVED" && member.userId !== teamInfo.currentUserId && (teamInfo.isLeader || teamInfo.isMember) ? (
                           <button
                             type="button"
                             onClick={() => handleChatWhatsApp(member.whatsappNumber)}
@@ -292,7 +423,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                           >
                             Chat
                           </button>
-                        ) : teamInfo.isLeader ? (
+                        ) : member.status === "APPROVED" ? null : teamInfo.isLeader ? (
                           member.inviteToken === "REQUEST_JOIN" ? (
                             <>
                               <button
@@ -312,6 +443,14 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                                 Tolak
                               </button>
                             </>
+                          ) : member.invitedAt ? (
+                            <button
+                              type="button"
+                              disabled
+                              className="bg-gray-100 text-gray-400 font-bold px-5 py-2 rounded-[4px] text-[11px] cursor-not-allowed"
+                            >
+                              Invited
+                            </button>
                           ) : (
                             <button
                               type="button"
@@ -333,20 +472,17 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
 
           {!isTeamComplete && teamInfo.isLeader && (
             <div className="w-full text-center py-6 mt-4 tracking-wide">
-              {canFindMember ? (
-                <button
-                  type="button"
-                  onClick={handleFindMember}
-                  disabled={isPending}
-                  className="bg-[#FFC700] text-[#0A1024] font-bold px-6 py-2.5 rounded-[6px] text-xs hover:brightness-95 transition-all disabled:opacity-60"
-                >
-                  Cari Anggota
-                </button>
-              ) : (
-                <p className="text-sm font-semibold italic text-[#FFC700]">
-                  Sedang Mencari {maxMembers - approvedCount} Orang Lagi...
-                </p>
-              )}
+              <p className="text-sm font-semibold italic text-[#FFC700]">
+                Sedang Mencari {maxMembers - approvedCount} Orang Lagi...
+              </p>
+            </div>
+          )}
+
+          {isTeamComplete && teamInfo.isLeader && (
+            <div className="w-full text-center py-6 mt-4 tracking-wide">
+              <p className="text-sm font-semibold italic text-[#2E7D32]">
+                Tim anda sudah lengkap
+              </p>
             </div>
           )}
 
@@ -368,6 +504,33 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
               <p className="text-sm font-semibold italic text-[#E2A600]">
                 Permintaan bergabung kamu sedang menunggu persetujuan ketua tim.
               </p>
+            </div>
+          )}
+
+          {teamInfo.isInvited && (
+            <div className="w-full py-6 mt-4 border-t border-gray-100">
+              <p className="text-sm text-gray-600 mb-1">
+                Kamu diundang oleh <span className="font-bold text-[#0A1024]">{teamInfo.leadName}</span> untuk bergabung ke tim ini.
+              </p>
+              <p className="text-xs text-gray-400 mb-4">Lihat anggota dan CV di atas untuk mempertimbangkan keputusanmu.</p>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleAcceptInvite}
+                  disabled={isPending}
+                  className="bg-[#FFC700] text-[#0A1024] font-bold px-6 py-2.5 rounded-[6px] text-xs hover:brightness-95 transition-all disabled:opacity-60"
+                >
+                  Terima Undangan
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeclineInvite}
+                  disabled={isPending}
+                  className="border border-red-200 text-red-600 bg-white hover:bg-red-50 font-bold px-6 py-2.5 rounded-[6px] text-xs transition-all disabled:opacity-60"
+                >
+                  Tolak
+                </button>
+              </div>
             </div>
           )}
         </div>
