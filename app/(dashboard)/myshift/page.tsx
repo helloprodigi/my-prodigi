@@ -125,6 +125,7 @@ function getOverlapErrorsForDay(sessions: SessionForm[]): string[] {
 
 export default function MyShiftPage() {
   const [userRole, setUserRole] = useState<string>("aslab");
+  const [userDivisi, setUserDivisi] = useState<string>("");
   const [currentUserNim, setCurrentUserNim] = useState<string>("");
   const [currentUserName, setCurrentUserName] = useState<string>("");
   const [currentUserId, setCurrentUserId] = useState<string>("");
@@ -163,6 +164,7 @@ export default function MyShiftPage() {
       .then(data => {
         if (data) {
           if (data.role) setUserRole(data.role);
+          if (data.divisi) setUserDivisi(data.divisi);
           if (data.nim) setCurrentUserNim(data.nim);
           if (data.name) setCurrentUserName(data.name);
           if (data.id) setCurrentUserId(data.id);
@@ -189,6 +191,33 @@ export default function MyShiftPage() {
         setAgendaLoadError(true);
       })
       .finally(() => setIsLoadingAgendas(false));
+  };
+
+  const exportToExcel = (agenda: Agenda) => {
+    import("xlsx").then((XLSX) => {
+      const data = agenda.aslabs.map((aslab, index) => ({
+        "No": index + 1,
+        "Nama": aslab.nama,
+        "NIM": aslab.nim,
+        "Divisi/Jabatan": aslab.jabatan || aslab.divisi || "Asisten Lab",
+        "Status": aslab.status === "HADIR" ? "Hadir" : 
+                  aslab.status === "ALPA" ? "Alpa" : 
+                  aslab.status === "IZIN" ? "Izin" : "Belum Absen",
+        "Waktu Datang": aslab.waktuDatang ? new Date(aslab.waktuDatang).toLocaleTimeString("id-ID") : "-",
+        "Waktu Pulang": aslab.waktuPulang ? new Date(aslab.waktuPulang).toLocaleTimeString("id-ID") : "-",
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Daftar Hadir");
+      
+      const fileName = `Daftar_Hadir_${agenda.nama.replace(/\s+/g, '_')}_${selectedDate.toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+      toast.success("Daftar hadir berhasil diunduh");
+    }).catch(err => {
+      console.error("Failed to load xlsx library", err);
+      toast.error("Gagal mengunduh Excel.");
+    });
   };
 
   useEffect(() => {
@@ -669,9 +698,20 @@ export default function MyShiftPage() {
                         {formatTime(agenda.waktuMulai)} - {formatTime(agenda.waktuSelesai)} WIB
                       </span>
                     </h3>
-                    <span className="text-xs font-semibold text-gray-500">
-                      {agenda.aslabs.length} Asisten Lab Bertugas
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-semibold text-gray-500">
+                        {agenda.aslabs.length} Asisten Lab Bertugas
+                      </span>
+                      {(userRole === "admin" || userDivisi === "Human Capital") && (
+                        <button 
+                          onClick={() => exportToExcel(agenda)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded-lg text-xs font-bold transition-colors border border-green-200 shadow-sm"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Unduh Excel
+                        </button>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

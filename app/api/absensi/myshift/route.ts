@@ -17,7 +17,7 @@ export async function GET(req: Request) {
 
     let dbUser = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { id: true, role: true, nim: true, name: true, email: true }
+      select: { id: true, role: true, nim: true, name: true, email: true, divisi: true }
     });
 
     const activeRoleCookie = cookieStore.get("activeRole")?.value;
@@ -265,8 +265,21 @@ export async function GET(req: Request) {
     // If Aslab (not admin), filter only agendas where this specific aslab is assigned
     const userNim = dbUser?.nim?.trim();
     const userName = (dbUser?.name || user.user_metadata?.name || "").trim().toLowerCase();
+    const userDivisi = dbUser?.divisi || user.user_metadata?.divisi;
 
-    const myAgendas = allAgendas;
+    let myAgendas = allAgendas;
+
+    // Only Admin and Aslab from Human Capital can see all schedules.
+    // Others can only see schedules they are specifically assigned to.
+    if (!isAdmin && userDivisi !== "Human Capital") {
+      myAgendas = allAgendas.filter(agenda => {
+        return agenda.assignedUsers.some(a => 
+          (user.id && a.userId === user.id) ||
+          (userNim && a.nim && a.nim.trim() === userNim) ||
+          (userName && a.nama && a.nama.toLowerCase().trim() === userName)
+        );
+      });
+    }
 
     const formattedAgendas = await Promise.all(myAgendas.map(async (agenda) => {
       // Ensure QR tokens are always present
