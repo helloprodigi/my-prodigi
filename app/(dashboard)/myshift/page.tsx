@@ -499,7 +499,7 @@ export default function MyShiftPage() {
     // If no agendas exist today
     if (agendas.length === 0) {
       setEmptyAgendaMessage(
-        userRole === "admin"
+        (userRole === "admin" || userDivisi === "Human Capital")
           ? "Belum ada jadwal MyShift yang dibuat pada hari ini."
           : "Maaf, kamu tidak dijadwalkan untuk piket hari ini. Silakan periksa jadwal piket kamu untuk informasi lebih lanjut."
       );
@@ -507,8 +507,8 @@ export default function MyShiftPage() {
       return;
     }
 
-    // If User is Aslab, check if Aslab is scheduled today & time validity
-    if (userRole !== "admin") {
+    // If User is Aslab (non-HC), check if Aslab is scheduled today & time validity
+    if (userRole !== "admin" && userDivisi !== "Human Capital") {
       const now = Date.now();
       
       // Find shift where current user is assigned
@@ -547,7 +547,7 @@ export default function MyShiftPage() {
       return;
     }
 
-    // If Admin, can view all MyShift QR codes
+    // If Admin or HC Aslab, can view all MyShift QR codes
     if (agendas.length === 1) {
       setActiveAgenda(agendas[0]);
       setShowQRModal(true);
@@ -595,7 +595,7 @@ export default function MyShiftPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            {userRole === "admin" && (
+            {(userRole === "admin" || userDivisi === "Human Capital") && (
               <button
                 onClick={handleOpenScheduleModal}
                 className="flex-1 sm:flex-none bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-semibold px-5 py-2.5 rounded-lg transition-all shadow-sm flex items-center justify-center gap-2 text-sm border border-[#0B132B]"
@@ -674,17 +674,17 @@ export default function MyShiftPage() {
               <div className="text-center py-20 text-gray-400 flex flex-col items-center">
                 <Clock className="w-12 h-12 mb-4 text-gray-300" />
                 <p className="font-semibold text-gray-700 text-base">
-                  {userRole === "admin"
+                  {(userRole === "admin" || userDivisi === "Human Capital")
                     ? "Tidak ada jadwal shift pada hari ini."
                     : "Kamu tidak memiliki jadwal shift pada hari ini."}
                 </p>
-                {userRole === "admin" ? (
+                {(userRole === "admin" || userDivisi === "Human Capital") ? (
                   <p className="text-xs text-gray-400 mt-2 max-w-md">
                     Klik tombol <span className="font-bold text-gray-700">"Atur Jadwal Shift"</span> di kanan atas untuk mengelola template jadwal piket mingguan.
                   </p>
                 ) : (
                   <p className="text-xs text-gray-400 mt-2 max-w-md">
-                    Jadwal piket kamu akan muncul di sini secara otomatis apabila ditugaskan oleh Admin.
+                    Jadwal piket kamu akan muncul di sini secara otomatis apabila ditugaskan oleh divisi Human Capital.
                   </p>
                 )}
               </div>
