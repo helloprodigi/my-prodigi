@@ -16,7 +16,7 @@ export async function GET() {
 
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { id: true, name: true, role: true, photoUrl: true, divisi: true }
+      select: { id: true, name: true, role: true, photoUrl: true, divisi: true, jabatan: true }
     });
 
     const realRole = (dbUser?.role || user.user_metadata?.role || "talent").toLowerCase();
@@ -41,6 +41,7 @@ export async function GET() {
       dbRole: normalizedRealRole,
       role: effectiveRole,
       divisi: dbUser?.divisi || user.user_metadata?.divisi || null,
+      jabatan: dbUser?.jabatan || user.user_metadata?.jabatan || null,
       availableRoles,
       photoUrl: dbUser?.photoUrl || user.user_metadata?.photoUrl || null
     });

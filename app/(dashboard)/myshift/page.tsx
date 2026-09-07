@@ -126,6 +126,7 @@ function getOverlapErrorsForDay(sessions: SessionForm[]): string[] {
 export default function MyShiftPage() {
   const [userRole, setUserRole] = useState<string>("aslab");
   const [userDivisi, setUserDivisi] = useState<string>("");
+  const [userJabatan, setUserJabatan] = useState<string>("");
   const [currentUserNim, setCurrentUserNim] = useState<string>("");
   const [currentUserName, setCurrentUserName] = useState<string>("");
   const [currentUserId, setCurrentUserId] = useState<string>("");
@@ -165,6 +166,7 @@ export default function MyShiftPage() {
         if (data) {
           if (data.role) setUserRole(data.role);
           if (data.divisi) setUserDivisi(data.divisi);
+          if (data.jabatan) setUserJabatan(data.jabatan);
           if (data.nim) setCurrentUserNim(data.nim);
           if (data.name) setCurrentUserName(data.name);
           if (data.id) setCurrentUserId(data.id);
@@ -496,10 +498,12 @@ export default function MyShiftPage() {
 
   // Handle "Lihat QR Absensi" Click
   const handleOpenQRGenerator = () => {
+    const isHC = userDivisi === "Human Capital" || userJabatan.includes("Human Capital");
+
     // If no agendas exist today
     if (agendas.length === 0) {
       setEmptyAgendaMessage(
-        (userRole === "admin" || userDivisi === "Human Capital")
+        (userRole === "admin" || isHC)
           ? "Belum ada jadwal MyShift yang dibuat pada hari ini."
           : "Maaf, kamu tidak dijadwalkan untuk piket hari ini. Silakan periksa jadwal piket kamu untuk informasi lebih lanjut."
       );
@@ -508,7 +512,7 @@ export default function MyShiftPage() {
     }
 
     // If User is Aslab (non-HC), check if Aslab is scheduled today & time validity
-    if (userRole !== "admin" && userDivisi !== "Human Capital") {
+    if (userRole !== "admin" && !isHC) {
       const now = Date.now();
       
       // Find shift where current user is assigned
@@ -595,7 +599,7 @@ export default function MyShiftPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            {(userRole === "admin" || userDivisi === "Human Capital") && (
+            {(userRole === "admin" || userDivisi === "Human Capital" || userJabatan.includes("Human Capital")) && (
               <button
                 onClick={handleOpenScheduleModal}
                 className="flex-1 sm:flex-none bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-semibold px-5 py-2.5 rounded-lg transition-all shadow-sm flex items-center justify-center gap-2 text-sm border border-[#0B132B]"
@@ -674,11 +678,11 @@ export default function MyShiftPage() {
               <div className="text-center py-20 text-gray-400 flex flex-col items-center">
                 <Clock className="w-12 h-12 mb-4 text-gray-300" />
                 <p className="font-semibold text-gray-700 text-base">
-                  {(userRole === "admin" || userDivisi === "Human Capital")
+                  {(userRole === "admin" || userDivisi === "Human Capital" || userJabatan.includes("Human Capital"))
                     ? "Tidak ada jadwal shift pada hari ini."
                     : "Kamu tidak memiliki jadwal shift pada hari ini."}
                 </p>
-                {(userRole === "admin" || userDivisi === "Human Capital") ? (
+                {(userRole === "admin" || userDivisi === "Human Capital" || userJabatan.includes("Human Capital")) ? (
                   <p className="text-xs text-gray-400 mt-2 max-w-md">
                     Klik tombol <span className="font-bold text-gray-700">"Atur Jadwal Shift"</span> di kanan atas untuk mengelola template jadwal piket mingguan.
                   </p>
@@ -702,7 +706,7 @@ export default function MyShiftPage() {
                       <span className="text-xs font-semibold text-gray-500">
                         {agenda.aslabs.length} Asisten Lab Bertugas
                       </span>
-                      {(userRole === "admin" || userDivisi === "Human Capital") && (
+                      {(userRole === "admin" || userDivisi === "Human Capital" || userJabatan.includes("Human Capital")) && (
                         <button 
                           onClick={() => exportToExcel(agenda)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded-lg text-xs font-bold transition-colors border border-green-200 shadow-sm"
