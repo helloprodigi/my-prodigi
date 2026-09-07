@@ -102,11 +102,13 @@ export async function POST(req: Request) {
 
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { role: true }
+      select: { role: true, divisi: true, jabatan: true }
     });
 
-    if (dbUser?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden. Hanya admin yang dapat mengatur jadwal shift." }, { status: 403 });
+    const isHC = dbUser?.divisi === "Human Capital" || (dbUser?.jabatan && dbUser.jabatan.includes("Human Capital"));
+
+    if (dbUser?.role !== "admin" && !isHC) {
+      return NextResponse.json({ error: "Forbidden. Hanya admin dan divisi Human Capital yang dapat mengatur jadwal shift." }, { status: 403 });
     }
 
     const body = await req.json();

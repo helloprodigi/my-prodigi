@@ -17,7 +17,7 @@ export async function GET(req: Request) {
 
     let dbUser = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { id: true, role: true, nim: true, name: true, email: true, divisi: true }
+      select: { id: true, role: true, nim: true, name: true, email: true, divisi: true, jabatan: true }
     });
 
     const activeRoleCookie = cookieStore.get("activeRole")?.value;
@@ -266,12 +266,15 @@ export async function GET(req: Request) {
     const userNim = dbUser?.nim?.trim();
     const userName = (dbUser?.name || user.user_metadata?.name || "").trim().toLowerCase();
     const userDivisi = dbUser?.divisi || user.user_metadata?.divisi;
+    const userJabatan = dbUser?.jabatan || user.user_metadata?.jabatan;
 
     let myAgendas = allAgendas;
 
-    // Only Admin and Aslab from Human Capital can see all schedules.
+    // Only Admin and Aslab from Human Capital (or Ketua HC) can see all schedules.
     // Others can only see schedules they are specifically assigned to.
-    if (!isAdmin && userDivisi !== "Human Capital") {
+    const isHC = userDivisi === "Human Capital" || (userJabatan && userJabatan.includes("Human Capital"));
+
+    if (!isAdmin && !isHC) {
       myAgendas = allAgendas.filter(agenda => {
         return agenda.assignedUsers.some(a => 
           (user.id && a.userId === user.id) ||
