@@ -502,11 +502,7 @@ export default function MyShiftPage() {
 
     // If no agendas exist today
     if (agendas.length === 0) {
-      setEmptyAgendaMessage(
-        (userRole === "admin" || isHC)
-          ? "Belum ada jadwal MyShift yang dibuat pada hari ini."
-          : "Maaf, kamu tidak dijadwalkan untuk piket hari ini. Silakan periksa jadwal piket kamu untuk informasi lebih lanjut."
-      );
+      setEmptyAgendaMessage("Belum ada jadwal MyShift yang dibuat pada hari ini.");
       setShowEmptyAgendaModal(true);
       return;
     }
@@ -678,9 +674,7 @@ export default function MyShiftPage() {
               <div className="text-center py-20 text-gray-400 flex flex-col items-center">
                 <Clock className="w-12 h-12 mb-4 text-gray-300" />
                 <p className="font-semibold text-gray-700 text-base">
-                  {(userRole === "admin" || userDivisi === "Human Capital" || userJabatan.includes("Human Capital"))
-                    ? "Tidak ada jadwal shift pada hari ini."
-                    : "Kamu tidak memiliki jadwal shift pada hari ini."}
+                  Tidak ada jadwal shift pada hari ini.
                 </p>
                 {(userRole === "admin" || userDivisi === "Human Capital" || userJabatan.includes("Human Capital")) ? (
                   <p className="text-xs text-gray-400 mt-2 max-w-md">
@@ -688,7 +682,7 @@ export default function MyShiftPage() {
                   </p>
                 ) : (
                   <p className="text-xs text-gray-400 mt-2 max-w-md">
-                    Jadwal piket kamu akan muncul di sini secara otomatis apabila ditugaskan oleh divisi Human Capital.
+                    Jadwal piket akan muncul di sini secara otomatis apabila ditugaskan oleh divisi Human Capital.
                   </p>
                 )}
               </div>

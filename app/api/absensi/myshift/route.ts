@@ -265,24 +265,8 @@ export async function GET(req: Request) {
     // If Aslab (not admin), filter only agendas where this specific aslab is assigned
     const userNim = dbUser?.nim?.trim();
     const userName = (dbUser?.name || user.user_metadata?.name || "").trim().toLowerCase();
-    const userDivisi = dbUser?.divisi || user.user_metadata?.divisi;
-    const userJabatan = dbUser?.jabatan || user.user_metadata?.jabatan;
 
-    let myAgendas = allAgendas;
-
-    // Only Admin and Aslab from Human Capital (or Ketua HC) can see all schedules.
-    // Others can only see schedules they are specifically assigned to.
-    const isHC = userDivisi === "Human Capital" || (userJabatan && userJabatan.includes("Human Capital"));
-
-    if (!isAdmin && !isHC) {
-      myAgendas = allAgendas.filter(agenda => {
-        return agenda.assignedUsers.some(a => 
-          (user.id && a.userId === user.id) ||
-          (userNim && a.nim && a.nim.trim() === userNim) ||
-          (userName && a.nama && a.nama.toLowerCase().trim() === userName)
-        );
-      });
-    }
+    const myAgendas = allAgendas;
 
     const formattedAgendas = await Promise.all(myAgendas.map(async (agenda) => {
       // Ensure QR tokens are always present
