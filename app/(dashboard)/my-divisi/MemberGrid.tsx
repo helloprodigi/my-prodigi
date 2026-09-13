@@ -51,7 +51,7 @@ function MemberCard({
           </button>
 
           {isMenuOpen && (
-            <div className="absolute right-0 top-9 z-20 w-44 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden py-1">
+            <div className="absolute right-0 top-9 z-20 w-44 bg-white rounded-xl  border border-gray-100 overflow-hidden py-1">
               {member.hasProkerAccess ? (
                 <button
                   onClick={() => {

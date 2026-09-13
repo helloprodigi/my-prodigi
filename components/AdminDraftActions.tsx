@@ -28,11 +28,12 @@ export default function AdminDraftActions({ draftId, draftTitle }: AdminDraftAct
         setShowConfirm(false);
         router.refresh();
       } else {
-        const errorData = await res.json();
-        toast.error("Gagal menghapus draft: " + (errorData.error || "Unknown error"));
+        const data = await res.json().catch(() => null);
+        toast.error("Gagal menghapus draft: " + (data?.error || "Terjadi kesalahan, silakan coba lagi."));
       }
     } catch (err: any) {
-      toast.error("Error: " + err.message);
+      console.error("Draft delete unexpected error:", err);
+      toast.error("Gagal menghapus draft. Silakan coba lagi.");
     } finally {
       setIsDeleting(false);
     }

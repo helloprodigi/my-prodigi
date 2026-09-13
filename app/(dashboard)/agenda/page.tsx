@@ -184,7 +184,7 @@ export default function AgendaAdminPage() {
       {activeTab === "buat" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-2xl p-6 space-y-6">
+            <div className="bg-white border border-gray-100  rounded-2xl p-6 space-y-6">
               <h2 className="text-lg font-bold text-[#0B132B] border-b border-gray-100 pb-3 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-[#FFC727]" />
                 Detail Agenda
@@ -266,7 +266,7 @@ export default function AgendaAdminPage() {
                   onClick={handleBuatAgenda}
                   disabled={isLoading}
                   className={`w-full font-bold py-3.5 rounded-lg transition-all flex items-center justify-center gap-2 text-sm bg-[#FFC700] text-[#0A1024] hover:bg-[#e6b400] ${
-                    isLoading ? 'opacity-70 cursor-not-allowed shadow-none' : 'active:scale-[0.99] shadow-md'
+                    isLoading ? 'opacity-70 cursor-not-allowed' : 'active:scale-[0.99]'
                   }`}
                 >
                   {isLoading ? (
@@ -287,7 +287,7 @@ export default function AgendaAdminPage() {
 
           {/* QR Result Panel */}
           <div className="lg:col-span-1">
-            <div className="bg-white border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-2xl p-6 sticky top-6 text-center space-y-4">
+            <div className="bg-white border border-gray-100  rounded-2xl p-6 sticky top-6 text-center space-y-4">
               <h2 className="text-base font-bold text-[#0B132B] flex items-center justify-center gap-2">
                 <QrCode className="w-5 h-5 text-[#FFC727]" />
                 QR Code Absensi
@@ -309,19 +309,19 @@ export default function AgendaAdminPage() {
                   <div className="flex bg-gray-100/80 rounded-xl p-1 w-fit mx-auto border border-gray-200">
                     <button 
                       onClick={() => setShowQr("datang")}
-                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${showQr === "datang" ? "bg-[#0B132B] text-white shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${showQr === "datang" ? "bg-[#0B132B] text-white " : "text-gray-600 hover:text-gray-900"}`}
                     >
                       QR Datang
                     </button>
                     <button 
                       onClick={() => setShowQr("pulang")}
-                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${showQr === "pulang" ? "bg-[#0B132B] text-white shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${showQr === "pulang" ? "bg-[#0B132B] text-white " : "text-gray-600 hover:text-gray-900"}`}
                     >
                       QR Pulang
                     </button>
                   </div>
                   
-                  <div className="bg-white p-4 border-2 border-gray-200 shadow-sm rounded-2xl inline-block">
+                  <div className="bg-white p-4 border-2 border-gray-200  rounded-2xl inline-block">
                     <QRCode 
                       id="agenda-created-qr-code-svg"
                       value={`${typeof window !== 'undefined' ? window.location.origin : ''}/scan-absensi?token=${showQr === "datang" ? createdAgenda.kodeQrDatang : createdAgenda.kodeQrPulang}&type=${showQr}`}
@@ -352,7 +352,7 @@ export default function AgendaAdminPage() {
                       const formattedName = `QR_Agenda_${createdAgenda.nama}_${showQr === "datang" ? "Datang" : "Pulang"}`;
                       downloadQRCode("agenda-created-qr-code-svg", formattedName);
                     }}
-                    className="w-full bg-[#FFC727] hover:bg-[#e5b323] text-[#0B132B] font-bold py-3 rounded-xl text-xs transition-colors flex items-center justify-center gap-2 shadow-sm"
+                    className="w-full bg-[#FFC727] hover:bg-[#e5b323] text-[#0B132B] font-bold py-3 rounded-xl text-xs transition-colors flex items-center justify-center gap-2 "
                   >
                     <Download className="w-4 h-4" /> Download QR {showQr === "datang" ? "Datang" : "Pulang"}
                   </button>
@@ -365,7 +365,7 @@ export default function AgendaAdminPage() {
 
       {/* Tab: Riwayat Agenda */}
       {activeTab === "riwayat" && (
-        <div className="bg-white border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-lg overflow-hidden">
+        <div className="bg-white border border-gray-100  rounded-lg overflow-hidden">
           <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold text-[#0B132B]">Riwayat Agenda & QR Absensi</h2>
@@ -447,7 +447,7 @@ export default function AgendaAdminPage() {
                               setSelectedAgendaForQr(agenda);
                               setModalQrType("datang");
                             }}
-                            className="px-3.5 py-2 text-xs font-bold text-[#0B132B] bg-[#FFC727] hover:bg-[#e5b323] rounded-md transition-all shadow-sm flex items-center gap-1.5 shrink-0"
+                            className="px-3.5 py-2 text-xs font-bold text-[#0B132B] bg-[#FFC727] hover:bg-[#e5b323] rounded-md transition-all  flex items-center gap-1.5 shrink-0"
                             title="Buka & Unduh QR Absensi"
                           >
                             <QrCode className="w-3.5 h-3.5" />
@@ -477,7 +477,7 @@ export default function AgendaAdminPage() {
       {/* Modal: Lihat & Download QR Agenda dari Riwayat */}
       {selectedAgendaForQr && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md relative flex flex-col items-center text-center shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md relative flex flex-col items-center text-center  border border-gray-100 animate-in zoom-in-95 duration-200">
             <button 
               onClick={() => setSelectedAgendaForQr(null)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition-colors p-1 rounded-full hover:bg-gray-100"
@@ -485,7 +485,7 @@ export default function AgendaAdminPage() {
               <X className="w-6 h-6" />
             </button>
             
-            <div className="w-12 h-12 rounded-2xl bg-[#0B132B] flex items-center justify-center text-[#FFC727] mb-3 shadow-md">
+            <div className="w-12 h-12 rounded-2xl bg-[#0B132B] flex items-center justify-center text-[#FFC727] mb-3 ">
               <QrCode className="w-6 h-6" />
             </div>
 
@@ -501,21 +501,21 @@ export default function AgendaAdminPage() {
               <button 
                 type="button"
                 onClick={() => setModalQrType("datang")}
-                className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${modalQrType === "datang" ? "bg-[#0B132B] text-white shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+                className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${modalQrType === "datang" ? "bg-[#0B132B] text-white " : "text-gray-600 hover:text-gray-900"}`}
               >
                 QR Datang
               </button>
               <button 
                 type="button"
                 onClick={() => setModalQrType("pulang")}
-                className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${modalQrType === "pulang" ? "bg-[#0B132B] text-white shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+                className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${modalQrType === "pulang" ? "bg-[#0B132B] text-white " : "text-gray-600 hover:text-gray-900"}`}
               >
                 QR Pulang
               </button>
             </div>
 
             {/* QR Code Container */}
-            <div className="bg-white p-4 border-2 border-gray-200 shadow-sm rounded-3xl mb-4 inline-block">
+            <div className="bg-white p-4 border-2 border-gray-200  rounded-3xl mb-4 inline-block">
               <QRCode 
                 id="modal-agenda-qr-code-svg"
                 value={`${typeof window !== 'undefined' ? window.location.origin : ''}/scan-absensi?token=${modalQrType === "datang" ? selectedAgendaForQr.kodeQrDatang : selectedAgendaForQr.kodeQrPulang}&type=${modalQrType}`}
@@ -542,7 +542,7 @@ export default function AgendaAdminPage() {
                 const formattedName = `QR_Agenda_${selectedAgendaForQr.nama}_${modalQrType === "datang" ? "Datang" : "Pulang"}`;
                 downloadQRCode("modal-agenda-qr-code-svg", formattedName);
               }}
-              className="w-full bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-md"
+              className="w-full bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 text-sm "
             >
               <Download className="w-4 h-4 text-[#FFC727]" />
               Download PNG ({modalQrType === "datang" ? "QR Datang" : "QR Pulang"})
@@ -554,7 +554,7 @@ export default function AgendaAdminPage() {
       {/* Error Popup Modal */}
       {errorMessage && (
         <div className="fixed inset-0 bg-black/80 z-[80] flex flex-col items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden relative flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-200 shadow-2xl">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden relative flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-200 ">
             <button 
               onClick={() => setErrorMessage(null)}
               className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-900 transition-colors rounded-full hover:bg-gray-100"
@@ -565,7 +565,7 @@ export default function AgendaAdminPage() {
             <img 
               src="/assets/absen/pop-up/ups.png" 
               alt="Warning Icon" 
-              className="w-28 h-28 mb-6 object-contain drop-shadow-md"
+              className="w-28 h-28 mb-6 object-contain "
             />
             
             <h3 className="text-2xl font-bold text-[#0B132B] mb-3">
@@ -582,7 +582,7 @@ export default function AgendaAdminPage() {
       {/* Success Popup Modal */}
       {successMessage && (
         <div className="fixed inset-0 bg-black/80 z-[80] flex flex-col items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden relative flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-300 shadow-2xl">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden relative flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-300 ">
             <button 
               onClick={() => setSuccessMessage(null)}
               className="absolute top-5 right-5 p-2 text-gray-400 hover:text-gray-900 transition-colors rounded-full hover:bg-gray-100"

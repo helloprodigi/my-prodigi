@@ -5,6 +5,24 @@ import { useRouter } from "next/navigation";
 import { X, CheckCircle2, FileText, Upload, ChevronDown, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
+const UPLOAD_LIMIT_ERROR =
+  "File terlalu besar, melebihi batas ukuran server. Maksimal 15MB.";
+
+async function readErrorData(res: Response): Promise<{ error?: string; message?: string } | null> {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function uploadErrorMessage(res: Response, data: { error?: string; message?: string } | null) {
+  if (data?.error) return data.error;
+  if (data?.message) return data.message;
+  if (res.status === 413) return UPLOAD_LIMIT_ERROR;
+  return "Terjadi kesalahan saat mengunggah. Silakan coba lagi.";
+}
+
 interface AddDraftCompetitionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -99,16 +117,23 @@ export default function AddDraftCompetitionModal({ isOpen, onClose, onSuccess }:
         body: formData,
       });
 
-      const data = await res.json();
-      if (res.ok && data.url) {
-        setPdfUrl(data.url);
-        toast.success("File PDF berhasil diunggah!");
+      if (res.ok) {
+        const data = (await res.json().catch(() => null)) as { url?: string } | null;
+        if (data?.url) {
+          setPdfUrl(data.url);
+          toast.success("File PDF berhasil diunggah!");
+        } else {
+          toast.error("Gagal mengunggah file. Silakan coba lagi.");
+          setPdfFile(null);
+        }
       } else {
-        toast.error("Gagal mengunggah file: " + (data.error || "Unknown error"));
+        const data = await readErrorData(res);
+        toast.error("Gagal mengunggah file: " + uploadErrorMessage(res, data));
         setPdfFile(null);
       }
     } catch (err: any) {
-      toast.error("Gagal mengunggah PDF: " + err.message);
+      console.error("PDF upload unexpected error:", err);
+      toast.error("Gagal mengunggah PDF. Periksa koneksi atau ukuran file, lalu coba lagi.");
       setPdfFile(null);
     } finally {
       setIsUploadingPdf(false);
@@ -210,11 +235,12 @@ export default function AddDraftCompetitionModal({ isOpen, onClose, onSuccess }:
         if (onSuccess) onSuccess();
         router.refresh();
       } else {
-        const errorData = await res.json();
-        toast.error("Gagal menyimpan draft: " + (errorData.error || "Unknown error"));
+        const errorData = await readErrorData(res);
+        toast.error("Gagal menyimpan draft: " + (errorData?.error || "Terjadi kesalahan, silakan coba lagi."));
       }
     } catch (err: any) {
-      toast.error("Error: " + err.message);
+      console.error("Draft submit unexpected error:", err);
+      toast.error("Terjadi kesalahan saat menyimpan draft. Silakan coba lagi.");
     } finally {
       setLoading(false);
     }

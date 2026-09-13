@@ -251,24 +251,24 @@ export default function AslabDashboard() {
                   {formattedDate}
                 </h2>
                 <div className="flex items-center gap-2">
-                  <button onClick={handlePrev} className="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors shadow-sm bg-white">
+                  <button onClick={handlePrev} className="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors  bg-white">
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <button onClick={handleToday} className="h-10 px-6 flex items-center justify-center text-sm font-semibold border border-gray-200 rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors shadow-sm bg-white">
+                  <button onClick={handleToday} className="h-10 px-6 flex items-center justify-center text-sm font-semibold border border-gray-200 rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors  bg-white">
                     Today
                   </button>
-                  <button onClick={handleNext} className="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors shadow-sm bg-white">
+                  <button onClick={handleNext} className="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors  bg-white">
                     <ChevronRight className="w-5 h-5" />
                   </button>
                 </div>
               </div>
               <div className="flex gap-4">
-                <div className="h-10 flex items-center gap-1 border border-gray-200 rounded-lg overflow-hidden p-1 bg-gray-50 shadow-sm">
+                <div className="h-10 flex items-center gap-1 border border-gray-200 rounded-lg overflow-hidden p-1 bg-gray-50 ">
                   <button 
                     onClick={() => setViewMode("month")}
                     className={`h-full px-4 text-sm font-semibold rounded-md flex items-center gap-2 transition-all ${
                       viewMode === "month" 
-                        ? "bg-white text-gray-900 shadow-sm border border-gray-200/60" 
+                        ? "bg-white text-gray-900  border border-gray-200/60" 
                         : "text-gray-500 hover:text-gray-800 hover:bg-gray-100"
                     }`}
                   >
@@ -279,7 +279,7 @@ export default function AslabDashboard() {
                     onClick={() => setViewMode("week")}
                     className={`h-full px-4 text-sm font-semibold rounded-md flex items-center gap-2 transition-all ${
                       viewMode === "week" 
-                        ? "bg-white text-gray-900 shadow-sm border border-gray-200/60" 
+                        ? "bg-white text-gray-900  border border-gray-200/60" 
                         : "text-gray-500 hover:text-gray-800 hover:bg-gray-100"
                     }`}
                   >
@@ -290,7 +290,7 @@ export default function AslabDashboard() {
                 <div className="relative z-20">
                   <button 
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    className="h-10 border border-gray-200 rounded-lg pl-4 pr-10 text-sm font-medium text-[#0A1024] bg-white flex items-center justify-between min-w-[200px] hover:border-gray-300 transition-colors shadow-sm"
+                    className="h-10 border border-gray-200 rounded-lg pl-4 pr-10 text-sm font-medium text-[#0A1024] bg-white flex items-center justify-between min-w-[200px] hover:border-gray-300 transition-colors "
                   >
                     <span className="truncate">
                       {selectedDivisi ? selectedDivisi : "Semua Departmen"}
@@ -301,7 +301,7 @@ export default function AslabDashboard() {
                   {isFilterOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setIsFilterOpen(false)}></div>
-                      <div className="absolute right-0 mt-2 w-full min-w-[220px] bg-white border border-gray-100 rounded-xl shadow-lg z-20 py-1 origin-top animate-in fade-in zoom-in-95 duration-100">
+                      <div className="absolute right-0 mt-2 w-full min-w-[220px] bg-white border border-gray-100 rounded-xl  z-20 py-1 origin-top animate-in fade-in zoom-in-95 duration-100">
                         <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">
                           <button
                             onClick={() => { setSelectedDivisi(""); setIsFilterOpen(false); }}
@@ -357,7 +357,7 @@ export default function AslabDashboard() {
                           >
                             <div className="flex justify-end mb-1">
                               <span className={`text-xs w-6 h-6 flex items-center justify-center rounded-full font-semibold ${
-                                isToday ? "bg-[#FFC700] text-white shadow-sm" :
+                                isToday ? "bg-[#FFC700] text-white " :
                                 showAsFaded ? "text-gray-300" : "text-gray-700"
                               }`}>
                                 {dayNum}
@@ -372,7 +372,7 @@ export default function AslabDashboard() {
                         {weekBars.map((bar) => (
                           <div
                             key={`${bar.proker.id}-${weekIdx}`}
-                            className={`absolute h-[18px] flex items-center text-white text-[10px] leading-none px-1.5 truncate shadow-sm cursor-pointer hover:opacity-90 transition-opacity pointer-events-auto ${
+                            className={`absolute h-[18px] flex items-center text-white text-[10px] leading-none px-1.5 truncate  cursor-pointer hover:opacity-90 transition-opacity pointer-events-auto ${
                               bar.continuesBefore ? "" : "rounded-l"
                             } ${bar.continuesAfter ? "" : "rounded-r"}`}
                             style={{

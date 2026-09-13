@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
-import { FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import AdminCompetitionActions from "@/components/AdminCompetitionActions";
 import AdminDraftActions from "@/components/AdminDraftActions";
 import CompetitionsHeader from "@/components/CompetitionsHeader";
@@ -127,7 +127,7 @@ export default async function CompetitionsPage({
         ) : draftCompetitions && draftCompetitions.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4 md:gap-8">
             {draftCompetitions.map((item: DraftCompetitionRecord) => (
-              <div key={item.id} className="flex h-full flex-col rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+              <div key={item.id} className="flex h-full flex-col rounded-xl border border-gray-100 bg-white p-5">
                 <div className="mb-3 flex items-center justify-between min-h-[28px]">
                   <p className="text-[11px] font-semibold text-[#FFC700]">
                     {item.category || "Belmawa"}
@@ -141,7 +141,7 @@ export default async function CompetitionsPage({
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#FFF6D8]">
                     <FileText className="h-6 w-6 text-[#FFC700]" />
                   </div>
-                  <h2 className="break-words text-lg font-bold leading-tight text-[#0A1024] sm:text-xl">{item.title}</h2>
+                  <h2 className="line-clamp-2 break-words text-lg font-bold leading-tight text-[#0A1024] sm:text-xl">{item.title}</h2>
                 </div>
                 {item.tab !== "Guidebook" && (
                   <p className="mb-4 break-words text-sm text-gray-500">Dibuat Oleh : {item.organizer}</p>
@@ -242,7 +242,7 @@ export default async function CompetitionsPage({
             }
 
             return (
-              <div key={comp.id} className="relative flex h-full flex-col rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+              <div key={comp.id} className="relative flex h-full flex-col rounded-xl border border-gray-100 bg-white p-5">
                 <div className="mb-2 flex items-start justify-between">
                   <p className="text-[11px] font-semibold text-[#FFC700] sm:text-xs">
                     Deadline • {new Date(comp.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
@@ -286,26 +286,44 @@ export default async function CompetitionsPage({
       )}
 
       {totalPages > 1 && (
-        <div className="mt-8 mb-4 flex flex-wrap items-center justify-center gap-3 md:mt-12 md:mb-8 md:gap-4">
+        <div className="mt-8 mb-4 flex flex-wrap items-center justify-center gap-2 md:mt-12 md:mb-8">
           {currentPage > 1 ? (
-            <Link href={`/competitions?tab=${currentTab}&page=${currentPage - 1}`} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50">
+            <Link
+              href={`/competitions?tab=${currentTab}&page=${currentPage - 1}`}
+              aria-label="Previous page"
+              className="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-black transition-colors hover:bg-gray-100"
+            >
+              <ChevronLeft className="h-4 w-4" />
               Previous
             </Link>
           ) : (
-            <button disabled className="cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400">
+            <button
+              disabled
+              className="flex cursor-not-allowed items-center gap-1 rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400"
+            >
+              <ChevronLeft className="h-4 w-4" />
               Previous
             </button>
           )}
 
-          <span className="text-sm font-medium text-gray-600">Page {currentPage} of {totalPages}</span>
+          <span className="px-2 text-sm font-medium text-gray-600">Page {currentPage} of {totalPages}</span>
 
           {currentPage < totalPages ? (
-            <Link href={`/competitions?tab=${currentTab}&page=${currentPage + 1}`} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50">
+            <Link
+              href={`/competitions?tab=${currentTab}&page=${currentPage + 1}`}
+              aria-label="Next page"
+              className="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-black transition-colors hover:bg-gray-100"
+            >
               Next
+              <ChevronRight className="h-4 w-4" />
             </Link>
           ) : (
-            <button disabled className="cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-400">
+            <button
+              disabled
+              className="flex cursor-not-allowed items-center gap-1 rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm font-medium text-gray-400"
+            >
               Next
+              <ChevronRight className="h-4 w-4" />
             </button>
           )}
         </div>

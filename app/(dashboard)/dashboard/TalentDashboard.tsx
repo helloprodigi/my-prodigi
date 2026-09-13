@@ -137,7 +137,7 @@ export default function TalentDashboard() {
           <div className="flex items-center justify-between gap-3 lg:block">
             <h1 className="text-[22px] sm:text-3xl md:text-4xl font-bold text-[#0A1024]">Dashboard</h1>
             <Link href="/matchmaking" className="lg:hidden">
-              <button className="bg-[#FFC700] text-[#0A1024] font-bold px-5 py-2.5 rounded-[8px] text-sm hover:brightness-95 transition-all shadow-sm">
+              <button className="bg-[#FFC700] text-[#0A1024] font-bold px-5 py-2.5 rounded-[8px] text-sm hover:brightness-95 transition-all ">
                 Buat Tim
               </button>
             </Link>
@@ -166,7 +166,7 @@ export default function TalentDashboard() {
             </select>
 
             <Link href="/matchmaking" className="hidden lg:block">
-              <button className="w-full sm:w-auto bg-[#FFC700] text-[#0A1024] font-bold px-9 py-3 rounded-[8px] text-sm hover:brightness-95 transition-all shadow-sm">
+              <button className="w-full sm:w-auto bg-[#FFC700] text-[#0A1024] font-bold px-9 py-3 rounded-[8px] text-sm hover:brightness-95 transition-all ">
                 Buat Tim
               </button>
             </Link>
@@ -216,7 +216,7 @@ export default function TalentDashboard() {
             {filteredTeams.map((team) => (
               <div
                 key={team.id}
-                className="bg-white rounded-[8px] border border-[#F0F0F0] p-4 shadow-sm flex flex-col justify-between w-full"
+                className="bg-white rounded-[8px] border border-[#F0F0F0] p-4  flex flex-col justify-between w-full"
               >
                 <div>
                   <div className="text-[13px] text-gray-500 font-medium mb-1 flex flex-wrap items-center gap-1.5">

@@ -74,7 +74,7 @@ export default function TutorialFAQPage() {
                 <div className="flex items-center justify-between pt-8 pb-6 w-full">
                     <h1 className="text-3xl font-bold text-[#0A1024]">Tutorial & FAQ</h1>
                     <Link href="/matchmaking">
-                        <button className="bg-[#FFC700] text-[#0A1024] font-bold px-9 py-3 rounded-[8px] text-sm hover:brightness-95 transition-all shadow-sm">
+                        <button className="bg-[#FFC700] text-[#0A1024] font-bold px-9 py-3 rounded-[8px] text-sm hover:brightness-95 transition-all ">
                             Buat Tim
                         </button>
                     </Link>
@@ -94,7 +94,7 @@ export default function TutorialFAQPage() {
                     </div>
 
                     {/* Video Container Card */}
-                    <div className="w-full max-w-[780px] bg-black rounded-[10px] aspect-video relative shadow-md overflow-hidden group flex flex-col justify-between z-10">
+                    <div className="w-full max-w-[780px] bg-black rounded-[10px] aspect-video relative  overflow-hidden group flex flex-col justify-between z-10">
                         <iframe
                             className="w-full h-full"
                             src="https://drive.google.com/file/d/1cTn9Nwdx3S1JmqyEm6qhusOSZ5wCtKh6/preview"
@@ -160,12 +160,12 @@ export default function TutorialFAQPage() {
                 </div>
 
                 {/* Customer Support Call-Out Box */}
-                <div className="w-full max-w-[840px] mx-auto bg-white rounded-[12px] border border-[#F4F5F6] p-8 flex flex-col items-center justify-center text-center shadow-xs">
+                <div className="w-full max-w-[840px] mx-auto bg-white rounded-[12px] border border-[#F4F5F6] p-8 flex flex-col items-center justify-center text-center ">
                     {/* Avatar Robot / Maskot */}
-                    <div className="w-24 h-24 rounded-full flex items-center justify-center relative mb-4 shadow-sm animate-bounce-slow bg-transparent">
+                    <div className="w-24 h-24 rounded-full flex items-center justify-center relative mb-4  animate-bounce-slow bg-transparent">
                         <Image src="/assets/faq/faqBot.svg" alt="FAQ Bot" width={96} height={96} className="w-full h-full" />
                         {/* Bubble Chat kecil di atas telinga */}
-                        <div className="absolute top-0 left-[-2px] bg-white text-[9px] px-1.5 py-0.5 rounded-full border border-gray-100 shadow-xs">
+                        <div className="absolute top-0 left-[-2px] bg-white text-[9px] px-1.5 py-0.5 rounded-full border border-gray-100 ">
                             •••
                         </div>
                     </div>
@@ -180,7 +180,7 @@ export default function TutorialFAQPage() {
                     <button
                         type="button"
                         onClick={handleContactWA}
-                        className="bg-[#FFC700] text-[#0A1024] font-bold px-6 py-2.5 rounded-[6px] text-xs hover:brightness-95 transition-all shadow-xs"
+                        className="bg-[#FFC700] text-[#0A1024] font-bold px-6 py-2.5 rounded-[6px] text-xs hover:brightness-95 transition-all "
                     >
                         Chat Whatsapp
                     </button>

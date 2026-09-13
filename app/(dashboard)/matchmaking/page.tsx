@@ -113,7 +113,7 @@ export default function MatchmakingPage() {
         <div className="flex items-center justify-between pt-6 sm:pt-8 pb-4 w-full gap-3">
           <h1 className="text-[22px] sm:text-3xl font-bold text-[#0A1024]">Matchmaking</h1>
           <Link href="/competitions">
-            <button className="bg-[#FFC700] text-[#0A1024] font-bold px-5 sm:px-9 py-2.5 sm:py-3 rounded-[8px] text-sm hover:brightness-95 transition-all shadow-sm whitespace-nowrap">
+            <button className="bg-[#FFC700] text-[#0A1024] font-bold px-5 sm:px-9 py-2.5 sm:py-3 rounded-[8px] text-sm hover:brightness-95 transition-all  whitespace-nowrap">
               Cari Lomba
             </button>
           </Link>
@@ -258,7 +258,7 @@ export default function MatchmakingPage() {
               <button
                 type="submit"
                 disabled={isPending}
-                className="w-full sm:w-auto bg-[#FFC700] text-[#0A1024] font-bold px-9 py-3 rounded-[8px] text-sm hover:bg-[#e6b400] transition-colors disabled:opacity-60 shadow-sm"
+                className="w-full sm:w-auto bg-[#FFC700] text-[#0A1024] font-bold px-9 py-3 rounded-[8px] text-sm hover:bg-[#e6b400] transition-colors disabled:opacity-60 "
               >
                 {isPending ? "Memproses..." : "Buat Tim"}
               </button>

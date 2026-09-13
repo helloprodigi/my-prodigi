@@ -248,7 +248,7 @@ export default function NotificationsPage() {
           </p>
           <Link
             href="/competitions"
-            className="px-8 py-3 bg-[#FFC700] hover:bg-[#e6b400] text-[#0A1024] font-bold rounded-xl transition-colors shadow-sm"
+            className="px-8 py-3 bg-[#FFC700] hover:bg-[#e6b400] text-[#0A1024] font-bold rounded-xl transition-colors "
           >
             Jelajahi Kompetisi
           </Link>

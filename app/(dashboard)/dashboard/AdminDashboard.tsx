@@ -173,7 +173,7 @@ export default function AdminDashboard() {
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
                             <select
-                              className="min-w-[220px] px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFC700]/30 focus:border-[#FFC700] disabled:bg-gray-50 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed"
+                              className="min-w-[220px] px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700  transition-all duration-200 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FFC700]/30 focus:border-[#FFC700] disabled:bg-gray-50 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed"
                               value={u.role}
                               onChange={(event) => handleUpdateRole(u.id, event.target.value)}
                               disabled={updatingRole === u.id || u.id === currentUserId}

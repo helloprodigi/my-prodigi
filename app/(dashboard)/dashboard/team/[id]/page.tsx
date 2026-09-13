@@ -192,13 +192,13 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
           <Link href="/matchmaking">
-            <button className="bg-[#FFC700] text-[#0A1024] font-bold px-4 sm:px-9 py-2 sm:py-3 rounded-[8px] text-xs sm:text-sm hover:brightness-95 transition-all shadow-sm whitespace-nowrap">
+            <button className="bg-[#FFC700] text-[#0A1024] font-bold px-4 sm:px-9 py-2 sm:py-3 rounded-[8px] text-xs sm:text-sm hover:brightness-95 transition-all  whitespace-nowrap">
               Buat Tim
             </button>
           </Link>
         </div>
 
-        <div className="bg-white rounded-[8px] border border-[#F0F0F0] p-6 shadow-sm mt-4 w-full">
+        <div className="bg-white rounded-[8px] border border-[#F0F0F0] p-6  mt-4 w-full">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4 mb-4">
             <div>
               <h2 className="text-xl font-bold text-[#0A1024]">
@@ -279,7 +279,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                       onClick={() => handleRefreshMember(member.id)}
                       disabled={refreshingMemberId === member.id}
                       title="Ganti kandidat"
-                      className="bg-[#FFC700] text-white p-1.5 rounded-[4px] hover:bg-[#e6b400] transition-colors inline-flex items-center justify-center shadow-sm disabled:opacity-50"
+                      className="bg-[#FFC700] text-white p-1.5 rounded-[4px] hover:bg-[#e6b400] transition-colors inline-flex items-center justify-center  disabled:opacity-50"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-3.5 h-3.5 ${refreshingMemberId === member.id ? "animate-spin" : ""}`}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -299,7 +299,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                     <button
                       type="button"
                       onClick={() => handleChatWhatsApp(member.whatsappNumber)}
-                      className="bg-[#FFC700] text-[#0A1024] font-bold px-5 py-2 rounded-[4px] text-[11px] hover:brightness-95 transition-all shadow-xs"
+                      className="bg-[#FFC700] text-[#0A1024] font-bold px-5 py-2 rounded-[4px] text-[11px] hover:brightness-95 transition-all "
                     >
                       Chat
                     </button>
@@ -310,7 +310,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                           type="button"
                           onClick={() => handleApproveJoinRequest(member.id, member.fullName)}
                           disabled={isPending}
-                          className="bg-[#FFC700] text-[#0A1024] font-bold px-4 py-2 rounded-[4px] text-[11px] hover:brightness-95 transition-all shadow-xs disabled:opacity-60"
+                          className="bg-[#FFC700] text-[#0A1024] font-bold px-4 py-2 rounded-[4px] text-[11px] hover:brightness-95 transition-all  disabled:opacity-60"
                         >
                           Terima
                         </button>
@@ -336,7 +336,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                         type="button"
                         onClick={() => handleInvite(member.id, member.fullName)}
                         disabled={isPending}
-                        className="bg-[#FFF9E6] text-[#0A1024] font-bold px-5 py-2 rounded-[4px] text-[11px] hover:brightness-95 transition-all shadow-xs disabled:opacity-60"
+                        className="bg-[#FFF9E6] text-[#0A1024] font-bold px-5 py-2 rounded-[4px] text-[11px] hover:brightness-95 transition-all  disabled:opacity-60"
                       >
                         Invite
                       </button>
@@ -369,7 +369,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                           onClick={() => handleRefreshMember(member.id)}
                           disabled={refreshingMemberId === member.id}
                           title="Roll — ganti kandidat"
-                          className="bg-[#FFC700] text-white p-1.5 rounded-[4px] hover:bg-[#e6b400] transition-colors inline-flex items-center justify-center shadow-sm disabled:opacity-50"
+                          className="bg-[#FFC700] text-white p-1.5 rounded-[4px] hover:bg-[#e6b400] transition-colors inline-flex items-center justify-center  disabled:opacity-50"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-3.5 h-3.5 ${refreshingMemberId === member.id ? "animate-spin" : ""}`}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -419,7 +419,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                           <button
                             type="button"
                             onClick={() => handleChatWhatsApp(member.whatsappNumber)}
-                            className="bg-[#FFC700] text-[#0A1024] font-bold px-5 py-2 rounded-[4px] text-[11px] hover:brightness-95 transition-all shadow-xs"
+                            className="bg-[#FFC700] text-[#0A1024] font-bold px-5 py-2 rounded-[4px] text-[11px] hover:brightness-95 transition-all "
                           >
                             Chat
                           </button>
@@ -430,7 +430,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                                 type="button"
                                 onClick={() => handleApproveJoinRequest(member.id, member.fullName)}
                                 disabled={isPending}
-                                className="bg-[#FFC700] text-[#0A1024] font-bold px-4 py-2 rounded-[4px] text-[11px] hover:brightness-95 transition-all shadow-xs disabled:opacity-60"
+                                className="bg-[#FFC700] text-[#0A1024] font-bold px-4 py-2 rounded-[4px] text-[11px] hover:brightness-95 transition-all  disabled:opacity-60"
                               >
                                 Terima
                               </button>
@@ -456,7 +456,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                               type="button"
                               onClick={() => handleInvite(member.id, member.fullName)}
                               disabled={isPending}
-                              className="bg-[#FFF9E6] text-[#0A1024] font-bold px-5 py-2 rounded-[4px] text-[11px] hover:brightness-95 transition-all shadow-xs disabled:opacity-60"
+                              className="bg-[#FFF9E6] text-[#0A1024] font-bold px-5 py-2 rounded-[4px] text-[11px] hover:brightness-95 transition-all  disabled:opacity-60"
                             >
                               Invite
                             </button>
