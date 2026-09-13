@@ -313,7 +313,7 @@ export default function OnboardingPage() {
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-4 mt-8 sm:mt-10">
                 <button
                   onClick={handlePrev}
-                  className="w-full sm:w-auto bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-8 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="w-full sm:w-auto bg-white border border-gray-300 text-black font-semibold py-3 px-8 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   Previous
                 </button>
@@ -352,7 +352,7 @@ export default function OnboardingPage() {
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-4 mt-8 sm:mt-10">
                 <button
                   onClick={handlePrev}
-                  className="w-full sm:w-auto bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-8 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="w-full sm:w-auto bg-white border border-gray-300 text-black font-semibold py-3 px-8 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   Previous
                 </button>

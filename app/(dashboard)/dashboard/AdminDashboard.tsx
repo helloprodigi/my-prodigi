@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import toast from "react-hot-toast";
 import { createClient } from "@/utils/supabase/client";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
@@ -146,17 +146,17 @@ export default function AdminDashboard() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="py-4 px-4 font-semibold text-gray-600">Nama</th>
-                      <th className="py-4 px-4 font-semibold text-gray-600">Email</th>
-                      <th className="py-4 px-4 font-semibold text-gray-600">Role Saat Ini</th>
-                      <th className="py-4 px-4 font-semibold text-gray-600">Aksi</th>
+                      <th className="py-4 px-4 font-semibold text-black">Nama</th>
+                      <th className="py-4 px-4 font-semibold text-black">Email</th>
+                      <th className="py-4 px-4 font-semibold text-black">Role Saat Ini</th>
+                      <th className="py-4 px-4 font-semibold text-black">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
                     {users.map((u: any) => (
                       <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                         <td className="py-4 px-4 text-gray-900">{u.name || "-"}</td>
-                        <td className="py-4 px-4 text-gray-600 text-sm">{u.email}</td>
+                        <td className="py-4 px-4 text-black text-sm">{u.email}</td>
                         <td className="py-4 px-4">
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -200,23 +200,25 @@ export default function AdminDashboard() {
             )}
 
             {!isLoadingUsers && totalPages > 1 && (
-              <div className="flex justify-center items-center gap-4 mt-8">
+              <div className="flex justify-center items-center gap-3 mt-8">
                 <button
                   onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                   disabled={currentPage <= 1}
-                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-black transition-colors hover:bg-gray-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                 >
+                  <ChevronLeft className="h-4 w-4" />
                   Previous
                 </button>
-                <span className="text-sm font-medium text-gray-600">
+                <span className="px-2 text-sm font-medium text-gray-600">
                   Page {currentPage} of {totalPages}
                 </span>
                 <button
                   onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                   disabled={currentPage >= totalPages}
-                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-black transition-colors hover:bg-gray-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                 >
                   Next
+                  <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
             )}

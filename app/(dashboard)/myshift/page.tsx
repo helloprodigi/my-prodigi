@@ -624,13 +624,13 @@ export default function MyShiftPage() {
                 {formatDateTitle(selectedDate)}
               </h2>
               <div className="flex items-center gap-2">
-                <button onClick={handlePrevDay} className="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600 transition-colors">
+                <button onClick={handlePrevDay} className="p-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 text-black transition-colors">
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                <button onClick={handleToday} className="px-4 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-700 font-semibold text-sm transition-colors">
+                <button onClick={handleToday} className="px-4 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 text-black font-semibold text-sm transition-colors">
                   Hari Ini
                 </button>
-                <button onClick={handleNextDay} className="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600 transition-colors">
+                <button onClick={handleNextDay} className="p-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 text-black transition-colors">
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>

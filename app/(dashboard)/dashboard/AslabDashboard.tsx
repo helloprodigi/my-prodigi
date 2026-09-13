@@ -251,13 +251,13 @@ export default function AslabDashboard() {
                   {formattedDate}
                 </h2>
                 <div className="flex items-center gap-2">
-                  <button onClick={handlePrev} className="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors  bg-white">
+                  <button onClick={handlePrev} className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg text-black hover:text-gray-900 hover:bg-gray-100 transition-colors bg-white">
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <button onClick={handleToday} className="h-10 px-6 flex items-center justify-center text-sm font-semibold border border-gray-200 rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors  bg-white">
+                  <button onClick={handleToday} className="h-10 px-6 flex items-center justify-center text-sm font-semibold border border-gray-300 rounded-lg text-black hover:text-gray-900 hover:bg-gray-100 transition-colors bg-white">
                     Today
                   </button>
-                  <button onClick={handleNext} className="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors  bg-white">
+                  <button onClick={handleNext} className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg text-black hover:text-gray-900 hover:bg-gray-100 transition-colors bg-white">
                     <ChevronRight className="w-5 h-5" />
                   </button>
                 </div>
