@@ -33,6 +33,13 @@ async function getCurrentUserJabatan(adminDb: ReturnType<typeof getAdminDb>) {
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const adminDb = getAdminDb();
   if (!adminDb) {
     return NextResponse.json({ error: "Missing Supabase configuration" }, { status: 500 });

@@ -1,10 +1,27 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/utils/supabase/server";
 import fs from "fs/promises";
 import path from "path";
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const caller = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { role: true },
+    });
+    if (!caller || !["asisten_lab", "admin"].includes(caller.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     // 1. Fetch real registered users with role asisten_lab from database
     const dbAslabs = await prisma.user.findMany({
       where: { role: "asisten_lab" },
@@ -21,7 +38,7 @@ export async function GET(req: Request) {
     });
 
     // 2. Load data_prodigi.json to auto-enrich any missing metadata (NIM, Divisi, Posisi/Jabatan)
-    let staticMap = new Map<string, { nim: string; divisi: string; posisi: string; nama: string }>();
+    const staticMap = new Map<string, { nim: string; divisi: string; posisi: string; nama: string }>();
     try {
       const dataPath = path.join(process.cwd(), "data", "data_prodigi.json");
       const fileContent = await fs.readFile(dataPath, "utf-8");
@@ -66,29 +83,7 @@ export async function GET(req: Request) {
       };
     });
 
-    // If there are registered aslabs in database, return them
-    if (formattedDbList.length > 0) {
-      return NextResponse.json(formattedDbList);
-    }
-
-    // Fallback: If no aslabs have registered yet in the DB, return static list so UI is testable
-    const dataPath = path.join(process.cwd(), "data", "data_prodigi.json");
-    const fileContent = await fs.readFile(dataPath, "utf-8");
-    const parsedData = JSON.parse(fileContent);
-    const aslabList = parsedData["CHAMP PRODIGI"] || [];
-    
-    const fallbackList = aslabList.map((aslab: any, index: number) => ({
-      id: `static-${index}`,
-      userId: null,
-      nim: String(aslab["NIM"]),
-      nama: aslab["Nama "] || aslab["Nama"],
-      divisi: aslab["DIVISI"] || "Asisten Lab",
-      posisi: aslab["Posisi"] || aslab["DIVISI"] || "Asisten Lab",
-      jabatan: aslab["Posisi"] || aslab["DIVISI"] || "Asisten Lab",
-      photoUrl: null
-    })).filter((a: any) => a.nim && a.nama);
-
-    return NextResponse.json(fallbackList);
+    return NextResponse.json(formattedDbList);
   } catch (error) {
     console.error("Error reading aslab data:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

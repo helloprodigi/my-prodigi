@@ -6,10 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ChevronRight } from "lucide-react";
 import toast from "react-hot-toast";
-
-function toDateInputValue(iso: string) {
-  return iso ? iso.slice(0, 10) : "";
-}
+import WaktuPelaksanaanPicker from "@/components/ui/WaktuPelaksanaanPicker";
 
 export default function EditProkerPage() {
   const router = useRouter();
@@ -36,8 +33,8 @@ export default function EditProkerPage() {
         setDivisi(pk.divisi);
         setNama(pk.nama);
         setDeskripsi(pk.deskripsi || "");
-        setTanggalMulai(toDateInputValue(pk.tanggalMulai));
-        setTanggalSelesai(toDateInputValue(pk.tanggalSelesai));
+        setTanggalMulai(pk.tanggalMulai || "");
+        setTanggalSelesai(pk.tanggalSelesai || "");
       })
       .catch(() => toast.error("Gagal memuat program kerja"))
       .finally(() => setIsLoading(false));
@@ -136,22 +133,15 @@ export default function EditProkerPage() {
 
             <div>
               <label className="block text-sm text-[#0A1024] mb-2">Waktu Pelaksanaan</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input
-                  type="date"
-                  value={tanggalMulai}
-                  onChange={(e) => setTanggalMulai(e.target.value)}
-                  className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700]"
-                  required
-                />
-                <input
-                  type="date"
-                  value={tanggalSelesai}
-                  onChange={(e) => setTanggalSelesai(e.target.value)}
-                  className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700]"
-                  required
-                />
-              </div>
+              <WaktuPelaksanaanPicker
+                waktuMulai={tanggalMulai}
+                waktuSelesai={tanggalSelesai}
+                onChange={(mulai, selesai) => {
+                  setTanggalMulai(mulai);
+                  setTanggalSelesai(selesai);
+                }}
+                placeholder="Pilih waktu pelaksanaan"
+              />
             </div>
 
             <div className="flex items-center gap-3">

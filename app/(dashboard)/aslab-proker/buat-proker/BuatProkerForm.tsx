@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import toast from "react-hot-toast";
+import WaktuPelaksanaanPicker from "@/components/ui/WaktuPelaksanaanPicker";
 
 type AllowedDivision = { name: string };
 
@@ -99,22 +100,15 @@ export function BuatProkerForm({ allowedDivisions }: { allowedDivisions: Allowed
 
           <div>
             <label className="block text-sm text-[#0A1024] mb-2">Waktu Pelaksanaan</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <input
-                type="date"
-                value={tanggalMulai}
-                onChange={(e) => setTanggalMulai(e.target.value)}
-                className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700]"
-                required
-              />
-              <input
-                type="date"
-                value={tanggalSelesai}
-                onChange={(e) => setTanggalSelesai(e.target.value)}
-                className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700]"
-                required
-              />
-            </div>
+            <WaktuPelaksanaanPicker
+              waktuMulai={tanggalMulai}
+              waktuSelesai={tanggalSelesai}
+              onChange={(mulai, selesai) => {
+                setTanggalMulai(mulai);
+                setTanggalSelesai(selesai);
+              }}
+              placeholder="Pilih waktu pelaksanaan"
+            />
           </div>
 
           <button

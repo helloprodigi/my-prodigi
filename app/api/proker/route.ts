@@ -15,6 +15,13 @@ function getAdminDb() {
 }
 
 export async function GET(req: Request) {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const adminDb = getAdminDb();
   if (!adminDb) {
     return NextResponse.json({ error: "Missing Supabase configuration" }, { status: 500 });
@@ -103,8 +110,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true, programKerja: programKerjaData });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("API Error:", error);
-    return NextResponse.json({ error: error.message ?? "Terjadi kesalahan" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Terjadi kesalahan";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

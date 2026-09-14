@@ -15,21 +15,18 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    let dbUser = await prisma.user.findUnique({
+    const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
       select: { id: true, role: true, nim: true, name: true, email: true, divisi: true, jabatan: true }
     });
 
-    const activeRoleCookie = cookieStore.get("activeRole")?.value;
-    const rawRole = (dbUser?.role || user.user_metadata?.role || "talent").toLowerCase();
-    const effectiveRole = (activeRoleCookie || rawRole).toLowerCase();
-    const isAslabOrAdmin = ["aslab", "asisten_lab", "admin"].includes(effectiveRole) || ["aslab", "asisten_lab", "admin"].includes(rawRole);
+    const rawRole = (dbUser?.role || "talent").toLowerCase();
+    const normalizedRole = rawRole === "aslab" ? "asisten_lab" : rawRole;
+    const isAslabOrAdmin = ["asisten_lab", "admin"].includes(normalizedRole);
 
     if (!isAslabOrAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-
-    const isAdmin = effectiveRole === "admin" || dbUser?.role === "admin";
 
     // Auto-sync NIM if missing so assignments can be matched accurately
     if (dbUser && !dbUser.nim && (dbUser.email || dbUser.name)) {
