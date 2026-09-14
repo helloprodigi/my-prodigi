@@ -23,14 +23,15 @@ export default async function DashboardPage() {
     .eq("id", user.id)
     .single();
 
-  const effectiveRole = await getEffectiveRole(userData?.role);
+  const databaseRole = (userData?.role || "talent").toLowerCase();
+  const effectiveRole = await getEffectiveRole(databaseRole);
 
-  if (effectiveRole === "asisten_lab") {
-    return <AslabDashboard />;
+  if (databaseRole === "admin" && effectiveRole === "admin") {
+    return <AdminDashboard />;
   }
 
-  if (effectiveRole === "admin") {
-    return <AdminDashboard />;
+  if (databaseRole === "asisten_lab" || (databaseRole === "admin" && effectiveRole === "asisten_lab")) {
+    return <AslabDashboard />;
   }
 
   return <TalentDashboard />;
