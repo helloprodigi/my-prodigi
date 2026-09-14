@@ -96,7 +96,8 @@ export async function middleware(request: NextRequest) {
                            pathname.startsWith('/team-invite') ||
                            pathname.startsWith('/agenda') ||
                            pathname.startsWith('/absensi') ||
-                           pathname.startsWith('/faq');
+                           pathname.startsWith('/faq') ||
+                           pathname.startsWith('/admin');
 
   // Redirect root to /dashboard for logged-in users, /login for anonymous
   // visitors (and crawlers) — going straight there avoids bouncing through
@@ -163,6 +164,7 @@ export async function middleware(request: NextRequest) {
 
         if (effectiveIsAdmin) {
           if (pathname === '/dashboard') allowed = true;
+          else if (pathname.startsWith('/admin')) allowed = true;
           else if (pathname === '/myshift') allowed = true;
           else if (pathname === '/agenda') allowed = true;
           else if (pathname.startsWith('/absensi')) allowed = true; // Added to prevent breaking Riwayat Agenda
