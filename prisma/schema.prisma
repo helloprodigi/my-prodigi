@@ -266,6 +266,11 @@ model AbsensiRecord {
   waktuPulang    DateTime?
   status         String        @default("ALPA") // "HADIR", "ALPA", "IZIN"
   
+  shiftStatus    String        @default("OFF") // "ON", "OFF"
+  actualDuration Int?          // in minutes
+  creditedDuration Int?        // in minutes
+  closeReason    String?       // "NORMAL", "AUTO_CLOSE"
+
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 

@@ -45,22 +45,32 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { token, lat, lng, type } = body; // type is 'datang' or 'pulang'
+    const { token, lat, lng, type } = body; // type is 'datang' or 'pulang' (legacy for agenda)
 
-    if (!token || !type) {
-      return NextResponse.json({ error: "Missing required fields: token and type are required" }, { status: 400 });
+    if (!token) {
+      return NextResponse.json({ error: "Missing required fields: token is required" }, { status: 400 });
     }
 
-    // Find Agenda by token first
-    const isDatang = type === "datang";
-    const agenda = await prisma.absensiAgenda.findFirst({
-      where: isDatang ? { kodeQrDatang: token } : { kodeQrPulang: token },
+    // Find Agenda by token
+    let agenda = await prisma.absensiAgenda.findFirst({
+      where: { kodeQrDatang: token },
       include: {
         createdBy: {
           select: { role: true }
         }
       }
     });
+
+    if (!agenda) {
+      agenda = await prisma.absensiAgenda.findFirst({
+        where: { kodeQrPulang: token },
+        include: {
+          createdBy: {
+            select: { role: true }
+          }
+        }
+      });
+    }
 
     if (!agenda) {
       return NextResponse.json({ error: "Invalid or expired QR token" }, { status: 404 });
@@ -70,8 +80,9 @@ export async function POST(req: Request) {
     // Agenda: bisa absen dimana saja (tidak perlu berada di LAB DTC)
     // MyShift: wajib berada di area LAB DTC (radius <= 50m)
     const isAgenda = Boolean(agenda.deskripsi);
+    const isMyShift = !isAgenda;
 
-    if (!isAgenda) {
+    if (isMyShift) {
       // MyShift requires location check in LAB DTC area
       if (typeof lat !== "number" || typeof lng !== "number") {
         return NextResponse.json({
@@ -100,7 +111,7 @@ export async function POST(req: Request) {
       }
     });
 
-    if (!assignment) {
+    if (!assignment && !isMyShift) {
       return NextResponse.json({ error: "You are not assigned to this shift" }, { status: 403 });
     }
 
@@ -126,64 +137,99 @@ export async function POST(req: Request) {
       });
     }
 
-    // Update based on type
+    // Update based on agenda type
     const now = new Date();
-    let newStatus = record.status;
+    
+    if (isMyShift) {
+      if (record.shiftStatus === "OFF") {
+        // DATANG
+        record = await prisma.absensiRecord.update({
+          where: { id: record.id },
+          data: {
+            shiftStatus: "ON",
+            waktuDatang: now
+          }
+        });
+        return NextResponse.json({ success: true, message: "Berhasil absen Datang MyShift", record, isMyShiftDatang: true });
+      } else {
+        // PULANG
+        const diffMs = now.getTime() - (record.waktuDatang?.getTime() ?? now.getTime());
+        const actualMinutes = Math.floor(diffMs / 60000);
+        const creditedMinutes = actualMinutes; // Normal close logic
 
-    if (isDatang) {
-      const deadlineDatang = new Date(agenda.waktuMulai.getTime() + 30 * 60 * 1000);
-      if (now > deadlineDatang) {
-        return NextResponse.json({
-          error: "Terlambat",
-          errorCode: "LATE_DATANG",
-          message: "Kamu telah melewati batas waktu absensi datang dan saat ini berstatus alpa. Silakan laporkan kepada petugas apabila terjadi kekeliruan."
-        }, { status: 400 });
+        record = await prisma.absensiRecord.update({
+          where: { id: record.id },
+          data: {
+            shiftStatus: "OFF",
+            waktuPulang: now,
+            status: "HADIR",
+            actualDuration: actualMinutes,
+            creditedDuration: creditedMinutes,
+            closeReason: "NORMAL"
+          }
+        });
+        return NextResponse.json({ success: true, message: "Berhasil absen Pulang MyShift", record, isMyShiftPulang: true, duration: creditedMinutes });
       }
-
-      if (record.waktuDatang) {
-        return NextResponse.json({ error: "Anda sudah melakukan absen Datang" }, { status: 400 });
-      }
-
-      // Update datang time
-      record = await prisma.absensiRecord.update({
-        where: { id: record.id },
-        data: { waktuDatang: now }
-      });
-
     } else {
-      const deadlinePulang = new Date(agenda.waktuSelesai.getTime() + 30 * 60 * 1000);
-      if (now > deadlinePulang) {
-        return NextResponse.json({
-          error: "Terlambat",
-          errorCode: "LATE_PULANG",
-          message: "Batas waktu absensi pulang telah berakhir. QR absensi sudah tidak dapat digunakan. Jika terjadi kesalahan, silakan hubungi petugas untuk melakukan pengecekan."
-        }, { status: 400 });
-      }
+      // Legacy Agenda logic
+      let newStatus = record.status;
+      const isDatang = token === agenda.kodeQrDatang;
 
-      if (record.waktuPulang) {
-        return NextResponse.json({ error: "Anda sudah melakukan absen Pulang" }, { status: 400 });
-      }
-      if (!record.waktuDatang) {
-        return NextResponse.json({
-          error: "Tidak Absen Datang",
-          errorCode: "MISSED_DATANG",
-          message: "Maaf, kamu tidak melakukan absensi datang sehingga saat ini status kamu tercatat sebagai alpa. Silakan laporkan kepada petugas apabila terjadi kekeliruan."
-        }, { status: 400 });
-      }
-
-      // Update pulang time and set to HADIR if both are filled
-      newStatus = "HADIR";
-
-      record = await prisma.absensiRecord.update({
-        where: { id: record.id },
-        data: {
-          waktuPulang: now,
-          status: newStatus
+      if (isDatang) {
+        const deadlineDatang = new Date(agenda.waktuMulai.getTime() + 30 * 60 * 1000);
+        if (now > deadlineDatang) {
+          return NextResponse.json({
+            error: "Terlambat",
+            errorCode: "LATE_DATANG",
+            message: "Kamu telah melewati batas waktu absensi datang dan saat ini berstatus alpa. Silakan laporkan kepada petugas apabila terjadi kekeliruan."
+          }, { status: 400 });
         }
-      });
-    }
 
-    return NextResponse.json({ success: true, message: "Absensi berhasil dicatat", record });
+        if (record.waktuDatang) {
+          return NextResponse.json({ error: "Anda sudah melakukan absen Datang" }, { status: 400 });
+        }
+
+        // Update datang time
+        record = await prisma.absensiRecord.update({
+          where: { id: record.id },
+          data: { waktuDatang: now }
+        });
+
+      } else {
+        const deadlinePulang = new Date(agenda.waktuSelesai.getTime() + 30 * 60 * 1000);
+        if (now > deadlinePulang) {
+          return NextResponse.json({
+            error: "Terlambat",
+            errorCode: "LATE_PULANG",
+            message: "Batas waktu absensi pulang telah berakhir. QR absensi sudah tidak dapat digunakan. Jika terjadi kesalahan, silakan hubungi petugas untuk melakukan pengecekan."
+          }, { status: 400 });
+        }
+
+        if (record.waktuPulang) {
+          return NextResponse.json({ error: "Anda sudah melakukan absen Pulang" }, { status: 400 });
+        }
+        if (!record.waktuDatang) {
+          return NextResponse.json({
+            error: "Tidak Absen Datang",
+            errorCode: "MISSED_DATANG",
+            message: "Maaf, kamu tidak melakukan absensi datang sehingga saat ini status kamu tercatat sebagai alpa. Silakan laporkan kepada petugas apabila terjadi kekeliruan."
+          }, { status: 400 });
+        }
+
+        // Update pulang time and set to HADIR if both are filled
+        newStatus = "HADIR";
+
+        record = await prisma.absensiRecord.update({
+          where: { id: record.id },
+          data: {
+            waktuPulang: now,
+            status: newStatus
+          }
+        });
+      }
+
+      return NextResponse.json({ success: true, message: "Absensi berhasil dicatat", record });
+    }
   } catch (error) {
     console.error("Error processing scan:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

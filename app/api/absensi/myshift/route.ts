@@ -265,6 +265,46 @@ export async function GET(req: Request) {
 
     const myAgendas = allAgendas;
 
+    // --- Lazy Auto-Close ---
+    const openRecords = await prisma.absensiRecord.findMany({
+      where: { shiftStatus: "ON" }
+    });
+    const nowTimestamp = Date.now();
+    for (const rec of openRecords) {
+      if (!rec.waktuDatang) continue;
+      const diffHours = (nowTimestamp - rec.waktuDatang.getTime()) / (1000 * 60 * 60);
+      if (diffHours > 8) {
+        await prisma.absensiRecord.update({
+          where: { id: rec.id },
+          data: {
+            shiftStatus: "OFF",
+            waktuPulang: new Date(rec.waktuDatang.getTime() + 8 * 60 * 60 * 1000),
+            status: "HADIR",
+            actualDuration: 480,
+            creditedDuration: 240, // max 4 hours for forgot checkout
+            closeReason: "AUTO_CLOSE"
+          }
+        }).catch(() => {});
+      }
+    }
+
+    // --- Cumulative Weekly Duration (Senin-Minggu) ---
+    const dayOfWeek = wibDayOfWeek === 0 ? 7 : wibDayOfWeek;
+    const startOfWeek = new Date(startOfDay.getTime() - (dayOfWeek - 1) * 24 * 60 * 60 * 1000);
+    const endOfWeek = new Date(startOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+
+    const weeklyRecords = await prisma.absensiRecord.findMany({
+      where: {
+        userId: user.id,
+        createdAt: { gte: startOfWeek, lte: endOfWeek },
+        agenda: { deskripsi: null } // Only MyShift
+      }
+    });
+    
+    // Sum all credited durations inside this week
+    const cumulativeWeeklyDuration = weeklyRecords.reduce((total, rec) => total + (rec.creditedDuration || 0), 0);
+
+
     const formattedAgendas = await Promise.all(myAgendas.map(async (agenda) => {
       // Ensure QR tokens are always present
       if (!agenda.kodeQrDatang || !agenda.kodeQrPulang) {
@@ -314,6 +354,8 @@ export async function GET(req: Request) {
           jabatan: assignment.user?.jabatan || assignment.user?.divisi || agenda.divisi || "Asisten Lab",
           photoUrl: assignment.user?.photoUrl || null,
           status: record ? record.status : "BELUM ABSEN",
+          shiftStatus: record?.shiftStatus || "OFF",
+          closeReason: record?.closeReason || null,
           waktuDatang: record?.waktuDatang || null,
           waktuPulang: record?.waktuPulang || null,
         };
@@ -328,13 +370,17 @@ export async function GET(req: Request) {
         kodeQrPulang: agenda.kodeQrPulang,
         jenis: !agenda.deskripsi ? "MyShift" : "Agenda",
         myStatus: myRecord ? myRecord.status : "BELUM ABSEN",
+        myShiftStatus: myRecord?.shiftStatus || "OFF",
         waktuDatang: myRecord?.waktuDatang || null,
         waktuPulang: myRecord?.waktuPulang || null,
         aslabs: allAslabs,
       };
     }));
 
-    return NextResponse.json(formattedAgendas);
+    return NextResponse.json({
+      agendas: formattedAgendas,
+      cumulativeWeeklyDuration
+    });
   } catch (error) {
     console.error("Error fetching myshift:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

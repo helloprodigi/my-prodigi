@@ -49,6 +49,8 @@ interface Aslab {
   status: string; // "HADIR", "ALPA", "IZIN", "BELUM ABSEN"
   waktuDatang: string | null;
   waktuPulang: string | null;
+  shiftStatus?: string;
+  closeReason?: string | null;
 }
 
 interface Agenda {
@@ -131,6 +133,7 @@ export default function MyShiftPage() {
   const [currentUserName, setCurrentUserName] = useState<string>("");
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [agendas, setAgendas] = useState<Agenda[]>([]);
+  const [cumulativeWeeklyDuration, setCumulativeWeeklyDuration] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isLoadingAgendas, setIsLoadingAgendas] = useState(true);
   const [agendaLoadError, setAgendaLoadError] = useState(false);
@@ -138,7 +141,7 @@ export default function MyShiftPage() {
   // QR Generator Modal
   const [showQRModal, setShowQRModal] = useState(false);
   const [activeAgenda, setActiveAgenda] = useState<Agenda | null>(null);
-  const [qrStatus, setQrStatus] = useState<"datang_open" | "pulang_open" | "closed" | "ended">("closed");
+  const [qrStatus, setQrStatus] = useState<"open" | "closed" | "ended">("closed");
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [nextWindowInfo, setNextWindowInfo] = useState<string>("");
   const [showAgendaSelectionModal, setShowAgendaSelectionModal] = useState(false);
@@ -181,15 +184,21 @@ export default function MyShiftPage() {
     fetch(`/api/absensi/myshift?date=${date.toISOString()}`)
       .then(res => res.json())
       .then(data => {
-        if (!data.error && Array.isArray(data)) {
+        if (!data.error && data.agendas) {
+          setAgendas(data.agendas);
+          setCumulativeWeeklyDuration(data.cumulativeWeeklyDuration || 0);
+        } else if (!data.error && Array.isArray(data)) {
           setAgendas(data);
+          setCumulativeWeeklyDuration(0);
         } else {
           setAgendas([]);
+          setCumulativeWeeklyDuration(0);
           setAgendaLoadError(true);
         }
       })
       .catch(() => {
         setAgendas([]);
+        setCumulativeWeeklyDuration(0);
         setAgendaLoadError(true);
       })
       .finally(() => setIsLoadingAgendas(false));
@@ -235,32 +244,16 @@ export default function MyShiftPage() {
       const mulai = new Date(activeAgenda.waktuMulai).getTime();
       const selesai = new Date(activeAgenda.waktuSelesai).getTime();
       
-      const endDatang = mulai + 20 * 60 * 1000;
-      const startPulang = selesai - 10 * 60 * 1000;
-
-      if (now >= mulai && now <= endDatang) {
-        setQrStatus("datang_open");
-        const remain = Math.max(0, Math.floor((endDatang - now) / 1000));
-        const visualRemain = remain % 600; // rotate token every 10 mins
-        setTimeRemaining(`${Math.floor(visualRemain / 60).toString().padStart(2, '0')}:${(visualRemain % 60).toString().padStart(2, '0')}`);
-        setNextWindowInfo(`Absen Datang dibuka hingga ${new Date(endDatang).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`);
-      } else if (now >= startPulang && now <= selesai) {
-        setQrStatus("pulang_open");
-        const remain = Math.max(0, Math.floor((selesai - now) / 1000));
-        const visualRemain = remain % 600;
-        setTimeRemaining(`${Math.floor(visualRemain / 60).toString().padStart(2, '0')}:${(visualRemain % 60).toString().padStart(2, '0')}`);
-        setNextWindowInfo(`Absen Pulang dibuka hingga shift berakhir (${new Date(selesai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB)`);
-      } else if (now > selesai) {
+      if (now >= mulai - 30 * 60 * 1000 && now <= selesai + 8 * 60 * 60 * 1000) {
+        setQrStatus("open");
+        setNextWindowInfo(`QR Absensi berlaku untuk absen Datang dan Pulang.`);
+      } else if (now > selesai + 8 * 60 * 60 * 1000) {
         setQrStatus("ended");
-        setTimeRemaining("");
         setNextWindowInfo("Sesi shift telah berakhir.");
       } else {
         setQrStatus("closed");
-        setTimeRemaining("");
-        if (now < mulai) {
-          setNextWindowInfo(`Absen Datang akan dibuka pada ${new Date(mulai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB (20 menit pertama).`);
-        } else {
-          setNextWindowInfo(`Waktu Absen Datang telah ditutup. Absen Pulang akan dibuka pukul ${new Date(startPulang).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB (10 menit terakhir).`);
+        if (now < mulai - 30 * 60 * 1000) {
+          setNextWindowInfo(`Absen akan dibuka pada ${new Date(mulai - 30 * 60 * 1000).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB.`);
         }
       }
     };
@@ -591,7 +584,12 @@ export default function MyShiftPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-[22px] font-bold text-[#0A1024] sm:text-3xl md:text-4xl">MyShift</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-[22px] font-bold text-[#0A1024] sm:text-3xl md:text-4xl">MyShift</h1>
+              <span className="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-800 text-xs font-bold border border-blue-200">
+                v1.3
+              </span>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
@@ -650,6 +648,24 @@ export default function MyShiftPage() {
               </div>
             )}
           </div>
+
+          {/* Cumulative Duration Info */}
+          {!isLoadingAgendas && !agendaLoadError && (
+            <div className="mb-6 bg-blue-50/50 border border-blue-100 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-blue-900">Total Durasi Jaga (Minggu Ini)</h3>
+                  <p className="text-[11px] text-blue-700 font-medium">Durasi dihitung otomatis dari waktu scan datang hingga scan pulang.</p>
+                </div>
+              </div>
+              <div className="text-xl font-black text-blue-800 shrink-0">
+                {Math.floor(cumulativeWeeklyDuration / 60)}j {cumulativeWeeklyDuration % 60}m
+              </div>
+            </div>
+          )}
 
           {/* Grid of Aslabs */}
           <div className="space-y-10">
@@ -732,15 +748,28 @@ export default function MyShiftPage() {
                           </div>
                         </div>
 
-                        <div className={`px-3 py-1.5 text-xs font-bold rounded-xl flex-shrink-0 ${
-                          aslab.status === "HADIR" ? "bg-green-100 text-green-800 border border-green-200" :
-                          aslab.status === "ALPA" ? "bg-red-100 text-red-800 border border-red-200" :
-                          aslab.status === "IZIN" ? "bg-yellow-100 text-yellow-800 border border-yellow-200" :
-                          "bg-gray-100 text-gray-600 border border-gray-200"
-                        }`}>
-                          {aslab.status === "HADIR" ? "Hadir" : 
-                           aslab.status === "ALPA" ? "Alpa" : 
-                           aslab.status === "IZIN" ? "Izin" : "Belum Absen"}
+                        <div className="text-right flex-shrink-0">
+                          <div className={`px-3 py-1.5 text-xs font-bold rounded-xl inline-block ${
+                            aslab.shiftStatus === "ON" ? "bg-blue-100 text-blue-800 border border-blue-200 shadow-sm" :
+                            aslab.status === "HADIR" ? "bg-green-100 text-green-800 border border-green-200" :
+                            aslab.status === "ALPA" ? "bg-red-100 text-red-800 border border-red-200" :
+                            aslab.status === "IZIN" ? "bg-yellow-100 text-yellow-800 border border-yellow-200" :
+                            "bg-gray-100 text-gray-600 border border-gray-200"
+                          }`}>
+                            {aslab.shiftStatus === "ON" ? (
+                               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> Sedang Berjalan</span>
+                            ) :
+                             aslab.status === "HADIR" ? "Selesai (Hadir)" : 
+                             aslab.status === "ALPA" ? "Alpa" : 
+                             aslab.status === "IZIN" ? "Izin" : "Belum Absen"}
+                          </div>
+                          {(aslab.waktuDatang || aslab.waktuPulang) && (
+                            <div className="mt-1.5 text-[10px] font-semibold text-gray-400 flex items-center justify-end gap-1">
+                              <span>{aslab.waktuDatang ? formatTime(aslab.waktuDatang) : "-"}</span>
+                              <span>-</span>
+                              <span>{aslab.waktuPulang ? formatTime(aslab.waktuPulang) : (aslab.shiftStatus === "ON" ? "Sekarang" : "-")}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1096,17 +1125,10 @@ export default function MyShiftPage() {
             </p>
             
             {/* Status Banner */}
-            {qrStatus === "datang_open" && (
-              <div className="bg-green-50 text-green-800 p-2.5 rounded-2xl text-xs mb-3 border border-green-300 w-full text-center font-bold flex items-center justify-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                Absen Datang Dibuka
-              </div>
-            )}
-
-            {qrStatus === "pulang_open" && (
-              <div className="bg-yellow-50 text-yellow-900 p-2.5 rounded-2xl text-xs mb-3 border border-yellow-300 w-full text-center font-bold flex items-center justify-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#FFC727] animate-pulse" />
-                Absen Pulang Dibuka
+            {qrStatus === "open" && (
+              <div className="bg-blue-50 text-blue-800 p-2.5 rounded-2xl text-xs mb-3 border border-blue-300 w-full text-center font-bold flex items-center justify-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                QR Absensi Aktif
               </div>
             )}
 
@@ -1139,29 +1161,21 @@ export default function MyShiftPage() {
             )}
             
             {/* QR Display */}
-            {qrStatus === "datang_open" || qrStatus === "pulang_open" || userRole === "admin" ? (
+            {qrStatus === "open" || userRole === "admin" ? (
               <>
                 <div className="bg-white border-2 border-gray-200 p-4 rounded-[2rem] mb-4 ">
                   <QRCode 
                     id="myshift-qr-code-svg"
-                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/scan-absensi?token=${(qrStatus === "pulang_open" ? activeAgenda.kodeQrPulang : activeAgenda.kodeQrDatang) || activeAgenda.kodeQrDatang}&type=${qrStatus === "pulang_open" ? "pulang" : "datang"}`}
+                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/scan-absensi?token=${activeAgenda.kodeQrDatang}&type=datang`}
                     size={220}
                     level="Q"
                     fgColor="#0B132B"
                   />
                 </div>
                 
-                {timeRemaining && (
-                  <div className="bg-gray-100 rounded-full px-5 py-1.5 mb-4">
-                    <span className="text-xs text-gray-700 font-bold">
-                      Refresh Token: {timeRemaining}
-                    </span>
-                  </div>
-                )}
-
                 <button 
                   onClick={() => {
-                    const formattedName = `QR_${activeAgenda.nama}_${qrStatus === "pulang_open" ? "Pulang" : "Datang"}`;
+                    const formattedName = `QR_${activeAgenda.nama}`;
                     downloadQRCode("myshift-qr-code-svg", formattedName);
                   }}
                   className="w-full bg-[#0B132B] hover:bg-[#1a2b5e] text-white font-bold py-3 rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm "
