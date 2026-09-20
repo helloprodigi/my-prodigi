@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/utils/supabase/server";
 
 // Coordinates for TULT (Telkom University Landmark Tower)
-const TULT_LAT = -6.969260270985497;
-const TULT_LNG = 107.62816532337784;
+const TULT_LAT = -6.9689408148039576;
+const TULT_LNG = 107.628070654925;
 const MAX_RADIUS_METERS = 50;
 
 function getDistanceFromLatLonInM(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
           }
         }
       });
-      
+
       if (!agenda) {
         return NextResponse.json({ error: "Tidak ada jadwal MyShift untuk hari ini." }, { status: 404 });
       }
@@ -167,7 +167,7 @@ export async function POST(req: Request) {
 
     // Update based on agenda type
     const now = new Date();
-    
+
     if (isMyShift) {
       if (record.shiftStatus === "OFF") {
         // DATANG
@@ -185,14 +185,25 @@ export async function POST(req: Request) {
         const actualMinutes = Math.floor(diffMs / 60000);
         const creditedMinutes = actualMinutes; // Normal close logic
 
+        // Retrieve existing history or initialize
+        const existingHistory = Array.isArray(record.shiftHistory) ? record.shiftHistory : [];
+        const newSession = {
+          datang: record.waktuDatang ? record.waktuDatang.toISOString() : now.toISOString(),
+          pulang: now.toISOString()
+        };
+
+        const newActual = (record.actualDuration || 0) + actualMinutes;
+        const newCredited = (record.creditedDuration || 0) + creditedMinutes;
+
         record = await prisma.absensiRecord.update({
           where: { id: record.id },
           data: {
             shiftStatus: "OFF",
             waktuPulang: now,
             status: "HADIR",
-            actualDuration: actualMinutes,
-            creditedDuration: creditedMinutes,
+            actualDuration: newActual,
+            creditedDuration: newCredited,
+            shiftHistory: [...existingHistory, newSession],
             closeReason: "NORMAL"
           }
         });

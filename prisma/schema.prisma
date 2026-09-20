@@ -267,6 +267,7 @@ model AbsensiRecord {
   status         String        @default("ALPA") // "HADIR", "ALPA", "IZIN"
   
   shiftStatus    String        @default("OFF") // "ON", "OFF"
+  shiftHistory   Json?         @default("[]") // Array of { datang: DateTime, pulang: DateTime }
   actualDuration Int?          // in minutes
   creditedDuration Int?        // in minutes
   closeReason    String?       // "NORMAL", "AUTO_CLOSE"

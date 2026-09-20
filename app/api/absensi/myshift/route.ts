@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/utils/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 const WIB_OFFSET_MS = 7 * 60 * 60 * 1000; // WIB is UTC+7
 
 export async function GET(req: Request) {
@@ -252,7 +254,13 @@ export async function GET(req: Request) {
         createdBy: {
           select: { role: true }
         },
-        records: true
+        records: {
+          include: {
+            user: {
+              select: { divisi: true, jabatan: true, photoUrl: true }
+            }
+          }
+        }
       },
       orderBy: {
         waktuMulai: "asc"
@@ -346,7 +354,10 @@ export async function GET(req: Request) {
       );
       
       // Map all assigned users and their status
-      const allAslabs = agenda.assignedUsers.map(assignment => {
+      const allAslabsMap = new Map<string, any>();
+
+      // 1. Add all assigned users first
+      for (const assignment of agenda.assignedUsers) {
         const record = agenda.records.find(r => 
           (assignment.userId && r.userId === assignment.userId) || 
           (assignment.nim && r.nim && r.nim.trim() === assignment.nim.trim()) ||
@@ -367,8 +378,9 @@ export async function GET(req: Request) {
 
         const weeklyDuration = getWeeklyDuration(assignment.userId, assignment.nim, assignment.nama);
 
-        return {
-          id: assignment.id,
+        const key = assignment.userId || assignment.nim || assignment.nama;
+        allAslabsMap.set(key, {
+          id: assignment.id, // assignment ID
           userId: assignment.userId,
           nama: assignment.nama,
           nim: assignment.nim,
@@ -380,9 +392,48 @@ export async function GET(req: Request) {
           closeReason: record?.closeReason || null,
           waktuDatang: record?.waktuDatang || null,
           waktuPulang: record?.waktuPulang || null,
+          actualDuration: record?.actualDuration || 0,
+          creditedDuration: record?.creditedDuration || 0,
+          shiftHistory: record?.shiftHistory || [],
           weeklyDuration,
-        };
-      });
+        });
+      }
+
+      // 2. Add unassigned users who have an AbsensiRecord for this agenda (numpang absen)
+      for (const record of agenda.records) {
+        // Check if this record already matches an assignment
+        const isAssigned = agenda.assignedUsers.some(a => 
+          (a.userId && a.userId === record.userId) || 
+          (a.nim && record.nim && a.nim.trim() === record.nim.trim()) ||
+          (a.nama && record.nama && a.nama.toLowerCase().trim() === record.nama.toLowerCase().trim())
+        );
+
+        if (!isAssigned) {
+          const weeklyDuration = getWeeklyDuration(record.userId, record.nim, record.nama);
+          const key = record.userId || record.nim || record.nama || record.id;
+          allAslabsMap.set(key, {
+            id: record.id, // use record ID since there is no assignment ID
+            userId: record.userId,
+            nama: record.nama || "Unknown",
+            nim: record.nim,
+            divisi: record.user?.divisi || "Asisten Lab (Tambahan)",
+            jabatan: record.user?.jabatan || "Asisten Lab",
+            photoUrl: record.user?.photoUrl || null,
+            status: record.status,
+            shiftStatus: record.shiftStatus,
+            closeReason: record.closeReason,
+            waktuDatang: record.waktuDatang,
+            waktuPulang: record.waktuPulang,
+            actualDuration: record.actualDuration || 0,
+            creditedDuration: record.creditedDuration || 0,
+            shiftHistory: record.shiftHistory || [],
+            weeklyDuration,
+          });
+        }
+      }
+
+      const allAslabs = Array.from(allAslabsMap.values());
+
 
       return {
         id: agenda.id,

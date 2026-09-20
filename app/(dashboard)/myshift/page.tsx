@@ -1,21 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  Clock, 
-  CheckCircle2, 
-  XCircle, 
-  X, 
-  ChevronLeft, 
-  ChevronRight, 
-  AlertCircle, 
-  Download, 
-  CalendarPlus, 
-  Plus, 
-  Trash2, 
-  Users, 
-  Search, 
-  Check, 
+import {
+  Clock,
+  CheckCircle2,
+  XCircle,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  Download,
+  CalendarPlus,
+  Plus,
+  Trash2,
+  Users,
+  Search,
+  Check,
   Loader2,
   CalendarDays,
   ShieldAlert,
@@ -52,6 +52,9 @@ interface Aslab {
   shiftStatus?: string;
   closeReason?: string | null;
   weeklyDuration?: number;
+  actualDuration?: number;
+  creditedDuration?: number;
+  shiftHistory?: any[];
 }
 
 interface Agenda {
@@ -118,7 +121,7 @@ export default function MyShiftPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isLoadingAgendas, setIsLoadingAgendas] = useState(true);
   const [agendaLoadError, setAgendaLoadError] = useState(false);
-  
+
   // QR Generator Modal
   const [showQRModal, setShowQRModal] = useState(false);
   const [activeAgenda, setActiveAgenda] = useState<Agenda | null>(null);
@@ -156,7 +159,15 @@ export default function MyShiftPage() {
           if (data.id) setCurrentUserId(data.id);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
+  }, []);
+
+  const [nowTimestamp, setNowTimestamp] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNowTimestamp(Date.now());
+    }, 60000); // update every minute
+    return () => clearInterval(interval);
   }, []);
 
   const fetchAgendas = (date: Date) => {
@@ -190,7 +201,7 @@ export default function MyShiftPage() {
             nama: "Piket Asisten Lab",
             aslabs: mergedAslabs
           };
-          
+
           setAgendas([unifiedAgenda]);
           setCumulativeWeeklyDuration(data.cumulativeWeeklyDuration || 0);
         } else {
@@ -209,23 +220,44 @@ export default function MyShiftPage() {
 
   const exportToExcel = (agenda: Agenda) => {
     import("xlsx").then((XLSX) => {
-      const data = agenda.aslabs.map((aslab, index) => ({
-        "No": index + 1,
-        "Nama": aslab.nama,
-        "NIM": aslab.nim,
-        "Divisi/Jabatan": aslab.jabatan || aslab.divisi || "Asisten Lab",
-        "Status": aslab.status === "HADIR" ? "Hadir" : 
-                  aslab.status === "ALPA" ? "Alpa" : 
+      const data = agenda.aslabs
+        .filter(aslab => aslab.waktuDatang)
+        .map((aslab, index) => {
+          let historyStr = "";
+          if (aslab.shiftHistory && aslab.shiftHistory.length > 0) {
+            historyStr = aslab.shiftHistory.map((h: any) =>
+              `${new Date(h.datang).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })} - ${new Date(h.pulang).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })}`
+            ).join(", ");
+            // Add ongoing session if any
+            if (aslab.shiftStatus === "ON" && aslab.waktuDatang) {
+              historyStr += `, ${new Date(aslab.waktuDatang).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })} - Sedang Berjalan`;
+            }
+          } else if (aslab.waktuDatang) {
+            const datangStr = new Date(aslab.waktuDatang).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' });
+            const pulangStr = aslab.waktuPulang ? new Date(aslab.waktuPulang).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' }) : "Sedang Berjalan";
+            historyStr = `${datangStr} - ${pulangStr}`;
+          } else {
+            historyStr = "-";
+          }
+
+          return {
+            "No": index + 1,
+            "Nama": aslab.nama,
+            "NIM": aslab.nim,
+            "Divisi/Jabatan": aslab.jabatan || aslab.divisi || "Asisten Lab",
+            "Status": aslab.shiftStatus === "ON" ? "Hadir (Sedang Berjalan)" :
+              aslab.status === "HADIR" ? "Hadir" :
+                aslab.status === "ALPA" ? "Alpa" :
                   aslab.status === "IZIN" ? "Izin" : "Belum Absen",
-        "Waktu Datang": aslab.waktuDatang ? new Date(aslab.waktuDatang).toLocaleTimeString("id-ID") : "-",
-        "Waktu Pulang": aslab.waktuPulang ? new Date(aslab.waktuPulang).toLocaleTimeString("id-ID") : "-",
-        "Durasi Mingguan (Menit)": aslab.weeklyDuration || 0,
-      }));
+            "Riwayat Datang & Pulang": historyStr,
+            "Durasi Harian (Menit)": (aslab.creditedDuration || 0) + (aslab.shiftStatus === "ON" && aslab.waktuDatang ? Math.floor((nowTimestamp - new Date(aslab.waktuDatang).getTime()) / 60000) : 0),
+          };
+        });
 
       const worksheet = XLSX.utils.json_to_sheet(data);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Daftar Hadir");
-      
+
       const fileName = `Daftar_Hadir_${agenda.nama.replace(/\s+/g, '_')}_${selectedDate.toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(workbook, fileName);
       toast.success("Daftar hadir berhasil diunduh");
@@ -247,7 +279,7 @@ export default function MyShiftPage() {
       const now = Date.now();
       const mulai = new Date(activeAgenda.waktuMulai).getTime();
       const selesai = new Date(activeAgenda.waktuSelesai).getTime();
-      
+
       if (now >= mulai - 30 * 60 * 1000 && now <= selesai + 8 * 60 * 60 * 1000) {
         setQrStatus("open");
         setNextWindowInfo(`QR Absensi berlaku untuk absen Datang dan Pulang.`);
@@ -348,7 +380,7 @@ export default function MyShiftPage() {
         }));
         setScheduleDays(initialDays);
       }
-      } catch (e) {
+    } catch (e) {
       console.error("Failed to load schedule:", e);
       setScheduleModalError("Gagal memuat data jadwal shift.");
     } finally {
@@ -370,7 +402,7 @@ export default function MyShiftPage() {
   // Removed handleAddSessionToActiveDay and handleRemoveSessionFromActiveDay since each day only has 1 shift
 
   const handleSessionFieldChange = (sessionIndex: number, field: "namaSesi" | "waktuMulai" | "waktuSelesai", value: string) => {
-    setScheduleDays(prev => 
+    setScheduleDays(prev =>
       prev.map(day => {
         if (day.hari !== activeDayTab) return day;
         return {
@@ -394,7 +426,7 @@ export default function MyShiftPage() {
   };
 
   const handleToggleAslabForSession = (sessionIndex: number, aslab: RegisteredAslab) => {
-    setScheduleDays(prev => 
+    setScheduleDays(prev =>
       prev.map(day => {
         if (day.hari !== activeDayTab) return day;
         return {
@@ -420,7 +452,7 @@ export default function MyShiftPage() {
     setScheduleModalError(null);
 
     // Filter only days that have aslabs assigned
-    const daysWithSessions = scheduleDays.filter(d => 
+    const daysWithSessions = scheduleDays.filter(d =>
       Array.isArray(d.sessions) && d.sessions.length > 0 && d.sessions[0].assignedAslabs.length > 0
     );
 
@@ -474,7 +506,7 @@ export default function MyShiftPage() {
       setShowEmptyAgendaModal(true);
       return;
     }
-    
+
     if (agendas.length === 1) {
       setActiveAgenda(agendas[0]);
       setShowQRModal(true);
@@ -514,7 +546,7 @@ export default function MyShiftPage() {
   return (
     <div className="min-h-screen bg-[#F9FAFC] relative">
       <div className="p-6 md:p-10 w-full space-y-8">
-        
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -544,10 +576,10 @@ export default function MyShiftPage() {
 
         {/* Content Container */}
         <div className="bg-white rounded-2xl p-6  border border-gray-100 min-h-[500px]">
-          
+
           {/* Date Controls */}
           <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-4 border-b border-gray-100 pb-4">
-            
+
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <h2 className="text-lg font-bold text-[#0B132B] min-w-[200px]">
                 {formatDateTitle(selectedDate)}
@@ -570,7 +602,25 @@ export default function MyShiftPage() {
               <div className="flex items-center gap-2 bg-yellow-50 text-yellow-800 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border border-yellow-200">
                 <Clock className="w-4 h-4 text-yellow-600 shrink-0" />
                 <span>
-                  Progress Mingguan Anda: <span className={cumulativeWeeklyDuration >= 240 ? "text-green-600 font-bold" : "text-yellow-700"}>{Math.floor(cumulativeWeeklyDuration / 60)}j {cumulativeWeeklyDuration % 60}m</span> / 4 Jam
+                  Progress Mingguan Anda: <span className={
+                    (() => {
+                      let rDuration = cumulativeWeeklyDuration;
+                      const currentUserAslab = agendas[0]?.aslabs.find(a => (a.userId && a.userId === currentUserId) || (a.nim && a.nim === currentUserNim));
+                      if (currentUserAslab && currentUserAslab.shiftStatus === "ON" && currentUserAslab.waktuDatang) {
+                        rDuration += Math.floor((nowTimestamp - new Date(currentUserAslab.waktuDatang).getTime()) / 60000);
+                      }
+                      return rDuration >= 240 ? "text-green-600 font-bold" : "text-yellow-700";
+                    })()
+                  }>{
+                      (() => {
+                        let rDuration = cumulativeWeeklyDuration;
+                        const currentUserAslab = agendas[0]?.aslabs.find(a => (a.userId && a.userId === currentUserId) || (a.nim && a.nim === currentUserNim));
+                        if (currentUserAslab && currentUserAslab.shiftStatus === "ON" && currentUserAslab.waktuDatang) {
+                          rDuration += Math.floor((nowTimestamp - new Date(currentUserAslab.waktuDatang).getTime()) / 60000);
+                        }
+                        return `${Math.floor(rDuration / 60)}j ${rDuration % 60}m`;
+                      })()
+                    }</span> / 4 Jam
                 </span>
               </div>
             )}
@@ -623,7 +673,7 @@ export default function MyShiftPage() {
                         {agenda.aslabs.length} Asisten Lab Bertugas
                       </span>
                       {(userRole === "admin" || userDivisi === "Human Capital" || userJabatan.includes("Human Capital")) && (
-                        <button 
+                        <button
                           onClick={() => exportToExcel(agenda)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded-lg text-xs font-bold transition-colors border border-green-200 "
                         >
@@ -633,7 +683,7 @@ export default function MyShiftPage() {
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {agenda.aslabs.map(aslab => (
                       <div key={aslab.id} className="flex items-center justify-between p-4 rounded-2xl hover:bg-gray-50/80 transition-colors border border-gray-100 bg-white ">
@@ -660,25 +710,44 @@ export default function MyShiftPage() {
                         </div>
 
                         <div className="text-right flex-shrink-0">
-                          <div className={`px-3 py-1.5 text-xs font-bold rounded-xl inline-block ${
-                            aslab.shiftStatus === "ON" ? "bg-blue-100 text-blue-800 border border-blue-200 shadow-sm" :
-                            aslab.status === "HADIR" ? "bg-green-100 text-green-800 border border-green-200" :
-                            aslab.status === "ALPA" ? "bg-red-100 text-red-800 border border-red-200" :
-                            aslab.status === "IZIN" ? "bg-yellow-100 text-yellow-800 border border-yellow-200" :
-                            "bg-gray-100 text-gray-600 border border-gray-200"
-                          }`}>
+                          <div className={`px-3 py-1.5 text-xs font-bold rounded-xl inline-block ${aslab.shiftStatus === "ON" ? "bg-blue-100 text-blue-800 border border-blue-200 shadow-sm" :
+                              aslab.status === "HADIR" ? "bg-green-100 text-green-800 border border-green-200" :
+                                aslab.status === "ALPA" ? "bg-red-100 text-red-800 border border-red-200" :
+                                  aslab.status === "IZIN" ? "bg-yellow-100 text-yellow-800 border border-yellow-200" :
+                                    "bg-gray-100 text-gray-600 border border-gray-200"
+                            }`}>
                             {aslab.shiftStatus === "ON" ? (
-                               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> Sedang Berjalan</span>
+                              <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> Sedang Berjalan</span>
                             ) :
-                             aslab.status === "HADIR" ? "Selesai (Hadir)" : 
-                             aslab.status === "ALPA" ? "Alpa" : 
-                             aslab.status === "IZIN" ? "Izin" : "Belum Absen"}
+                              aslab.status === "HADIR" ? "Selesai (Hadir)" :
+                                aslab.status === "ALPA" ? "Alpa" :
+                                  aslab.status === "IZIN" ? "Izin" : "Belum Absen"}
                           </div>
-                          {(aslab.waktuDatang || aslab.waktuPulang) && (
-                            <div className="mt-1.5 text-[10px] font-semibold text-gray-400 flex items-center justify-end gap-1">
-                              <span>{aslab.waktuDatang ? formatTime(aslab.waktuDatang) : "-"}</span>
-                              <span>-</span>
-                              <span>{aslab.waktuPulang ? formatTime(aslab.waktuPulang) : (aslab.shiftStatus === "ON" ? "Sekarang" : "-")}</span>
+                          {(aslab.waktuDatang || aslab.waktuPulang || (aslab.shiftHistory && aslab.shiftHistory.length > 0)) && (
+                            <div className="mt-1.5 text-[10px] font-semibold text-gray-400 flex flex-col items-end gap-1">
+                              {(() => {
+                                let parts = [];
+                                if (aslab.shiftHistory && aslab.shiftHistory.length > 0) {
+                                  parts = aslab.shiftHistory.map((h: any) =>
+                                    `${new Date(h.datang).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })} - ${new Date(h.pulang).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })}`
+                                  );
+                                  if (aslab.shiftStatus === "ON" && aslab.waktuDatang) {
+                                    const elapsed = Math.floor((nowTimestamp - new Date(aslab.waktuDatang).getTime()) / 60000);
+                                    parts.push(`${new Date(aslab.waktuDatang).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })} - Sekarang (${elapsed}m)`);
+                                  }
+                                } else if (aslab.waktuDatang) {
+                                  const datangStr = new Date(aslab.waktuDatang).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' });
+                                  if (aslab.waktuPulang) {
+                                    parts.push(`${datangStr} - ${new Date(aslab.waktuPulang).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })}`);
+                                  } else {
+                                    const elapsed = Math.floor((nowTimestamp - new Date(aslab.waktuDatang).getTime()) / 60000);
+                                    parts.push(`${datangStr} - Sekarang (${elapsed}m)`);
+                                  }
+                                }
+                                return parts.map((part, idx) => (
+                                  <span key={idx}>{part}</span>
+                                ));
+                              })()}
                             </div>
                           )}
                         </div>
@@ -696,7 +765,7 @@ export default function MyShiftPage() {
       {showScheduleModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col  overflow-hidden animate-in zoom-in-95 duration-200">
-            
+
             {/* Modal Header */}
             <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/70 flex-shrink-0">
               <h2 className="text-xl font-bold text-[#0B132B]">Atur Jadwal Piket MyShift</h2>
@@ -722,20 +791,18 @@ export default function MyShiftPage() {
                       key={dayName}
                       type="button"
                       onClick={() => setActiveDayTab(dayName)}
-                      className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 ${
-                        isActive
+                      className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 ${isActive
                           ? "bg-[#0B132B] text-white "
                           : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200/80"
-                      } ${hasOverlap ? "ring-2 ring-red-500" : ""}`}
+                        } ${hasOverlap ? "ring-2 ring-red-500" : ""}`}
                     >
                       <span>{dayName}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                        isActive
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${isActive
                           ? "bg-[#FFC727] text-[#0B132B]"
-                          : aslabCount > 0 
-                            ? "bg-gray-100 text-gray-700" 
+                          : aslabCount > 0
+                            ? "bg-gray-100 text-gray-700"
                             : "bg-gray-50 text-gray-400"
-                      }`}>
+                        }`}>
                         {aslabCount} Orang
                       </span>
                     </button>
@@ -746,7 +813,7 @@ export default function MyShiftPage() {
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-5 flex-1 min-h-0">
-              
+
               {scheduleModalError && (
                 <div className="bg-red-50 text-red-700 p-4 rounded-2xl border border-red-200 text-xs sm:text-sm flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
@@ -777,7 +844,7 @@ export default function MyShiftPage() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  
+
                   {/* Active Day Header */}
                   <div className="flex items-center justify-between bg-[#F8F9FB] p-4 rounded-2xl border border-gray-200/80">
                     <div className="flex items-center gap-3">
@@ -797,128 +864,127 @@ export default function MyShiftPage() {
                       const searchVal = aslabSearchQuery[dropdownKey] || "";
                       const isDropdownOpen = !!aslabDropdownOpen[dropdownKey];
 
-                        const filteredAslabs = allRegisteredAslabs.filter(a => 
-                          a.nama.toLowerCase().includes(searchVal.toLowerCase()) ||
-                          a.nim.toLowerCase().includes(searchVal.toLowerCase()) ||
-                          a.divisi.toLowerCase().includes(searchVal.toLowerCase()) ||
-                          (a.posisi && a.posisi.toLowerCase().includes(searchVal.toLowerCase()))
-                        );
+                      const filteredAslabs = allRegisteredAslabs.filter(a =>
+                        a.nama.toLowerCase().includes(searchVal.toLowerCase()) ||
+                        a.nim.toLowerCase().includes(searchVal.toLowerCase()) ||
+                        a.divisi.toLowerCase().includes(searchVal.toLowerCase()) ||
+                        (a.posisi && a.posisi.toLowerCase().includes(searchVal.toLowerCase()))
+                      );
 
-                        return (
-                          <div key={sessionIndex} className="bg-white p-5 rounded-2xl border border-gray-200/90 space-y-4">
-                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                              
-                              {/* Sesi Input is hidden, we just use 1 shift per day */}
-                              
-                              {/* Remove Session Button was here */}
+                      return (
+                        <div key={sessionIndex} className="bg-white p-5 rounded-2xl border border-gray-200/90 space-y-4">
+                          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+
+                            {/* Sesi Input is hidden, we just use 1 shift per day */}
+
+                            {/* Remove Session Button was here */}
+                          </div>
+
+                          {/* Aslab Selector */}
+                          <div className="space-y-2.5 pt-3 border-t border-gray-100">
+                            <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block">
+                              Asisten Lab Bertugas ({(session.assignedAslabs || []).length} Orang)
+                            </label>
+
+                            {/* Selected Aslabs Chips */}
+                            <div className="flex flex-wrap gap-2 min-h-[32px] items-center">
+                              {session.assignedAslabs && session.assignedAslabs.length > 0 ? (
+                                session.assignedAslabs.map((aslab, aslabIdx) => (
+                                  <span
+                                    key={aslab.nim || aslab.id || aslabIdx}
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-yellow-100/70 border border-yellow-300 rounded-full text-xs font-bold text-[#0B132B] animate-in fade-in zoom-in-95 duration-150"
+                                  >
+                                    <span>{aslab.nama}</span>
+                                    <span className="text-[10px] text-gray-600 font-normal">({aslab.posisi || aslab.jabatan || aslab.divisi})</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleAslabForSession(sessionIndex, aslab)}
+                                      className="text-gray-400 hover:text-red-600 ml-1 p-0.5 rounded-full hover:bg-white transition-colors cursor-pointer"
+                                      title="Hapus aslab dari sesi ini"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs text-gray-400 italic font-medium">Belum ada asisten lab yang dipilih</span>
+                              )}
                             </div>
 
-                            {/* Aslab Selector */}
-                            <div className="space-y-2.5 pt-3 border-t border-gray-100">
-                              <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block">
-                                Asisten Lab Bertugas ({(session.assignedAslabs || []).length} Orang)
-                              </label>
-
-                              {/* Selected Aslabs Chips */}
-                              <div className="flex flex-wrap gap-2 min-h-[32px] items-center">
-                                {session.assignedAslabs && session.assignedAslabs.length > 0 ? (
-                                  session.assignedAslabs.map((aslab, aslabIdx) => (
-                                    <span 
-                                      key={aslab.nim || aslab.id || aslabIdx}
-                                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-yellow-100/70 border border-yellow-300 rounded-full text-xs font-bold text-[#0B132B] animate-in fade-in zoom-in-95 duration-150"
-                                    >
-                                      <span>{aslab.nama}</span>
-                                      <span className="text-[10px] text-gray-600 font-normal">({aslab.posisi || aslab.jabatan || aslab.divisi})</span>
-                                      <button 
-                                        type="button"
-                                        onClick={() => handleToggleAslabForSession(sessionIndex, aslab)}
-                                        className="text-gray-400 hover:text-red-600 ml-1 p-0.5 rounded-full hover:bg-white transition-colors cursor-pointer"
-                                        title="Hapus aslab dari sesi ini"
-                                      >
-                                        <X className="w-3.5 h-3.5" />
-                                      </button>
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span className="text-xs text-gray-400 italic font-medium">Belum ada asisten lab yang dipilih</span>
-                                )}
+                            {/* Search & Selection Dropdown */}
+                            <div className="relative">
+                              <div className="flex items-center bg-[#F5F5F5] rounded-lg px-3.5 py-2.5 focus-within:ring-2 focus-within:ring-[#FFC700] transition-colors">
+                                <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+                                <input
+                                  type="text"
+                                  value={searchVal}
+                                  onFocus={() => setAslabDropdownOpen(prev => ({ ...prev, [dropdownKey]: true }))}
+                                  onChange={(e) => {
+                                    setAslabSearchQuery(prev => ({ ...prev, [dropdownKey]: e.target.value }));
+                                    setAslabDropdownOpen(prev => ({ ...prev, [dropdownKey]: true }));
+                                  }}
+                                  className="w-full bg-transparent text-xs sm:text-sm text-[#0B132B] font-medium focus:outline-none"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setAslabDropdownOpen(prev => ({ ...prev, [dropdownKey]: !isDropdownOpen }))}
+                                  className="text-xs text-[#0B132B] font-bold px-2 py-1 bg-yellow-200/80 rounded-lg hover:bg-yellow-300 transition-colors ml-2 shrink-0"
+                                >
+                                  {isDropdownOpen ? "Tutup" : "Pilih Aslab"}
+                                </button>
                               </div>
 
-                              {/* Search & Selection Dropdown */}
-                              <div className="relative">
-                                <div className="flex items-center bg-[#F5F5F5] rounded-lg px-3.5 py-2.5 focus-within:ring-2 focus-within:ring-[#FFC700] transition-colors">
-                                  <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
-                                  <input
-                                    type="text"
-                                    value={searchVal}
-                                    onFocus={() => setAslabDropdownOpen(prev => ({ ...prev, [dropdownKey]: true }))}
-                                    onChange={(e) => {
-                                      setAslabSearchQuery(prev => ({ ...prev, [dropdownKey]: e.target.value }));
-                                      setAslabDropdownOpen(prev => ({ ...prev, [dropdownKey]: true }));
-                                    }}
-                                    className="w-full bg-transparent text-xs sm:text-sm text-[#0B132B] font-medium focus:outline-none"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => setAslabDropdownOpen(prev => ({ ...prev, [dropdownKey]: !isDropdownOpen }))}
-                                    className="text-xs text-[#0B132B] font-bold px-2 py-1 bg-yellow-200/80 rounded-lg hover:bg-yellow-300 transition-colors ml-2 shrink-0"
-                                  >
-                                    {isDropdownOpen ? "Tutup" : "Pilih Aslab"}
-                                  </button>
-                                </div>
-
-                                {isDropdownOpen && (
-                                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl  z-20 max-h-60 overflow-y-auto p-2 space-y-1">
-                                    {filteredAslabs.length === 0 ? (
-                                      <div className="p-4 text-center text-xs text-gray-400">
-                                        Tidak ada asisten lab ditemukan.
-                                      </div>
-                                    ) : (
-                                      filteredAslabs.map(aslab => {
-                                        const isSelected = (session.assignedAslabs || []).some(a => isSameAslab(a, aslab));
-                                        return (
-                                          <button
-                                            key={aslab.id || aslab.nim}
-                                            type="button"
-                                            onClick={() => handleToggleAslabForSession(sessionIndex, aslab)}
-                                            className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors ${
-                                              isSelected ? "bg-yellow-50 text-[#0B132B]" : "hover:bg-gray-50 text-gray-700"
+                              {isDropdownOpen && (
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl  z-20 max-h-60 overflow-y-auto p-2 space-y-1">
+                                  {filteredAslabs.length === 0 ? (
+                                    <div className="p-4 text-center text-xs text-gray-400">
+                                      Tidak ada asisten lab ditemukan.
+                                    </div>
+                                  ) : (
+                                    filteredAslabs.map(aslab => {
+                                      const isSelected = (session.assignedAslabs || []).some(a => isSameAslab(a, aslab));
+                                      return (
+                                        <button
+                                          key={aslab.id || aslab.nim}
+                                          type="button"
+                                          onClick={() => handleToggleAslabForSession(sessionIndex, aslab)}
+                                          className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors ${isSelected ? "bg-yellow-50 text-[#0B132B]" : "hover:bg-gray-50 text-gray-700"
                                             }`}
-                                          >
-                                            <div className="flex items-center gap-2.5">
-                                              <div className="w-7 h-7 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center font-bold text-[11px] text-[#0B132B]">
-                                                {aslab.photoUrl ? (
-                                                  <img src={aslab.photoUrl} alt={aslab.nama} className="w-full h-full object-cover" />
-                                                ) : (
-                                                  aslab.nama.charAt(0)
-                                                )}
-                                              </div>
-                                              <div>
-                                                <div className="font-bold text-[#0B132B]">{aslab.nama}</div>
-                                                <div className="text-[10px] text-gray-400">{aslab.nim} • {aslab.posisi || aslab.jabatan || aslab.divisi}</div>
-                                              </div>
+                                        >
+                                          <div className="flex items-center gap-2.5">
+                                            <div className="w-7 h-7 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center font-bold text-[11px] text-[#0B132B]">
+                                              {aslab.photoUrl ? (
+                                                <img src={aslab.photoUrl} alt={aslab.nama} className="w-full h-full object-cover" />
+                                              ) : (
+                                                aslab.nama.charAt(0)
+                                              )}
                                             </div>
-                                            {isSelected ? (
-                                              <div className="w-5 h-5 rounded-full bg-[#FFC727] flex items-center justify-center text-[#0B132B] shrink-0">
-                                                <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                              </div>
-                                            ) : (
-                                              <div className="w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 shrink-0 hover:border-gray-400">
-                                                <Plus className="w-3 h-3" />
-                                              </div>
-                                            )}
-                                          </button>
-                                        );
-                                      })
-                                    )}
-                                  </div>
-                                )}
-                              </div>
+                                            <div>
+                                              <div className="font-bold text-[#0B132B]">{aslab.nama}</div>
+                                              <div className="text-[10px] text-gray-400">{aslab.nim} • {aslab.posisi || aslab.jabatan || aslab.divisi}</div>
+                                            </div>
+                                          </div>
+                                          {isSelected ? (
+                                            <div className="w-5 h-5 rounded-full bg-[#FFC727] flex items-center justify-center text-[#0B132B] shrink-0">
+                                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                            </div>
+                                          ) : (
+                                            <div className="w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 shrink-0 hover:border-gray-400">
+                                              <Plus className="w-3 h-3" />
+                                            </div>
+                                          )}
+                                        </button>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      );
+                    })}
+                  </div>
 
                 </div>
               )}
@@ -926,7 +992,7 @@ export default function MyShiftPage() {
 
             {/* Modal Footer */}
             <div className="p-6 border-t border-gray-100 bg-gray-50/80 flex items-center justify-end gap-3 flex-shrink-0">
-              <button 
+              <button
                 type="button"
                 onClick={() => setShowScheduleModal(false)}
                 disabled={isSavingSchedule}
@@ -934,7 +1000,7 @@ export default function MyShiftPage() {
               >
                 Batal
               </button>
-              <button 
+              <button
                 type="button"
                 onClick={handleSaveSchedule}
                 disabled={isSavingSchedule || isLoadingSchedule || currentDayOverlapErrors.length > 0}
@@ -958,20 +1024,20 @@ export default function MyShiftPage() {
       {showQRModal && activeAgenda && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl p-8 w-full max-w-sm relative flex flex-col items-center text-center  border border-gray-100">
-            <button 
+            <button
               onClick={() => setShowQRModal(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition-colors p-1 rounded-full hover:bg-gray-100"
             >
               <X className="w-6 h-6" />
             </button>
-            
+
             <h2 className="text-2xl font-bold text-[#0B132B] mb-1">
               QR Absensi MyShift
             </h2>
             <p className="text-xs text-gray-500 mb-3 font-semibold">
               {activeAgenda.nama} ({formatTime(activeAgenda.waktuMulai)} - {formatTime(activeAgenda.waktuSelesai)} WIB)
             </p>
-            
+
             {/* Status Banner */}
             {qrStatus === "open" && (
               <div className="bg-blue-50 text-blue-800 p-2.5 rounded-2xl text-xs mb-3 border border-blue-300 w-full text-center font-bold flex items-center justify-center gap-1.5">
@@ -1007,12 +1073,12 @@ export default function MyShiftPage() {
                 🏁 Kamu sudah tercatat absen pulang ({formatTime(activeAgenda.waktuPulang)} WIB)
               </div>
             )}
-            
+
             {/* QR Display */}
             {qrStatus === "open" || userRole === "admin" ? (
               <>
                 <div className="bg-white border-2 border-gray-200 p-4 rounded-[2rem] mb-4 ">
-                  <QRCode 
+                  <QRCode
                     id="myshift-qr-code-svg"
                     value={`${typeof window !== 'undefined' ? window.location.origin : ''}/scan-absensi?token=PRODIGI-MYSHIFT-STATIC-QR&type=datang`}
                     size={220}
@@ -1020,8 +1086,8 @@ export default function MyShiftPage() {
                     fgColor="#0B132B"
                   />
                 </div>
-                
-                <button 
+
+                <button
                   onClick={() => {
                     const formattedName = `QR_${activeAgenda.nama}`;
                     downloadQRCode("myshift-qr-code-svg", formattedName);
@@ -1047,18 +1113,18 @@ export default function MyShiftPage() {
       {showAgendaSelectionModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-8 w-full max-w-sm relative flex flex-col items-center text-center ">
-            <button 
+            <button
               onClick={() => setShowAgendaSelectionModal(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition-colors p-1 rounded-full hover:bg-gray-100"
             >
               <X className="w-6 h-6" />
             </button>
-            
+
             <h2 className="text-xl font-bold text-[#0B132B] mb-2">
               Pilih Sesi Shift
             </h2>
             <p className="text-xs text-gray-500 mb-5">Pilih shift yang ingin dilihat kode QR absensinya</p>
-            
+
             <div className="w-full space-y-3">
               {agendas.map(agenda => (
                 <button
@@ -1086,23 +1152,23 @@ export default function MyShiftPage() {
       {showEmptyAgendaModal && (
         <div className="fixed inset-0 bg-black/80 z-[60] flex flex-col items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden relative flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95 duration-200 ">
-            <button 
+            <button
               onClick={() => setShowEmptyAgendaModal(false)}
               className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-900 transition-colors rounded-full hover:bg-gray-100"
             >
               <X className="w-6 h-6" />
             </button>
-            
-            <img 
-              src="/assets/absen/pop-up/clock.png" 
-              alt="Clock Icon" 
+
+            <img
+              src="/assets/absen/pop-up/clock.png"
+              alt="Clock Icon"
               className="w-32 h-32 mb-6 object-contain "
             />
-            
+
             <h3 className="text-2xl font-bold text-[#0B132B] mb-3">
               Uppss!!
             </h3>
-            
+
             <p className="text-gray-700 font-medium leading-relaxed max-w-sm text-sm">
               {emptyAgendaMessage}
             </p>
