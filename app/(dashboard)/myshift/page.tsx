@@ -165,16 +165,38 @@ export default function MyShiftPage() {
     fetch(`/api/absensi/myshift?date=${date.toISOString()}`)
       .then(res => res.json())
       .then(data => {
+        let rawAgendas = [];
         if (!data.error && data.agendas) {
-          setAgendas(data.agendas);
-          setCumulativeWeeklyDuration(data.cumulativeWeeklyDuration || 0);
+          rawAgendas = data.agendas;
         } else if (!data.error && Array.isArray(data)) {
-          setAgendas(data);
-          setCumulativeWeeklyDuration(0);
+          rawAgendas = data;
+        }
+
+        if (rawAgendas.length > 0) {
+          // Merge all agendas for the day into one
+          const mergedAslabs: any[] = [];
+          rawAgendas.forEach((ag: any) => {
+            if (Array.isArray(ag.aslabs)) {
+              ag.aslabs.forEach((a: any) => {
+                if (!mergedAslabs.some((existing: any) => (existing.id && existing.id === a.id) || (existing.nim && existing.nim === a.nim))) {
+                  mergedAslabs.push(a);
+                }
+              });
+            }
+          });
+
+          const unifiedAgenda = {
+            ...rawAgendas[0],
+            nama: "Piket Asisten Lab",
+            aslabs: mergedAslabs
+          };
+          
+          setAgendas([unifiedAgenda]);
+          setCumulativeWeeklyDuration(data.cumulativeWeeklyDuration || 0);
         } else {
           setAgendas([]);
           setCumulativeWeeklyDuration(0);
-          setAgendaLoadError(true);
+          if (data.error) setAgendaLoadError(true);
         }
       })
       .catch(() => {
@@ -263,40 +285,25 @@ export default function MyShiftPage() {
       const schedRes = await fetch("/api/absensi/myshift/schedule");
       const schedData = await schedRes.json();
 
-      if (schedData && Array.isArray(schedData.days) && schedData.days.length > 0) {
-        // Ensure all 7 days exist in scheduleDays structure
-        const existingMap = new Map<string, DayForm>();
-        schedData.days.forEach((d: DayForm) => existingMap.set(d.hari, d));
-
-        const filledDays: DayForm[] = ALL_DAYS.map(dayName => {
-          if (existingMap.has(dayName)) {
-            return existingMap.get(dayName)!;
-          }
-          return {
-            hari: dayName,
-            dayOfWeek: DAYS_MAPPING[dayName],
-            sessions: []
-          };
-        });
-
-        setScheduleDays(filledDays);
-      } else {
-        // Initialize all 7 days with Monday having default shift
+      // We still fetch schedData to verify the endpoint is alive or if needed later, 
+      // but we NO LONGER populate the modal with existing Aslabs to keep it blank & consistent.
+      if (schedData) {
+        // Initialize all 7 days with a single empty shift
         const initialDays: DayForm[] = ALL_DAYS.map(dayName => ({
           hari: dayName,
           dayOfWeek: DAYS_MAPPING[dayName],
-          sessions: dayName === "Senin" ? [
+          sessions: [
             {
-              namaSesi: "Shift 1",
-              waktuMulai: "08:00",
-              waktuSelesai: "11:30",
+              namaSesi: `Piket ${dayName}`,
+              waktuMulai: "00:00",
+              waktuSelesai: "23:59",
               assignedAslabs: []
             }
-          ] : []
+          ]
         }));
         setScheduleDays(initialDays);
       }
-    } catch (e) {
+      } catch (e) {
       console.error("Failed to load schedule:", e);
       setScheduleModalError("Gagal memuat data jadwal shift.");
     } finally {
@@ -315,39 +322,7 @@ export default function MyShiftPage() {
     };
   };
 
-  const handleAddSessionToActiveDay = () => {
-    setScheduleDays(prev => 
-      prev.map(day => {
-        if (day.hari !== activeDayTab) return day;
-        const nextShiftNumber = (day.sessions?.length || 0) + 1;
-
-        return {
-          ...day,
-          sessions: [
-            ...(day.sessions || []),
-            {
-              namaSesi: `Shift ${nextShiftNumber}`,
-              waktuMulai: "00:00",
-              waktuSelesai: "23:59",
-              assignedAslabs: []
-            }
-          ]
-        };
-      })
-    );
-  };
-
-  const handleRemoveSessionFromActiveDay = (sessionIndex: number) => {
-    setScheduleDays(prev => 
-      prev.map(day => {
-        if (day.hari !== activeDayTab) return day;
-        return {
-          ...day,
-          sessions: day.sessions.filter((_, sIdx) => sIdx !== sessionIndex)
-        };
-      })
-    );
-  };
+  // Removed handleAddSessionToActiveDay and handleRemoveSessionFromActiveDay since each day only has 1 shift
 
   const handleSessionFieldChange = (sessionIndex: number, field: "namaSesi" | "waktuMulai" | "waktuSelesai", value: string) => {
     setScheduleDays(prev => 
@@ -399,33 +374,19 @@ export default function MyShiftPage() {
   const handleSaveSchedule = async () => {
     setScheduleModalError(null);
 
-    // Filter only days that have sessions
-    const daysWithSessions = scheduleDays.filter(d => Array.isArray(d.sessions) && d.sessions.length > 0);
+    // Filter only days that have aslabs assigned
+    const daysWithSessions = scheduleDays.filter(d => 
+      Array.isArray(d.sessions) && d.sessions.length > 0 && d.sessions[0].assignedAslabs.length > 0
+    );
 
     if (daysWithSessions.length === 0) {
-      setScheduleModalError("Silakan tambahkan minimal 1 sesi shift pada salah satu hari.");
+      setScheduleModalError("Silakan pilih minimal 1 Asisten Lab pada salah satu hari.");
       return;
     }
 
     // Validate inputs & overlaps across all days
     for (const day of daysWithSessions) {
-      for (let sIdx = 0; sIdx < day.sessions.length; sIdx++) {
-        const s = day.sessions[sIdx];
-        if (!Array.isArray(s.assignedAslabs) || s.assignedAslabs.length === 0) {
-          setScheduleModalError(`Pilih minimal 1 Asisten Lab untuk bertugas pada hari ${day.hari} (${s.namaSesi || `Sesi ${sIdx + 1}`}).`);
-          setActiveDayTab(day.hari);
-          return;
-        }
-      }
-
-
-      // Check overlap
-      const overlapErrors = getOverlapErrorsForDay(day.sessions);
-      if (overlapErrors.length > 0) {
-        setScheduleModalError(`Terdapat waktu shift yang bertabrakan pada hari ${day.hari}:\n${overlapErrors.join(" ")}`);
-        setActiveDayTab(day.hari);
-        return;
-      }
+      // Logic handled by filtering above, no specific validation needed here anymore
     }
 
     setIsSavingSchedule(true);
@@ -611,9 +572,6 @@ export default function MyShiftPage() {
                   <div className="flex flex-wrap items-center justify-between border-l-4 border-[#FFC727] pl-3 gap-2">
                     <h3 className="font-bold text-gray-900 text-base flex items-center gap-2">
                       <span>{agenda.nama}</span>
-                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
-                        {formatTime(agenda.waktuMulai)} - {formatTime(agenda.waktuSelesai)} WIB
-                      </span>
                     </h3>
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-semibold text-gray-500">
@@ -782,42 +740,17 @@ export default function MyShiftPage() {
                         Hari {activeDayTab}
                       </span>
                       <span className="text-xs text-gray-600 font-semibold">
-                        {currentActiveDayForm.sessions.length} Sesi Shift Dikonfigurasi
+                        Jadwal Piket Asisten Lab
                       </span>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={handleAddSessionToActiveDay}
-                      className="px-4 py-2 bg-[#FFC727] hover:bg-[#e5b323] text-[#0B132B] rounded-xl text-xs font-bold transition-all  flex items-center gap-1.5"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Tambah Sesi Shift
-                    </button>
                   </div>
 
-                  {/* Sessions List for Active Day */}
-                  {currentActiveDayForm.sessions.length === 0 ? (
-                    <div className="text-center py-16 text-gray-400 bg-gray-50/60 rounded-3xl border-2 border-dashed border-gray-200 space-y-3">
-                      <CalendarDays className="w-10 h-10 mx-auto text-gray-300" />
-                      <p className="text-sm font-semibold text-gray-600">
-                        Belum ada sesi shift yang diatur untuk hari {activeDayTab}.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleAddSessionToActiveDay}
-                        className="px-4 py-2 bg-[#0B132B] hover:bg-[#1a2b5e] text-white rounded-xl text-xs font-semibold inline-flex items-center gap-1.5"
-                      >
-                        <Plus className="w-4 h-4 text-[#FFC727]" />
-                        Tambah Sesi di Hari {activeDayTab}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {currentActiveDayForm.sessions.map((session, sessionIndex) => {
-                        const dropdownKey = `${activeDayTab}-${sessionIndex}`;
-                        const searchVal = aslabSearchQuery[dropdownKey] || "";
-                        const isDropdownOpen = !!aslabDropdownOpen[dropdownKey];
+                  {/* Sessions List for Active Day (Always 1 Session) */}
+                  <div className="space-y-4">
+                    {currentActiveDayForm.sessions.map((session, sessionIndex) => {
+                      const dropdownKey = `${activeDayTab}-${sessionIndex}`;
+                      const searchVal = aslabSearchQuery[dropdownKey] || "";
+                      const isDropdownOpen = !!aslabDropdownOpen[dropdownKey];
 
                         const filteredAslabs = allRegisteredAslabs.filter(a => 
                           a.nama.toLowerCase().includes(searchVal.toLowerCase()) ||
@@ -830,32 +763,9 @@ export default function MyShiftPage() {
                           <div key={sessionIndex} className="bg-white p-5 rounded-2xl border border-gray-200/90 space-y-4">
                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                               
-                              {/* Nama Sesi Input */}
-                              <div className="flex-1">
-                                <label className="block text-sm text-[#0A1024] mb-2">
-                                  Nama Sesi / Shift
-                                </label>
-                                <input
-                                  type="text"
-                                  value={session.namaSesi}
-                                  onChange={(e) => handleSessionFieldChange(sessionIndex, "namaSesi", e.target.value)}
-                                  className="w-full bg-[#F5F5F5] rounded-lg px-4 py-3 text-sm text-[#0A1024] outline-none focus:ring-2 focus:ring-[#FFC700]"
-                                />
-                              </div>
-
-                              {/* Waktu Pelaksanaan is hidden and defaults to full day */}
-
-                              {/* Remove Session Button */}
-                              <div className="lg:self-end pb-1 flex justify-end">
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveSessionFromActiveDay(sessionIndex)}
-                                  className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-transparent hover:border-red-200"
-                                  title="Hapus Sesi"
-                                >
-                                  <Trash2 className="w-5 h-5" />
-                                </button>
-                              </div>
+                              {/* Sesi Input is hidden, we just use 1 shift per day */}
+                              
+                              {/* Remove Session Button was here */}
                             </div>
 
                             {/* Aslab Selector */}
@@ -964,7 +874,6 @@ export default function MyShiftPage() {
                         );
                       })}
                     </div>
-                  )}
 
                 </div>
               )}

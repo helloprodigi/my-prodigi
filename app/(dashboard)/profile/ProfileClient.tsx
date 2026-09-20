@@ -367,7 +367,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
           Log Out
         </button>
 
-        <p className="text-xs text-gray-400 mt-8">MyProdigi V1.0</p>
+        <p className="text-xs text-gray-400 mt-8">MyProdigi V1.3</p>
       </div>
 
       {/* Main Content Area */}
