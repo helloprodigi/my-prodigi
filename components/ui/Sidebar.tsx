@@ -402,7 +402,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen, isDesktopOpen, setIsDes
           )}
 
           <div className={`mt-6 text-xs text-gray-600 transition-all duration-300 ${(isDesktopOpen || isMobileOpen) ? "opacity-100" : "opacity-0"}`}>
-            MyProdigi V1.0
+            MyProdigi V1.3
           </div>
         </div>
       </aside>

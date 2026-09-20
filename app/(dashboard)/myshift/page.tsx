@@ -51,6 +51,7 @@ interface Aslab {
   waktuPulang: string | null;
   shiftStatus?: string;
   closeReason?: string | null;
+  weeklyDuration?: number;
 }
 
 interface Agenda {
@@ -92,7 +93,7 @@ interface DayForm {
   sessions: SessionForm[];
 }
 
-// Helper to convert "HH:MM" to total minutes from midnight
+// SessionForm no longer needs user-input times, we'll hardcode them in submit
 function timeToMinutes(timeStr: string): number {
   if (!timeStr || !timeStr.includes(":")) return 0;
   const [h, m] = timeStr.split(":").map(Number);
@@ -101,28 +102,8 @@ function timeToMinutes(timeStr: string): number {
 
 // Check session overlaps within a day
 function getOverlapErrorsForDay(sessions: SessionForm[]): string[] {
-  const errors: string[] = [];
-  if (!sessions || sessions.length < 2) return errors;
-
-  for (let i = 0; i < sessions.length; i++) {
-    const s1 = sessions[i];
-    const start1 = timeToMinutes(s1.waktuMulai);
-    const end1 = timeToMinutes(s1.waktuSelesai);
-
-    for (let j = i + 1; j < sessions.length; j++) {
-      const s2 = sessions[j];
-      const start2 = timeToMinutes(s2.waktuMulai);
-      const end2 = timeToMinutes(s2.waktuSelesai);
-
-      if (Math.max(start1, start2) < Math.min(end1, end2)) {
-        errors.push(
-          `"${s1.namaSesi || `Sesi ${i + 1}`}" (${s1.waktuMulai}–${s1.waktuSelesai}) bertabrakan dengan "${s2.namaSesi || `Sesi ${j + 1}`}" (${s2.waktuMulai}–${s2.waktuSelesai}).`
-        );
-      }
-    }
-  }
-
-  return errors;
+  // Since time is no longer requested, we don't validate overlap.
+  return [];
 }
 
 export default function MyShiftPage() {
@@ -216,6 +197,7 @@ export default function MyShiftPage() {
                   aslab.status === "IZIN" ? "Izin" : "Belum Absen",
         "Waktu Datang": aslab.waktuDatang ? new Date(aslab.waktuDatang).toLocaleTimeString("id-ID") : "-",
         "Waktu Pulang": aslab.waktuPulang ? new Date(aslab.waktuPulang).toLocaleTimeString("id-ID") : "-",
+        "Durasi Mingguan (Menit)": aslab.weeklyDuration || 0,
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(data);
@@ -338,17 +320,6 @@ export default function MyShiftPage() {
       prev.map(day => {
         if (day.hari !== activeDayTab) return day;
         const nextShiftNumber = (day.sessions?.length || 0) + 1;
-        
-        // Suggest non-overlapping default time
-        let defaultStart = "08:00";
-        let defaultEnd = "11:30";
-        if (day.sessions && day.sessions.length > 0) {
-          const lastSession = day.sessions[day.sessions.length - 1];
-          defaultStart = lastSession.waktuSelesai || "13:00";
-          const [h, m] = defaultStart.split(":").map(Number);
-          const endH = Math.min(23, h + 3);
-          defaultEnd = `${String(endH).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-        }
 
         return {
           ...day,
@@ -356,8 +327,8 @@ export default function MyShiftPage() {
             ...(day.sessions || []),
             {
               namaSesi: `Shift ${nextShiftNumber}`,
-              waktuMulai: defaultStart,
-              waktuSelesai: defaultEnd,
+              waktuMulai: "00:00",
+              waktuSelesai: "23:59",
               assignedAslabs: []
             }
           ]
@@ -440,22 +411,13 @@ export default function MyShiftPage() {
     for (const day of daysWithSessions) {
       for (let sIdx = 0; sIdx < day.sessions.length; sIdx++) {
         const s = day.sessions[sIdx];
-        if (!s.waktuMulai || !s.waktuSelesai) {
-          setScheduleModalError(`Waktu mulai dan selesai pada hari ${day.hari} (${s.namaSesi || `Sesi ${sIdx + 1}`}) wajib diisi.`);
-          setActiveDayTab(day.hari);
-          return;
-        }
-        if (s.waktuSelesai <= s.waktuMulai) {
-          setScheduleModalError(`Waktu selesai (${s.waktuSelesai}) harus setelah waktu mulai (${s.waktuMulai}) pada hari ${day.hari}.`);
-          setActiveDayTab(day.hari);
-          return;
-        }
         if (!Array.isArray(s.assignedAslabs) || s.assignedAslabs.length === 0) {
           setScheduleModalError(`Pilih minimal 1 Asisten Lab untuk bertugas pada hari ${day.hari} (${s.namaSesi || `Sesi ${sIdx + 1}`}).`);
           setActiveDayTab(day.hari);
           return;
         }
       }
+
 
       // Check overlap
       const overlapErrors = getOverlapErrorsForDay(day.sessions);
@@ -468,10 +430,20 @@ export default function MyShiftPage() {
 
     setIsSavingSchedule(true);
     try {
+      // Force 00:00 - 23:59 for all sessions
+      const payloadDays = daysWithSessions.map(day => ({
+        ...day,
+        sessions: day.sessions.map(s => ({
+          ...s,
+          waktuMulai: "00:00",
+          waktuSelesai: "23:59"
+        }))
+      }));
+
       const res = await fetch("/api/absensi/myshift/schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ days: daysWithSessions })
+        body: JSON.stringify({ days: payloadDays })
       });
 
       const data = await res.json();
@@ -491,56 +463,12 @@ export default function MyShiftPage() {
 
   // Handle "Lihat QR Absensi" Click
   const handleOpenQRGenerator = () => {
-    const isHC = userDivisi === "Human Capital" || userJabatan.includes("Human Capital");
-
-    // If no agendas exist today
     if (agendas.length === 0) {
       setEmptyAgendaMessage("Belum ada jadwal MyShift yang dibuat pada hari ini.");
       setShowEmptyAgendaModal(true);
       return;
     }
-
-    // If User is Aslab (non-HC), check if Aslab is scheduled today & time validity
-    if (userRole !== "admin" && !isHC) {
-      const now = Date.now();
-      
-      // Find shift where current user is assigned
-      const myAssignedAgendas = agendas.filter(agenda => {
-        return agenda.aslabs.some(a => 
-          (currentUserId && a.userId === currentUserId) ||
-          (currentUserNim && a.nim && a.nim.trim() === currentUserNim.trim()) ||
-          (currentUserName && a.nama && a.nama.toLowerCase().trim() === currentUserName.toLowerCase().trim())
-        );
-      });
-
-      if (myAssignedAgendas.length === 0) {
-        setEmptyAgendaMessage("Maaf, kamu tidak dijadwalkan untuk piket hari ini. Silakan periksa jadwal piket kamu untuk informasi lebih lanjut.");
-        setShowEmptyAgendaModal(true);
-        return;
-      }
-
-      // Find active shift right now or upcoming
-      const activeShift = myAssignedAgendas.find(agenda => {
-        const mulai = new Date(agenda.waktuMulai).getTime();
-        const selesai = new Date(agenda.waktuSelesai).getTime();
-        return now >= (mulai - 15 * 60 * 1000) && now <= selesai;
-      });
-
-      if (activeShift) {
-        setActiveAgenda(activeShift);
-        setShowQRModal(true);
-      } else {
-        // User is scheduled today, but currently outside shift hours
-        const nextShift = myAssignedAgendas[0];
-        const mulaiStr = new Date(nextShift.waktuMulai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-        const selesaiStr = new Date(nextShift.waktuSelesai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-        setEmptyAgendaMessage(`Maaf, saat ini bukan jadwal shift kamu. Jadwal piket kamu hari ini adalah ${nextShift.nama} (${mulaiStr} - ${selesaiStr} WIB).`);
-        setShowEmptyAgendaModal(true);
-      }
-      return;
-    }
-
-    // If Admin or HC Aslab, can view all MyShift QR codes
+    
     if (agendas.length === 1) {
       setActiveAgenda(agendas[0]);
       setShowQRModal(true);
@@ -586,9 +514,6 @@ export default function MyShiftPage() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-[22px] font-bold text-[#0A1024] sm:text-3xl md:text-4xl">MyShift</h1>
-              <span className="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-800 text-xs font-bold border border-blue-200">
-                v1.3
-              </span>
             </div>
           </div>
 
@@ -634,38 +559,16 @@ export default function MyShiftPage() {
               </div>
             </div>
 
-            {/* Shift Time Info Banner */}
-            {agendas.length > 0 && (
-              <div className="flex items-center gap-2 bg-yellow-50 text-yellow-800 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border border-yellow-200/80">
-                <AlertCircle className="w-4 h-4 text-yellow-700 shrink-0" />
+            {/* Shift Time / Duration Info Banner */}
+            {!isLoadingAgendas && !agendaLoadError && (
+              <div className="flex items-center gap-2 bg-yellow-50 text-yellow-800 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border border-yellow-200">
+                <Clock className="w-4 h-4 text-yellow-600 shrink-0" />
                 <span>
-                  Rentang Jadwal: {formatTime(
-                    agendas.reduce((earliest, a) => a.waktuMulai < earliest ? a.waktuMulai : earliest, agendas[0].waktuMulai)
-                  )} - {formatTime(
-                    agendas.reduce((latest, a) => a.waktuSelesai > latest ? a.waktuSelesai : latest, agendas[0].waktuSelesai)
-                  )} WIB (Lokasi: LAB DTC)
+                  Progress Mingguan Anda: <span className={cumulativeWeeklyDuration >= 240 ? "text-green-600 font-bold" : "text-yellow-700"}>{Math.floor(cumulativeWeeklyDuration / 60)}j {cumulativeWeeklyDuration % 60}m</span> / 4 Jam
                 </span>
               </div>
             )}
           </div>
-
-          {/* Cumulative Duration Info */}
-          {!isLoadingAgendas && !agendaLoadError && (
-            <div className="mb-6 bg-blue-50/50 border border-blue-100 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-blue-900">Total Durasi Jaga (Minggu Ini)</h3>
-                  <p className="text-[11px] text-blue-700 font-medium">Durasi dihitung otomatis dari waktu scan datang hingga scan pulang.</p>
-                </div>
-              </div>
-              <div className="text-xl font-black text-blue-800 shrink-0">
-                {Math.floor(cumulativeWeeklyDuration / 60)}j {cumulativeWeeklyDuration % 60}m
-              </div>
-            </div>
-          )}
 
           {/* Grid of Aslabs */}
           <div className="space-y-10">
@@ -745,6 +648,11 @@ export default function MyShiftPage() {
                             <p className="font-bold text-[#0B132B] text-sm line-clamp-1">{aslab.nama}</p>
                             <p className="text-xs text-teal-700 font-semibold">{aslab.jabatan || aslab.divisi || "Asisten Lab"}</p>
                             <p className="text-[11px] text-gray-400 font-medium">{aslab.nim}</p>
+                            {/* {aslab.weeklyDuration !== undefined && (
+                              <p className="text-[10px] text-blue-600 font-bold mt-0.5">
+                                Total Mingguan: {Math.floor(aslab.weeklyDuration / 60)}j {aslab.weeklyDuration % 60}m
+                              </p>
+                            )} */}
                           </div>
                         </div>
 
@@ -935,21 +843,7 @@ export default function MyShiftPage() {
                                 />
                               </div>
 
-                              {/* Waktu Pelaksanaan Shift (24 Jam) */}
-                              <div className="w-full lg:w-72">
-                                <label className="block text-sm text-[#0A1024] mb-2">
-                                  Waktu Pelaksanaan (24 Jam)
-                                </label>
-                                <ShiftTimePicker
-                                  dayName={activeDayTab}
-                                  waktuMulai={session.waktuMulai}
-                                  waktuSelesai={session.waktuSelesai}
-                                  onChange={(mulai, selesai) => {
-                                    handleSessionFieldChange(sessionIndex, "waktuMulai", mulai);
-                                    handleSessionFieldChange(sessionIndex, "waktuSelesai", selesai);
-                                  }}
-                                />
-                              </div>
+                              {/* Waktu Pelaksanaan is hidden and defaults to full day */}
 
                               {/* Remove Session Button */}
                               <div className="lg:self-end pb-1 flex justify-end">

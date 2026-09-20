@@ -295,14 +295,34 @@ export async function GET(req: Request) {
 
     const weeklyRecords = await prisma.absensiRecord.findMany({
       where: {
-        userId: user.id,
         createdAt: { gte: startOfWeek, lte: endOfWeek },
         agenda: { deskripsi: null } // Only MyShift
       }
     });
     
-    // Sum all credited durations inside this week
-    const cumulativeWeeklyDuration = weeklyRecords.reduce((total, rec) => total + (rec.creditedDuration || 0), 0);
+    // Sum all credited durations inside this week per user
+    const weeklyDurationMap = new Map<string, number>();
+    for (const rec of weeklyRecords) {
+      const duration = rec.creditedDuration || 0;
+      if (rec.userId) {
+        weeklyDurationMap.set(`user:${rec.userId}`, (weeklyDurationMap.get(`user:${rec.userId}`) || 0) + duration);
+      }
+      if (rec.nim) {
+        weeklyDurationMap.set(`nim:${rec.nim.trim().toLowerCase()}`, (weeklyDurationMap.get(`nim:${rec.nim.trim().toLowerCase()}`) || 0) + duration);
+      }
+      if (rec.nama) {
+        weeklyDurationMap.set(`nama:${rec.nama.trim().toLowerCase()}`, (weeklyDurationMap.get(`nama:${rec.nama.trim().toLowerCase()}`) || 0) + duration);
+      }
+    }
+
+    const getWeeklyDuration = (uId: string | null | undefined, uNim: string | null | undefined, uNama: string | null | undefined) => {
+      if (uId && weeklyDurationMap.has(`user:${uId}`)) return weeklyDurationMap.get(`user:${uId}`) || 0;
+      if (uNim && weeklyDurationMap.has(`nim:${uNim.trim().toLowerCase()}`)) return weeklyDurationMap.get(`nim:${uNim.trim().toLowerCase()}`) || 0;
+      if (uNama && weeklyDurationMap.has(`nama:${uNama.trim().toLowerCase()}`)) return weeklyDurationMap.get(`nama:${uNama.trim().toLowerCase()}`) || 0;
+      return 0;
+    };
+
+    const cumulativeWeeklyDuration = getWeeklyDuration(user.id, userNim, userName);
 
 
     const formattedAgendas = await Promise.all(myAgendas.map(async (agenda) => {
@@ -345,6 +365,8 @@ export async function GET(req: Request) {
            }).catch(console.error);
         }
 
+        const weeklyDuration = getWeeklyDuration(assignment.userId, assignment.nim, assignment.nama);
+
         return {
           id: assignment.id,
           userId: assignment.userId,
@@ -358,6 +380,7 @@ export async function GET(req: Request) {
           closeReason: record?.closeReason || null,
           waktuDatang: record?.waktuDatang || null,
           waktuPulang: record?.waktuPulang || null,
+          weeklyDuration,
         };
       });
 
