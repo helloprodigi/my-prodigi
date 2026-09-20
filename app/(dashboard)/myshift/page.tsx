@@ -1014,7 +1014,7 @@ export default function MyShiftPage() {
                 <div className="bg-white border-2 border-gray-200 p-4 rounded-[2rem] mb-4 ">
                   <QRCode 
                     id="myshift-qr-code-svg"
-                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/scan-absensi?token=${activeAgenda.kodeQrDatang}&type=datang`}
+                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/scan-absensi?token=PRODIGI-MYSHIFT-STATIC-QR&type=datang`}
                     size={220}
                     level="Q"
                     fgColor="#0B132B"

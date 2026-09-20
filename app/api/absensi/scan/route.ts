@@ -52,24 +52,52 @@ export async function POST(req: Request) {
     }
 
     // Find Agenda by token
-    let agenda = await prisma.absensiAgenda.findFirst({
-      where: { kodeQrDatang: token },
-      include: {
-        createdBy: {
-          select: { role: true }
-        }
-      }
-    });
+    let agenda = null;
 
-    if (!agenda) {
+    if (token === "PRODIGI-MYSHIFT-STATIC-QR") {
+      const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+      const nowWib = new Date(Date.now() + WIB_OFFSET_MS);
+      const wibYear = nowWib.getUTCFullYear();
+      const wibMonth = nowWib.getUTCMonth();
+      const wibDay = nowWib.getUTCDate();
+      const startOfDay = new Date(Date.UTC(wibYear, wibMonth, wibDay, 0, 0, 0, 0) - WIB_OFFSET_MS);
+      const endOfDay = new Date(Date.UTC(wibYear, wibMonth, wibDay, 23, 59, 59, 999) - WIB_OFFSET_MS);
+
       agenda = await prisma.absensiAgenda.findFirst({
-        where: { kodeQrPulang: token },
+        where: {
+          deskripsi: null, // Only MyShift
+          waktuMulai: { gte: startOfDay, lte: endOfDay }
+        },
         include: {
           createdBy: {
             select: { role: true }
           }
         }
       });
+      
+      if (!agenda) {
+        return NextResponse.json({ error: "Tidak ada jadwal MyShift untuk hari ini." }, { status: 404 });
+      }
+    } else {
+      agenda = await prisma.absensiAgenda.findFirst({
+        where: { kodeQrDatang: token },
+        include: {
+          createdBy: {
+            select: { role: true }
+          }
+        }
+      });
+
+      if (!agenda) {
+        agenda = await prisma.absensiAgenda.findFirst({
+          where: { kodeQrPulang: token },
+          include: {
+            createdBy: {
+              select: { role: true }
+            }
+          }
+        });
+      }
     }
 
     if (!agenda) {
