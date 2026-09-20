@@ -354,6 +354,26 @@ export async function POST(req: Request) {
       console.error("Error syncing today's shift agenda after schedule save:", syncErr);
     }
 
+    try {
+      // 4. Delete all FUTURE MyShift agendas (so they get naturally re-generated from the new templates by the GET route)
+      // We only delete agendas starting from tomorrow (waktuMulai > endOfDay) that are MyShift-generated (deskripsi = null).
+      const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+      const nowWib = new Date(Date.now() + WIB_OFFSET_MS);
+      const wibYear = nowWib.getUTCFullYear();
+      const wibMonth = nowWib.getUTCMonth();
+      const wibDay = nowWib.getUTCDate();
+      const endOfDay = new Date(Date.UTC(wibYear, wibMonth, wibDay, 23, 59, 59, 999) - WIB_OFFSET_MS);
+
+      await prisma.absensiAgenda.deleteMany({
+        where: {
+          waktuMulai: { gt: endOfDay },
+          deskripsi: null
+        }
+      });
+    } catch (futureDeleteErr) {
+      console.error("Error clearing future agendas:", futureDeleteErr);
+    }
+
     return NextResponse.json({ success: true, message: "Jadwal shift berhasil diperbarui!" });
   } catch (error) {
     console.error("Error saving MyShift schedule:", error);

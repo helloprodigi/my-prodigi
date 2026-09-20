@@ -285,10 +285,55 @@ export default function MyShiftPage() {
       const schedRes = await fetch("/api/absensi/myshift/schedule");
       const schedData = await schedRes.json();
 
-      // We still fetch schedData to verify the endpoint is alive or if needed later, 
-      // but we NO LONGER populate the modal with existing Aslabs to keep it blank & consistent.
-      if (schedData) {
-        // Initialize all 7 days with a single empty shift
+      // Load existing schedules so the user can edit them rather than starting blank
+      if (schedData && Array.isArray(schedData.days) && schedData.days.length > 0) {
+        const existingMap = new Map<string, DayForm>();
+        schedData.days.forEach((d: DayForm) => existingMap.set(d.hari, d));
+
+        const filledDays: DayForm[] = ALL_DAYS.map(dayName => {
+          if (existingMap.has(dayName)) {
+            const d = existingMap.get(dayName)!;
+            // Merge all aslabs from all sessions into one session
+            const mergedAslabs: any[] = [];
+            d.sessions.forEach(sess => {
+              if (Array.isArray(sess.assignedAslabs)) {
+                sess.assignedAslabs.forEach(a => {
+                  if (!mergedAslabs.some(existing => (existing.id && existing.id === a.id) || (existing.nim && existing.nim === a.nim))) {
+                    mergedAslabs.push(a);
+                  }
+                });
+              }
+            });
+
+            return {
+              hari: dayName,
+              dayOfWeek: d.dayOfWeek,
+              sessions: [
+                {
+                  namaSesi: `Piket ${dayName}`,
+                  waktuMulai: "00:00",
+                  waktuSelesai: "23:59",
+                  assignedAslabs: mergedAslabs
+                }
+              ]
+            };
+          }
+          return {
+            hari: dayName,
+            dayOfWeek: DAYS_MAPPING[dayName],
+            sessions: [
+              {
+                namaSesi: `Piket ${dayName}`,
+                waktuMulai: "00:00",
+                waktuSelesai: "23:59",
+                assignedAslabs: []
+              }
+            ]
+          };
+        });
+        setScheduleDays(filledDays);
+      } else {
+        // Initialize all 7 days with a single empty shift if db is empty
         const initialDays: DayForm[] = ALL_DAYS.map(dayName => ({
           hari: dayName,
           dayOfWeek: DAYS_MAPPING[dayName],
@@ -668,7 +713,7 @@ export default function MyShiftPage() {
               <div className="flex items-center gap-2 min-w-max">
                 {ALL_DAYS.map(dayName => {
                   const dayData = scheduleDays.find(d => d.hari === dayName);
-                  const sessionCount = dayData?.sessions?.length || 0;
+                  const aslabCount = dayData?.sessions?.[0]?.assignedAslabs?.length || 0;
                   const isActive = activeDayTab === dayName;
                   const hasOverlap = dayData ? getOverlapErrorsForDay(dayData.sessions).length > 0 : false;
 
@@ -687,11 +732,11 @@ export default function MyShiftPage() {
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                         isActive
                           ? "bg-[#FFC727] text-[#0B132B]"
-                          : sessionCount > 0 
+                          : aslabCount > 0 
                             ? "bg-gray-100 text-gray-700" 
                             : "bg-gray-50 text-gray-400"
                       }`}>
-                        {sessionCount} Sesi
+                        {aslabCount} Orang
                       </span>
                     </button>
                   );
