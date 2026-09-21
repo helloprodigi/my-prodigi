@@ -251,6 +251,7 @@ export default function MyShiftPage() {
                   aslab.status === "IZIN" ? "Izin" : "Belum Absen",
             "Riwayat Datang & Pulang": historyStr,
             "Durasi Harian (Menit)": (aslab.creditedDuration || 0) + (aslab.shiftStatus === "ON" && aslab.waktuDatang ? Math.floor((nowTimestamp - new Date(aslab.waktuDatang).getTime()) / 60000) : 0),
+            "Durasi Mingguan (Menit)": (aslab.weeklyDuration || 0) + (aslab.shiftStatus === "ON" && aslab.waktuDatang ? Math.floor((nowTimestamp - new Date(aslab.waktuDatang).getTime()) / 60000) : 0),
           };
         });
 
