@@ -218,54 +218,39 @@ export default function MyShiftPage() {
       .finally(() => setIsLoadingAgendas(false));
   };
 
-  const exportToExcel = (agenda: Agenda) => {
-    import("xlsx").then((XLSX) => {
-      const data = agenda.aslabs
-        .filter(aslab => aslab.waktuDatang)
-        .map((aslab, index) => {
-          let historyStr = "";
-          if (aslab.shiftHistory && aslab.shiftHistory.length > 0) {
-            historyStr = aslab.shiftHistory.map((h: any) =>
-              `${new Date(h.datang).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })} - ${new Date(h.pulang).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })}`
-            ).join(", ");
-            // Add ongoing session if any
-            if (aslab.shiftStatus === "ON" && aslab.waktuDatang) {
-              historyStr += `, ${new Date(aslab.waktuDatang).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })} - Sedang Berjalan`;
-            }
-          } else if (aslab.waktuDatang) {
-            const datangStr = new Date(aslab.waktuDatang).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' });
-            const pulangStr = aslab.waktuPulang ? new Date(aslab.waktuPulang).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' }) : "Sedang Berjalan";
-            historyStr = `${datangStr} - ${pulangStr}`;
-          } else {
-            historyStr = "-";
-          }
+  const [isExporting, setIsExporting] = useState(false);
 
-          return {
-            "No": index + 1,
-            "Nama": aslab.nama,
-            "NIM": aslab.nim,
-            "Divisi/Jabatan": aslab.jabatan || aslab.divisi || "Asisten Lab",
-            "Status": aslab.shiftStatus === "ON" ? "Hadir (Sedang Berjalan)" :
-              aslab.status === "HADIR" ? "Hadir" :
-                aslab.status === "ALPA" ? "Alpa" :
-                  aslab.status === "IZIN" ? "Izin" : "Belum Absen",
-            "Riwayat Datang & Pulang": historyStr,
-            "Durasi Harian (Menit)": (aslab.creditedDuration || 0) + (aslab.shiftStatus === "ON" && aslab.waktuDatang ? Math.floor((nowTimestamp - new Date(aslab.waktuDatang).getTime()) / 60000) : 0),
-            "Durasi Mingguan (Menit)": (aslab.weeklyDuration || 0) + (aslab.shiftStatus === "ON" && aslab.waktuDatang ? Math.floor((nowTimestamp - new Date(aslab.waktuDatang).getTime()) / 60000) : 0),
-          };
-        });
+  const exportWeeklyToExcel = async () => {
+    setIsExporting(true);
+    try {
+      const XLSX = await import("xlsx");
+      const res = await fetch(`/api/absensi/myshift/weekly-report?endDate=${selectedDate.toISOString()}`);
+      const result = await res.json();
+      
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || "Gagal mengambil data laporan mingguan.");
+      }
 
-      const worksheet = XLSX.utils.json_to_sheet(data);
+      if (result.data.length === 0) {
+        toast.error("Tidak ada data kehadiran untuk minggu ini.");
+        setIsExporting(false);
+        return;
+      }
+
+      const worksheet = XLSX.utils.json_to_sheet(result.data);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Daftar Hadir");
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Mingguan");
 
-      const fileName = `Daftar_Hadir_${agenda.nama.replace(/\s+/g, '_')}_${selectedDate.toISOString().split('T')[0]}.xlsx`;
+      const sundayStr = selectedDate.toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric' }).replace(/\s+/g, '_');
+      const fileName = `Laporan_Mingguan_MyShift_${sundayStr}.xlsx`;
       XLSX.writeFile(workbook, fileName);
-      toast.success("Daftar hadir berhasil diunduh");
-    }).catch(err => {
-      console.error("Failed to load xlsx library", err);
-      toast.error("Gagal mengunduh Excel.");
-    });
+      toast.success("Laporan mingguan berhasil diunduh");
+    } catch (err: any) {
+      console.error("Failed to export excel", err);
+      toast.error(err.message || "Gagal mengunduh Excel.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   useEffect(() => {
@@ -673,13 +658,18 @@ export default function MyShiftPage() {
                       <span className="text-xs font-semibold text-gray-500">
                         {agenda.aslabs.length} Asisten Lab Bertugas
                       </span>
-                      {(userRole === "admin" || userDivisi === "Human Capital" || userJabatan.includes("Human Capital")) && (
+                      {(userRole === "admin" || userDivisi === "Human Capital" || userJabatan.includes("Human Capital")) && selectedDate.getDay() === 0 && (
                         <button
-                          onClick={() => exportToExcel(agenda)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded-lg text-xs font-bold transition-colors border border-green-200 "
+                          onClick={() => exportWeeklyToExcel()}
+                          disabled={isExporting}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded-lg text-xs font-bold transition-colors border border-green-200 disabled:opacity-50"
                         >
-                          <Download className="w-3.5 h-3.5" />
-                          Unduh Excel
+                          {isExporting ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Download className="w-3.5 h-3.5" />
+                          )}
+                          {isExporting ? "Mengunduh..." : "Unduh Laporan Mingguan"}
                         </button>
                       )}
                     </div>
