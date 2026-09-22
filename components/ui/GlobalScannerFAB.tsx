@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { QrCode, X, Camera, RefreshCw, AlertCircle } from "lucide-react";
+import { QrCode, X, Camera, RefreshCw, AlertCircle, SwitchCamera } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
 import { toast } from "react-hot-toast";
 import { createClient } from "@/utils/supabase/client";
@@ -184,6 +184,7 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
   const [scanError, setScanError] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isScanningRef = useRef(false);
 
@@ -289,7 +290,6 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
     };
 
     try {
-      // 1. Try to detect camera devices first (best for mobile devices)
       let cameras: Array<{ id: string; label: string }> = [];
       try {
         cameras = await Html5Qrcode.getCameras();
@@ -297,37 +297,51 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
         console.warn("getCameras error (falling back to facingMode):", e);
       }
 
-      if (cameras && cameras.length > 0) {
-        const backCamera = cameras.find(c => 
-          c.label.toLowerCase().includes("back") ||
-          c.label.toLowerCase().includes("belakang") ||
-          c.label.toLowerCase().includes("rear") ||
-          c.label.toLowerCase().includes("environment")
-        );
-        const selectedId = backCamera ? backCamera.id : cameras[cameras.length - 1].id;
+      let selectedId: string | { facingMode: string } = { facingMode };
 
-        await scanner.start(
-          selectedId,
-          qrConfig,
-          handleDecodedText,
-          () => {}
-        );
-      } else {
-        // Fallback to environment facingMode
-        await scanner.start(
-          { facingMode: "environment" },
-          qrConfig,
-          handleDecodedText,
-          () => {}
-        );
+      if (cameras && cameras.length > 0) {
+        if (facingMode === "environment") {
+          const backCamera = cameras.find(c => 
+            c.label.toLowerCase().includes("back") ||
+            c.label.toLowerCase().includes("belakang") ||
+            c.label.toLowerCase().includes("rear") ||
+            c.label.toLowerCase().includes("environment")
+          );
+          if (backCamera) {
+            selectedId = backCamera.id;
+          } else {
+            // fallback if no back camera string found, use the last camera
+            selectedId = cameras[cameras.length - 1].id;
+          }
+        } else {
+          const frontCamera = cameras.find(c => 
+            c.label.toLowerCase().includes("front") ||
+            c.label.toLowerCase().includes("depan") ||
+            c.label.toLowerCase().includes("user")
+          );
+          if (frontCamera) {
+            selectedId = frontCamera.id;
+          } else {
+            // fallback if no front camera string found, use the first camera
+            selectedId = cameras[0].id;
+          }
+        }
       }
+
+      await scanner.start(
+        selectedId,
+        qrConfig,
+        handleDecodedText,
+        () => {}
+      );
+      
       setIsInitializing(false);
     } catch (primaryErr: any) {
-      console.warn("Primary camera start failed, trying fallback facingMode 'user':", primaryErr);
+      console.warn(`Camera start failed for ${facingMode}:`, primaryErr);
       try {
-        // Fallback to user facingMode or default
+        // Ultimate fallback
         await scanner.start(
-          { facingMode: "user" },
+          { facingMode: facingMode === "environment" ? "user" : "environment" },
           qrConfig,
           handleDecodedText,
           () => {}
@@ -341,7 +355,7 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
         );
       }
     }
-  }, []);
+  }, [facingMode]);
 
   useEffect(() => {
     let isMounted = true;
@@ -512,7 +526,17 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
               </button>
             </div>
           ) : (
-            <div id="qr-reader" className="w-full"></div>
+            <>
+              <div id="qr-reader" className="w-full"></div>
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={() => setFacingMode(prev => prev === "environment" ? "user" : "environment")}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium text-sm flex items-center gap-2 transition-all"
+                >
+                  <SwitchCamera className="w-4 h-4" /> Putar Kamera ({facingMode === "environment" ? "Belakang" : "Depan"})
+                </button>
+              </div>
+            </>
           )}
 
           {scanError && (
