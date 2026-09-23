@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/server";
 // Coordinates for TULT (Telkom University Landmark Tower)
 const TULT_LAT = -6.9689408148039576;
 const TULT_LNG = 107.628070654925;
-const MAX_RADIUS_METERS = 50;
+const MAX_RADIUS_METERS = 100;
 
 function getDistanceFromLatLonInM(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371; // Radius of the earth in km
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
 
     // Determine if this is an Agenda (kegiatan divisi / event) or a standard MyShift
     // Agenda: bisa absen dimana saja (tidak perlu berada di LAB DTC)
-    // MyShift: wajib berada di area LAB DTC (radius <= 50m)
+    // MyShift: wajib berada di area LAB DTC (radius <= 100m)
     const isAgenda = Boolean(agenda.deskripsi);
     const isMyShift = !isAgenda;
 
@@ -123,7 +123,7 @@ export async function POST(req: Request) {
       if (distance > MAX_RADIUS_METERS) {
         return NextResponse.json({
           error: "Location out of bounds",
-          message: `Anda sedang tidak berada di area LAB DTC (${Math.round(distance)}m > ${MAX_RADIUS_METERS}m). Absensi MyShift hanya dapat dilakukan di area LAB DTC.`
+          message: "Anda tidak berada di LAB DTC. Absensi MyShift hanya dapat dilakukan di area LAB DTC."
         }, { status: 400 });
       }
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { QrCode, X, Camera, RefreshCw, AlertCircle, SwitchCamera } from "lucide-react";
+import { QrCode, X, Camera, RefreshCw, AlertCircle, SwitchCamera, CheckCircle } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
 import { toast } from "react-hot-toast";
 import { createClient } from "@/utils/supabase/client";
@@ -185,8 +185,10 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
+  const [scanSuccessMsg, setScanSuccessMsg] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isScanningRef = useRef(false);
+  const isInitializingRef = useRef(false);
 
   const locationRef = useRef<{lat: number, lng: number} | null>(location);
   const onSuccessRef = useRef(onSuccess);
@@ -201,6 +203,8 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
   }, [onSuccess]);
 
   const startScanner = useCallback(async () => {
+    if (isInitializingRef.current) return;
+    isInitializingRef.current = true;
     setIsInitializing(true);
     setCameraError(null);
     setScanError(null);
@@ -215,6 +219,7 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
       } catch (e) {
         console.warn("Cleanup previous scanner instance error:", e);
       }
+      scannerRef.current = null;
     }
 
     const element = document.getElementById("qr-reader");
@@ -279,7 +284,7 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
             await scannerRef.current.stop();
             scannerRef.current.clear();
           }
-          onSuccessRef.current();
+          setScanSuccessMsg(data.message || "Absensi berhasil!");
         }
       } catch (err) {
         console.error(err);
@@ -354,6 +359,8 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
           "Tidak dapat membuka kamera. Pastikan izin kamera telah diizinkan pada browser Anda."
         );
       }
+    } finally {
+      isInitializingRef.current = false;
     }
   }, [facingMode]);
 
@@ -394,7 +401,7 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
         </div>
 
         <div className="p-4">
-          {!location && (
+          {!location && !scanSuccessMsg && (
             <div className="bg-blue-50 text-blue-700 p-3 rounded-lg text-xs mb-4 border border-blue-200 flex items-center gap-2">
               <span>📍 Mendeteksi lokasi... (Izin lokasi diperlukan khusus untuk absensi MyShift di area LAB DTC)</span>
             </div>
@@ -509,7 +516,25 @@ function QRScannerModal({ onClose, location, onSuccess }: { onClose: () => void,
             }
           `}} />
 
-          {cameraError ? (
+          {scanSuccessMsg ? (
+            <div className="py-10 px-4 text-center flex flex-col items-center space-y-4 animate-in fade-in zoom-in-95">
+              <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center text-green-500 mb-2">
+                <CheckCircle className="w-10 h-10" />
+              </div>
+              <div className="space-y-1 max-w-xs">
+                <p className="font-bold text-gray-800 text-lg">Berhasil</p>
+                <p className="text-sm text-gray-600">{scanSuccessMsg}</p>
+              </div>
+              <button
+                onClick={() => {
+                  onSuccessRef.current(); // Calls window.location.reload()
+                }}
+                className="mt-4 px-6 py-3 bg-[#0B132B] hover:bg-[#1a2b5e] text-white rounded-xl font-medium text-sm flex items-center gap-2 transition-all w-full justify-center"
+              >
+                Tutup & Muat Ulang
+              </button>
+            </div>
+          ) : cameraError ? (
             <div className="py-8 px-4 text-center flex flex-col items-center space-y-4">
               <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-red-500">
                 <AlertCircle className="w-8 h-8" />
