@@ -26,11 +26,11 @@ export default async function DashboardPage() {
   const databaseRole = (userData?.role || "talent").toLowerCase();
   const effectiveRole = await getEffectiveRole(databaseRole);
 
-  if (databaseRole === "admin" && effectiveRole === "admin") {
+  if (effectiveRole === "admin") {
     return <AdminDashboard />;
   }
 
-  if (databaseRole === "asisten_lab" || (databaseRole === "admin" && effectiveRole === "asisten_lab")) {
+  if (effectiveRole === "asisten_lab" || effectiveRole === "aslab") {
     return <AslabDashboard />;
   }
 

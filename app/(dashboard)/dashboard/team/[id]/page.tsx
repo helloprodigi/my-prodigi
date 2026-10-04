@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Check, Crown } from "lucide-react";
+import { Check, Crown, AlertTriangle, X } from "lucide-react";
 import {
   getTeamDetailAction,
   inviteMemberAction,
@@ -13,6 +13,7 @@ import {
   requestJoinAction,
   approveJoinRequestAction,
   rejectJoinRequestAction,
+  cancelMatchmakingAction,
 } from "../../actions";
 import type { DashboardTeamDetail } from "@/types/team";
 
@@ -32,6 +33,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
   const router = useRouter();
   const [teamInfo, setTeamInfo] = useState<DashboardTeamDetail | null>(null);
   const [refreshingMemberId, setRefreshingMemberId] = useState<string | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const loadTeam = useCallback(async () => {
@@ -51,6 +53,20 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
   const approvedCount = teamInfo?.approvedCount ?? 0;
   const maxMembers = teamInfo?.maxAdditionalMembersNeeded ?? 0;
   const isTeamComplete = approvedCount >= maxMembers;
+  
+  const handleCancelMatchmaking = () => {
+    startTransition(async () => {
+      const result = await cancelMatchmakingAction(id);
+      if (result.success) {
+        toast.success("Matchmaking berhasil dibatalkan.");
+        router.push("/dashboard");
+      } else {
+        toast.error(result.error ?? "Gagal membatalkan matchmaking.");
+        setShowCancelModal(false);
+      }
+    });
+  };
+
   const handleInvite = (memberId: string, name: string) => {
     startTransition(async () => {
       const result = await inviteMemberAction(id, memberId);
@@ -235,6 +251,15 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
               <div className="text-xs text-gray-500 font-medium">
                 Lead : <span className="text-[#0A1024] font-bold">{teamInfo.leadName}</span>
               </div>
+              {teamInfo.isLeader && !isTeamComplete && (
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  disabled={isPending}
+                  className="mt-2 text-[11px] font-bold text-red-600 hover:text-red-700 transition-colors bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md disabled:opacity-50 flex items-center gap-1"
+                >
+                  Batal Matchmaking
+                </button>
+              )}
             </div>
           </div>
 
@@ -546,6 +571,49 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
           priority
         />
       </div>
+
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 relative">
+            <button 
+              onClick={() => !isPending && setShowCancelModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              disabled={isPending}
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="p-6">
+              <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-4">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Batalkan Matchmaking?</h3>
+              <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                Apakah Anda yakin ingin membatalkan matchmaking? Tim ini akan dihapus secara permanen dan Anda harus membuat tim baru jika ingin memulai matchmaking lagi.
+              </p>
+              
+              <div className="flex items-center gap-3 w-full">
+                <button
+                  onClick={() => setShowCancelModal(false)}
+                  disabled={isPending}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleCancelMatchmaking}
+                  disabled={isPending}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isPending && (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  )}
+                  Ya, Batalkan
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

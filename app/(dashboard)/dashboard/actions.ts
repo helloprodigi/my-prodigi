@@ -1153,3 +1153,42 @@ export async function rejectJoinRequestAction(teamId: string, memberId: string) 
     return { success: false, error: message };
   }
 }
+
+export async function cancelMatchmakingAction(teamId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { user } = await getAuthUser();
+    if (!user) return { success: false, error: "Kamu harus login." };
+
+    const adminDb = createAdminClient();
+
+    const { data: team } = await adminDb
+      .from("Team")
+      .select("id, leaderId, status")
+      .eq("id", teamId)
+      .single();
+
+    if (!team) return { success: false, error: "Tim tidak ditemukan." };
+    
+    if (team.leaderId !== user.id) {
+      return { success: false, error: "Hanya ketua tim yang dapat membatalkan matchmaking." };
+    }
+
+    if (team.status === "COMPLETED") {
+      return { success: false, error: "Matchmaking sudah selesai, tim tidak dapat dibatalkan." };
+    }
+
+    const { error: deleteError } = await adminDb
+      .from("Team")
+      .delete()
+      .eq("id", teamId);
+
+    if (deleteError) {
+      return { success: false, error: deleteError.message };
+    }
+
+    return { success: true };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Gagal membatalkan matchmaking.";
+    return { success: false, error: message };
+  }
+}
