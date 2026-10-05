@@ -10,12 +10,13 @@ const SKILL_CATEGORIES = [
   "UI/UX Design", "Frontend Developer", "Backend Developer",
   "Mobile Developer", "AI/ML Engineering", "Data Science",
   "Cybersecurity", "Business Plan", "Public Speaking",
-  "Video Editing/Multimedia", "Capture The Flag", "⁠Software Development", "Competitive Programing"
+  "Video Editing/Multimedia"
 ];
 
 const COMPETITION_INTERESTS = [
   "Hackathon", "UI/UX Design", "Business Case", "AI Competition",
-  "Innovation Competition", "Web Development", "Data Competition"
+  "Innovation Competition", "Web Development", "Data Competition",
+  "Capture The Flag", "Software Development", "Competitive Programing"
 ];
 
 const ROLES_INFO = [
@@ -28,10 +29,10 @@ export default function ProfileClient({ profile }: { profile: any }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("personal");
 
-  const availableRoles = profile.role === 'admin' 
-    ? ['talent', 'asisten_lab', 'admin'] 
-    : profile.role === 'asisten_lab' 
-      ? ['talent', 'asisten_lab'] 
+  const availableRoles = profile.role === 'admin'
+    ? ['talent', 'asisten_lab', 'admin']
+    : profile.role === 'asisten_lab'
+      ? ['talent', 'asisten_lab']
       : ['talent'];
 
   const [isChangingRole, setIsChangingRole] = useState(false);
@@ -52,7 +53,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
       setActiveRole(saved);
       setSelectedRole(saved);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // State for Personal Info Edit
@@ -92,7 +93,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
       localStorage.clear();
       sessionStorage.clear();
       document.cookie = "activeRole=; path=/; max-age=0; SameSite=Lax";
-    } catch {}
+    } catch { }
     window.location.href = "/auth/logout";
   };
 
@@ -233,7 +234,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ photoUrl: url })
         });
-        
+
         if (res.ok) {
           toast.success("Foto profil berhasil diubah.");
           window.dispatchEvent(new CustomEvent("myprodigi:profile-updated", { detail: { photoUrl: url } }));
@@ -316,7 +317,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
               </div>
             )}
           </div>
-          <button 
+          <button
             onClick={() => photoInputRef.current?.click()}
             disabled={isUploadingPhoto}
             className="absolute bottom-1 right-1 bg-[#FFC700] p-2 rounded-full text-black hover:scale-105 transition-transform disabled:opacity-50"
@@ -327,12 +328,12 @@ export default function ProfileClient({ profile }: { profile: any }) {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
             )}
           </button>
-          <input 
-            type="file" 
-            className="hidden" 
-            accept="image/*" 
+          <input
+            type="file"
+            className="hidden"
+            accept="image/*"
             ref={photoInputRef}
-            onChange={handlePhotoChange} 
+            onChange={handlePhotoChange}
           />
         </div>
 
@@ -621,17 +622,17 @@ export default function ProfileClient({ profile }: { profile: any }) {
               ) : (
                 <div className="flex gap-2">
                   {isChangingRole && (
-                    <button 
+                    <button
                       onClick={() => {
                         setIsChangingRole(false);
                         setSelectedRole(activeRole);
-                      }} 
+                      }}
                       className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-sm"
                     >
                       Cancel
                     </button>
                   )}
-                  <button 
+                  <button
                     onClick={() => {
                       if (!isChangingRole) {
                         setIsChangingRole(true);
@@ -657,16 +658,15 @@ export default function ProfileClient({ profile }: { profile: any }) {
               {ROLES_INFO.filter(r => availableRoles.includes(r.id)).map(roleInfo => {
                 const isActive = isChangingRole ? selectedRole === roleInfo.id : activeRole === roleInfo.id;
                 return (
-                  <div 
+                  <div
                     key={roleInfo.id}
                     onClick={() => {
                       if (isChangingRole) setSelectedRole(roleInfo.id);
                     }}
-                    className={`p-6 border rounded-2xl relative transition-all ${
-                      isActive 
-                        ? "border-[#FFC700] bg-[#FFF9E6]" 
-                        : "border-gray-200 bg-gray-50 opacity-60"
-                    } ${isChangingRole ? "cursor-pointer hover:border-[#FFC700]" : ""}`}
+                    className={`p-6 border rounded-2xl relative transition-all ${isActive
+                      ? "border-[#FFC700] bg-[#FFF9E6]"
+                      : "border-gray-200 bg-gray-50 opacity-60"
+                      } ${isChangingRole ? "cursor-pointer hover:border-[#FFC700]" : ""}`}
                   >
                     {isActive && <CheckCircle2 className="w-6 h-6 text-[#FFC700] absolute top-6 right-6 shrink-0" />}
                     <h3 className="text-lg font-bold text-[#0A1024] mb-2 pr-8">{roleInfo.title}</h3>
@@ -681,8 +681,8 @@ export default function ProfileClient({ profile }: { profile: any }) {
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Info className="w-4 h-4" />
               <span>
-                {availableRoles.length === 1 
-                  ? "saat ini kamu hanya memiliki 1 role" 
+                {availableRoles.length === 1
+                  ? "saat ini kamu hanya memiliki 1 role"
                   : `saat ini kamu memiliki ${availableRoles.length} role`}
               </span>
             </div>
@@ -708,7 +708,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                 </div>
 
                 <div className="flex gap-4">
-                  <button 
+                  <button
                     onClick={() => {
                       if (!profile.cvUrl) return;
                       let targetUrl = profile.cvUrl;
@@ -721,7 +721,7 @@ export default function ProfileClient({ profile }: { profile: any }) {
                   >
                     Buka
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       if (!profile.cvUrl) return;
                       let targetUrl = profile.cvUrl;

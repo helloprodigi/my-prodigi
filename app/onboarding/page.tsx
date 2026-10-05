@@ -3,14 +3,14 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Code, PenTool, Briefcase, Cpu, Lightbulb, Globe, Database, Upload, FileText } from "lucide-react";
+import { Code, PenTool, Briefcase, Cpu, Lightbulb, Globe, Database, Upload, FileText, Shield } from "lucide-react";
 import toast from "react-hot-toast";
 
 const SKILL_CATEGORIES = [
   "UI/UX Design", "Frontend Developer", "Backend Developer",
   "Mobile Developer", "AI/ML Engineering", "Data Science",
   "Cybersecurity", "Business Plan", "Public Speaking",
-  "Video Editing/Multimedia", "Capture The Flag", "⁠Software Development", "Competitive Programing"
+  "Video Editing/Multimedia"
 ];
 
 const COMPETITION_INTERESTS = [
@@ -20,7 +20,11 @@ const COMPETITION_INTERESTS = [
   { id: "AI Competition", label: "AI Competition", icon: Cpu },
   { id: "Innovation Competition", label: "Innovation Competition", icon: Lightbulb },
   { id: "Web Development", label: "Web Development", icon: Globe },
-  { id: "Data Competition", label: "Data Competition", icon: Database }
+  { id: "Data Competition", label: "Data Competition", icon: Database },
+  { id: "Capture The Flag", label: "Capture The Flag", icon: Shield },
+  { id: "Software Development", label: "Software Development", icon: Code },
+  { id: "Competitive Programming", label: "Competitive Programming", icon: Code }
+
 ];
 
 export default function OnboardingPage() {
