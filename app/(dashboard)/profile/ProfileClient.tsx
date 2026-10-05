@@ -10,7 +10,7 @@ const SKILL_CATEGORIES = [
   "UI/UX Design", "Frontend Developer", "Backend Developer",
   "Mobile Developer", "AI/ML Engineering", "Data Science",
   "Cybersecurity", "Business Plan", "Public Speaking",
-  "Video Editing/Multimedia"
+  "Video Editing/Multimedia", "Capture The Flag", "⁠Software Development", "Competitive Programing"
 ];
 
 const COMPETITION_INTERESTS = [
