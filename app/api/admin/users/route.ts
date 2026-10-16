@@ -14,10 +14,12 @@ export async function GET(req: Request) {
 
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
-    
+
     // Check authentication
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -33,34 +35,19 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Keep the management table in sync with Supabase Auth. User rows can
-    // remain in public.User after an account is deleted from auth.users.
+    // Use the service-role admin client to query the User table directly.
+    // This bypasses RLS so all rows are visible without needing to
+    // cross-reference against auth.users IDs.
+    //
+    // The previous approach collected all auth user IDs and then passed them
+    // into a PostgREST .in() filter. With 680+ users the generated URL
+    // exceeded PostgREST's URL-length limit, causing a "Bad Request" error
+    // that silently returned zero rows on the admin dashboard.
     const adminSupabase = createAdminClient();
-    const authUserIds: string[] = [];
-    const perPage = 1000;
-    let authPage = 1;
 
-    while (true) {
-      const { data: authUsers, error: authUsersError } = await adminSupabase.auth.admin.listUsers({
-        page: authPage,
-        perPage,
-      });
-
-      if (authUsersError) {
-        return NextResponse.json({ error: authUsersError.message }, { status: 500 });
-      }
-
-      authUserIds.push(...authUsers.users.map((authUser) => authUser.id));
-      if (authUsers.users.length < perPage) break;
-      authPage += 1;
-    }
-
-    // Fetch only users that still exist in auth.users, with pagination and
-    // optional name/email filtering.
-    let query = supabase
+    let query = adminSupabase
       .from("User")
       .select("*", { count: "exact" })
-      .in("id", authUserIds)
       .order("createdAt", { ascending: false });
 
     if (search) {
@@ -76,11 +63,11 @@ export async function GET(req: Request) {
 
     const totalPages = count ? Math.ceil(count / limit) : 0;
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       users,
       currentPage: page,
       totalPages,
-      totalCount: count || 0
+      totalCount: count || 0,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -91,10 +78,12 @@ export async function PUT(req: Request) {
   try {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
-    
+
     // Check authentication
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
