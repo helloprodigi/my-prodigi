@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 type DraftCompetition = {
@@ -31,22 +31,26 @@ export default function DraftCompetitionManager() {
     description: "",
     link: "",
   });
+  const loadRequestId = useRef(0);
 
   const loadItems = async () => {
+    const requestId = ++loadRequestId.current;
     setLoading(true);
     try {
-      const res = await fetch("/api/draft-competitions");
+      const res = await fetch("/api/draft-competitions", { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load");
-      setItems(data.draftCompetitions || []);
-    } catch (error: any) {
-      toast.error(error.message || "Gagal memuat draft competition");
+      if (requestId === loadRequestId.current) setItems(data.draftCompetitions || []);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Gagal memuat draft competition");
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestId.current) setLoading(false);
     }
   };
 
   useEffect(() => {
+    // This effect starts the initial async data load.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadItems();
   }, []);
 
@@ -72,8 +76,8 @@ export default function DraftCompetitionManager() {
       toast.success("Draft competition tersimpan");
       setForm({ title: "", organizer: "", tab: "Guidebook", tags: "UI/UX Design, Innovation", description: "", link: "" });
       await loadItems();
-    } catch (error: any) {
-      toast.error(error.message || "Gagal menyimpan draft competition");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Gagal menyimpan draft competition");
     } finally {
       setSubmitting(false);
     }

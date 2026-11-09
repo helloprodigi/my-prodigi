@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState, useTransition } from "react";
+import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -37,12 +37,18 @@ function LoadingSpinner() {
 }
 
 export default function TalentDashboard() {
+  type TeamTab = "my-teams" | "all-teams";
   const [activeTab, setActiveTab] = useState<"my-teams" | "all-teams">("my-teams");
-  const [teams, setTeams] = useState<DashboardTeamCard[]>([]);
+  const [teamsByTab, setTeamsByTab] = useState<Record<TeamTab, DashboardTeamCard[] | undefined>>({
+    "my-teams": undefined,
+    "all-teams": undefined,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [selectedSkill, setSelectedSkill] = useState("");
+  const requestIdRef = useRef(0);
+  const teams = useMemo(() => teamsByTab[activeTab] ?? [], [activeTab, teamsByTab]);
 
   const skillOptions = useMemo(() => {
     const skills = new Set<string>();
@@ -62,44 +68,32 @@ export default function TalentDashboard() {
     });
   }, [teams, search, selectedSkill]);
 
-  const fetchMyTeams = async () => {
-    try {
-      setIsLoading(true);
-      const res = await getMyTeamsAction();
-      if (res.success && res.data) {
-        setTeams(res.data);
-      } else {
-        toast.error(res.error ?? "Gagal memuat data tim saya.");
-      }
-    } catch {
-      toast.error("Gagal memuat data tim saya.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const loadTeams = async (tab: TeamTab, showLoading = true) => {
+    const requestId = ++requestIdRef.current;
+    if (showLoading) setIsLoading(true);
 
-  const fetchAllTeams = async () => {
     try {
-      setIsLoading(true);
-      const res = await getAllTeamsAction();
+      const res = tab === "my-teams" ? await getMyTeamsAction() : await getAllTeamsAction();
+      if (requestId !== requestIdRef.current) return;
+
       if (res.success && res.data) {
-        setTeams(res.data);
+        setTeamsByTab((current) => ({ ...current, [tab]: res.data }));
       } else {
-        toast.error(res.error ?? "Gagal memuat semua data tim.");
+        toast.error(res.error ?? `Gagal memuat ${tab === "my-teams" ? "data tim saya" : "semua data tim"}.`);
       }
     } catch {
-      toast.error("Gagal memuat semua data tim.");
+      if (requestId === requestIdRef.current) {
+        toast.error(`Gagal memuat ${tab === "my-teams" ? "data tim saya" : "semua data tim"}.`);
+      }
     } finally {
-      setIsLoading(false);
+      if (requestId === requestIdRef.current) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (activeTab === "my-teams") {
-      fetchMyTeams();
-    } else {
-      fetchAllTeams();
-    }
+    // This effect starts the async data load for the selected tab.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadTeams(activeTab, teamsByTab[activeTab] === undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
@@ -108,8 +102,7 @@ export default function TalentDashboard() {
       const result = await completeTeamAction(teamId);
       if (result.success) {
         toast.success("Tim berhasil diselesaikan.");
-        if (activeTab === "my-teams") fetchMyTeams();
-        else fetchAllTeams();
+        void loadTeams(activeTab);
       } else {
         toast.error(result.error ?? "Gagal menyelesaikan lomba.");
       }
@@ -121,8 +114,7 @@ export default function TalentDashboard() {
       const result = await requestJoinAction(teamId);
       if (result.success) {
         toast.success("Permintaan bergabung berhasil dikirim.");
-        if (activeTab === "my-teams") fetchMyTeams();
-        else fetchAllTeams();
+        void loadTeams(activeTab);
       } else {
         toast.error(result.error ?? "Gagal mengirim permintaan bergabung.");
       }

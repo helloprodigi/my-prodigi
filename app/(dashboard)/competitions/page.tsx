@@ -9,7 +9,6 @@ import DownloadDraftButton from "@/components/DownloadDraftButton";
 import PreviewLombaCard from "@/components/PreviewLombaCard";
 import ShareCompetitionButton from "@/components/ShareCompetitionButton";
 import { getEffectiveRole } from "@/lib/get-effective-role";
-import { createAdminClient } from "@/lib/supabase-admin";
 import { createClient } from "@/utils/supabase/server";
 
 type DraftCompetitionTab = "Guidebook" | "Proposal" | "Pitch Deck";
@@ -22,6 +21,15 @@ type DraftCompetitionRecord = {
   category?: string | null;
   skills: string[];
   description: string | null;
+  link: string | null;
+};
+
+type CompetitionCardRecord = {
+  id: string;
+  title: string;
+  organizer: string;
+  deadline: string;
+  skills: string[] | null;
   link: string | null;
 };
 
@@ -48,14 +56,6 @@ export default async function CompetitionsPage({
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
-
-  try {
-    const adminDb = createAdminClient();
-    const today = new Date().toISOString();
-    await adminDb.from("Competition").delete().lt("deadline", today);
-  } catch (error) {
-    console.warn("Skipping expired competition cleanup:", error);
-  }
 
   const {
     data: { user },
@@ -232,7 +232,7 @@ export default async function CompetitionsPage({
         <div className="text-red-500">Error loading competitions: {error.message}</div>
       ) : competitions && competitions.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-6">
-          {competitions.map((comp: any) => {
+          {competitions.map((comp: CompetitionCardRecord) => {
             if (currentTab === "Preview Lomba" && role === "admin") {
               return (
                 <div key={comp.id}>

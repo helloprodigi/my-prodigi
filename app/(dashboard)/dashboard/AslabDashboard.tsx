@@ -93,23 +93,26 @@ export default function AslabDashboard() {
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function fetchProkers() {
       setLoading(true);
       try {
         const url = selectedDivisi ? `/api/proker?divisi=${encodeURIComponent(selectedDivisi)}` : "/api/proker";
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: controller.signal, cache: "no-store" });
         const data = await res.json();
-        if (data.programKerja) {
-          setProkers(data.programKerja);
-        }
+        if (!res.ok) throw new Error(data.error || "Failed to fetch prokers");
+        setProkers(data.programKerja ?? []);
       } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         console.error("Failed to fetch prokers", err);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
     
-    fetchProkers();
+    void fetchProkers();
+    return () => controller.abort();
   }, [selectedDivisi]);
 
   const closestProkers = useMemo(() => {
